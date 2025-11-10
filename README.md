@@ -3,8 +3,11 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://badge.fury.io/py/code-scalpel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Status](https://img.shields.io/badge/status-in%20development-yellow.svg)](https://github.com/tescolopio/code-scalpel)
 
 Code Scalpel is a precision tool set for AI-driven code analysis and transformation. Using advanced techniques like Abstract Syntax Trees (ASTs), Program Dependence Graphs (PDGs), and Symbolic Execution, Code Scalpel enables AI agents to perform deep analysis and surgical modifications of code with unprecedented accuracy.
+
+> **🚧 Status:** Code Scalpel is currently being transformed from a development prototype into a production-ready toolkit with full Model Context Protocol (MCP) support. See our [ROADMAP.md](ROADMAP.md) for details.
 
 ## 🌟 Features
 
@@ -28,7 +31,9 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 
 ## 🚀 Quick Start
 
-### Installation
+> **⚠️ Note:** The package is currently being restructured. Installation via pip will not work until Epic 1 is completed. See [ROADMAP.md](ROADMAP.md) for progress.
+
+### Installation (Coming Soon)
 ```bash
 pip install code-scalpel
 ```
@@ -139,6 +144,25 @@ Full documentation is available at [code-scalpel.readthedocs.io](https://code-sc
 - [Integration Guides](docs/integration_guides.md)
 - [Examples](docs/examples.md)
 
+## 🗺️ Project Planning & Roadmap
+
+We're transforming Code Scalpel into a production-ready MCP-enabled toolkit:
+
+- **[ROADMAP.md](ROADMAP.md)** - High-level roadmap and timeline (12-week plan to v1.0)
+- **[PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md)** - Comprehensive backlog with all epics, features, and tasks
+- **[GETTING_STARTED_DEV.md](GETTING_STARTED_DEV.md)** - Developer quick start guide
+- **[GITHUB_ISSUES_TEMPLATE.md](GITHUB_ISSUES_TEMPLATE.md)** - Templates for creating issues
+
+### What's Coming?
+
+**Phase 1 (Weeks 1-2):** Package infrastructure + MCP server implementation  
+**Phase 2 (Weeks 3-4):** Comprehensive testing + documentation  
+**Phase 3 (Weeks 5-6):** CI/CD + security + PyPI release  
+**Phase 4 (Weeks 7-9):** Multi-language support + performance optimization  
+**Phase 5 (Weeks 10+):** Community building and ecosystem growth  
+
+See [ROADMAP.md](ROADMAP.md) for full details.
+
 ## 📝 License
 
 Code Scalpel is released under the MIT License. See the [LICENSE](LICENSE) file for details.
@@ -149,9 +173,29 @@ Code Scalpel is released under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 📧 Contact
 
-- GitHub Issues: For bug reports and feature requests
-- Documentation: [code-scalpel.readthedocs.io](https://code-scalpel.readthedocs.io/)
-- Email: your.email@example.com
+- **GitHub Issues:** For bug reports and feature requests
+- **GitHub Discussions:** For questions and community discussion
+- **Documentation:** [code-scalpel.readthedocs.io](https://code-scalpel.readthedocs.io/) (coming soon)
+- **Project Owner:** Tim Escolopio (3dtsus@gmail.com)
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+1. Read the [GETTING_STARTED_DEV.md](GETTING_STARTED_DEV.md) guide
+2. Check the [ROADMAP.md](ROADMAP.md) for current priorities
+3. Look at [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) for specific tasks
+4. Create an issue or comment on existing ones
+5. Submit a pull request
+
+**Priority areas for contributors:**
+- MCP server implementation
+- Testing and test coverage
+- Documentation and examples
+- Multi-language parser support
+- Performance optimization
 
 ---
 Made with ❤️ by the Code Scalpel Team
+
+**Join us in building the future of AI-driven code analysis!** 🚀
