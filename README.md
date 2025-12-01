@@ -38,7 +38,7 @@ Code Scalpel builds upon the foundations of static analysis while adding powerfu
 | Feature | **Code Scalpel** | **SMAT-Lab/Scalpel** |
 |---------|-----------------|---------------------|
 | **🤖 AI Agents** | ✅ **Yes** — Autogen, CrewAI, Langchain | ❌ No |
-| **🔌 MCP Server** | ✅ **Yes** — Model Context Protocol | ❌ No |
+| **🔌 MCP Server** | 🚧 Planned — Model Context Protocol | ❌ No |
 | **🔍 Symbolic Execution** | ✅ **Yes** — Z3-powered path analysis | ❌ No |
 | **📊 PDG Analysis** | ✅ **Yes** — Full data/control flow | ✅ Yes |
 | **🌳 AST Analysis** | ✅ **Yes** | ✅ Yes |
