@@ -286,7 +286,7 @@ class CodeAnalyzer:
                     path_info = {
                         'type': 'conditional',
                         'line': node.lineno,
-                        'condition': ast.unparse(node.test) if hasattr(ast, 'unparse') else 'N/A',
+                        'condition': ast.unparse(node.test),
                         'has_else': len(node.orelse) > 0
                     }
                     paths.append(path_info)
@@ -294,7 +294,7 @@ class CodeAnalyzer:
                     path_info = {
                         'type': 'loop',
                         'line': node.lineno,
-                        'condition': ast.unparse(node.test) if hasattr(ast, 'unparse') else 'N/A'
+                        'condition': ast.unparse(node.test)
                     }
                     paths.append(path_info)
                     
@@ -750,7 +750,8 @@ class CodeAnalyzer:
         
         try:
             return astor.to_source(new_tree)
-        except Exception:
+        except (AttributeError, ValueError, TypeError) as e:
+            self.logger.debug(f"Failed to convert AST to source: {e}")
             return code
 
     def _rename_variable(self, code: str, tree: ast.AST, old_name: str, new_name: str) -> str:
@@ -773,7 +774,8 @@ class CodeAnalyzer:
         
         try:
             return astor.to_source(new_tree)
-        except Exception:
+        except (AttributeError, ValueError, TypeError) as e:
+            self.logger.debug(f"Failed to convert AST to source: {e}")
             return code
 
     def _inline_constant(self, code: str, tree: ast.AST, target: str) -> str:
@@ -804,7 +806,8 @@ class CodeAnalyzer:
         
         try:
             return astor.to_source(new_tree)
-        except Exception:
+        except (AttributeError, ValueError, TypeError) as e:
+            self.logger.debug(f"Failed to convert AST to source: {e}")
             return code
 
     def clear_cache(self):

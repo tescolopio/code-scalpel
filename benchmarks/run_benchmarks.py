@@ -268,5 +268,13 @@ def run_all_benchmarks() -> Dict[str, Any]:
 if __name__ == '__main__':
     results = run_all_benchmarks()
     
+    # Log failure reasons if any
+    if not results['summary']['overall_pass']:
+        print("\nBenchmark failed due to:")
+        if not results['summary']['throughput_pass']:
+            print(f"  - Throughput below target: {results['summary']['throughput']:.0f} LOC/s (target: 200 LOC/s)")
+        if not results['summary']['accuracy_pass']:
+            print(f"  - Accuracy below target: {results['summary']['recall']:.1f}% (target: 80%)")
+    
     # Exit with appropriate code
     sys.exit(0 if results['summary']['overall_pass'] else 1)

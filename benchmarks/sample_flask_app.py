@@ -330,4 +330,5 @@ def server_error(error):
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=DEBUG, host='0.0.0.0', port=5000)
+    # Note: debug=False in production, this is sample code for benchmarking
+    app.run(debug=False, host='0.0.0.0', port=5000)
