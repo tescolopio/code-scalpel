@@ -243,16 +243,39 @@ def unused():
 
 x = used()
 """
-        # Get initial analysis to see dead code count
-        initial_result = self.analyzer.analyze(code)
-        initial_dead_count = len(initial_result.dead_code)
-        
         # Apply refactoring
         new_code = self.analyzer.apply_refactor(code, 'remove_dead_code')
         
-        # The refactored code should have fewer or equal dead items
-        # (We just verify it doesn't crash and returns something)
+        # Verify it returns a string
         self.assertIsInstance(new_code, str)
+        
+        # Parse the result and verify the unused function was removed
+        import ast
+        result_tree = ast.parse(new_code)
+        function_names = [
+            node.name for node in ast.walk(result_tree) 
+            if isinstance(node, ast.FunctionDef)
+        ]
+        
+        # The 'unused' function should be removed
+        self.assertNotIn('unused', function_names)
+        # The 'used' function should still exist
+        self.assertIn('used', function_names)
+    
+    def test_inline_constant(self):
+        """Test inlining a constant variable."""
+        code = """
+CONST_VALUE = 42
+result = CONST_VALUE + 10
+print(CONST_VALUE)
+"""
+        result = self.analyzer.apply_refactor(
+            code, 'inline_constant',
+            target='CONST_VALUE'
+        )
+        
+        # The constant should be inlined - the value 42 should appear directly
+        self.assertIn('42', result)
 
 
 class TestPDGConstruction(unittest.TestCase):
