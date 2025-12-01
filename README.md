@@ -31,6 +31,26 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 - **Security Analysis**: Detect potential vulnerabilities
 - **Refactoring**: Suggest and apply code improvements
 
+## **How We're Different** 🆚
+
+Code Scalpel builds upon the foundations of static analysis while adding powerful AI agent capabilities. Here's how we compare to [SMAT-Lab/Scalpel](https://github.com/SMAT-Lab/Scalpel):
+
+| Feature | **Code Scalpel** | **SMAT-Lab/Scalpel** |
+|---------|-----------------|---------------------|
+| **🤖 AI Agents** | ✅ **Yes** — Autogen, CrewAI, Langchain | ❌ No |
+| **🔌 MCP Server** | ✅ **Yes** — Model Context Protocol | ❌ No |
+| **🔍 Symbolic Execution** | ✅ **Yes** — Z3-powered path analysis | ❌ No |
+| **📊 PDG Analysis** | ✅ **Yes** — Full data/control flow | ✅ Yes |
+| **🌳 AST Analysis** | ✅ **Yes** | ✅ Yes |
+| **📞 Call Graph** | 🚧 Planned | ✅ Yes |
+| **🔤 SSA Form** | 🚧 Planned | ✅ Yes |
+| **🎯 Target Users** | **AI Agents & Automation** | Research & Academia |
+| **🌍 Multi-Language** | 🚧 Planned (JS, Java, Go) | Python only |
+| **⚡ Claude Optimized** | ✅ **Yes** — Structured for AI workflows | ❌ No |
+| **📦 Package** | `code-scalpel` | `python-scalpel` |
+
+> **💡 Key Insight:** While SMAT-Lab/Scalpel excels as a traditional static analysis framework for research, **Code Scalpel is purpose-built for the AI agent era** — enabling autonomous code analysis, review, and transformation by AI systems like Claude, Cursor, and Cline.
+
 ## 🚀 Quick Start
 
 > **⚠️ Note:** The package is currently being restructured. Installation via pip will not work until Epic 1 is completed. See [ROADMAP.md](ROADMAP.md) for progress.
@@ -164,6 +184,24 @@ We're transforming Code Scalpel into a production-ready MCP-enabled toolkit:
 **Phase 5 (Weeks 10+):** Community building and ecosystem growth  
 
 See [ROADMAP.md](ROADMAP.md) for full details.
+
+### 🚀 PyPI Alpha Release Checklist
+
+To release `pip install code-scalpel==0.1.0a1`, the following must be completed:
+
+1. **Package Structure** - Rename `src/` → `src/code_scalpel/` with proper `__init__.py`
+2. **pyproject.toml** - Update version to `0.1.0a1`, add classifiers, URLs, and Python version requirements
+3. **Dependencies** - Pin versions, add optional dev/test dependencies
+4. **Basic Tests** - Core functionality tests passing
+5. **Build & Verify** - Successfully build with `python -m build` and test install
+6. **PyPI Account** - Configure TestPyPI first, then production PyPI
+7. **Upload** - Use `twine upload` to publish
+
+See [ROADMAP.md](ROADMAP.md) Phase 3 for detailed steps.
+
+### 💬 Community Discussion
+
+> **📌 Featured Discussion:** [Code Scalpel: The AI Twist on Static Analysis](https://github.com/tescolopio/code-scalpel/discussions) — Join the conversation about how AI agents are transforming code analysis!
 
 ## 📝 License
 
