@@ -283,13 +283,30 @@ def run_server(
     Args:
         host: Host to bind to.
         port: Port to bind to.
-        debug: Whether to run in debug mode.
+        debug: Whether to run in debug mode. WARNING: Debug mode should
+               never be enabled in production as it can allow arbitrary
+               code execution.
     """
+    import os
+    import warnings
+    
+    # Warn if debug mode is enabled in production
+    if debug and os.environ.get('FLASK_ENV') == 'production':
+        warnings.warn(
+            "Debug mode should not be enabled in production. "
+            "Set FLASK_ENV to 'development' or disable debug mode.",
+            RuntimeWarning
+        )
+        debug = False  # Force disable debug in production
+    
     config = MCPServerConfig(host=host, port=port, debug=debug)
     app = create_app(config)
     app.run(host=host, port=port, debug=debug)
 
 
-# Allow running directly as a script
+# Allow running directly as a script (development only)
 if __name__ == '__main__':
-    run_server(debug=True)
+    import os
+    # Only enable debug mode in development
+    is_development = os.environ.get('FLASK_ENV', 'development') == 'development'
+    run_server(debug=is_development)
