@@ -225,12 +225,12 @@ class CrewAIScalpel:
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
-            None, self._analyze_security_sync, code
+            None, self.analyze_security, code
         )
     
-    def _analyze_security_sync(self, code: str) -> Dict[str, Any]:
+    def analyze_security(self, code: str) -> Dict[str, Any]:
         """
-        Synchronous security analysis implementation.
+        Perform synchronous security-focused analysis.
         
         Args:
             code: Python source code to analyze.
@@ -255,6 +255,20 @@ class CrewAIScalpel:
                 "issues": [],
                 "risk_level": "unknown"
             }
+    
+    def _analyze_security_sync(self, code: str) -> Dict[str, Any]:
+        """
+        Deprecated: Use analyze_security() instead.
+        
+        Synchronous security analysis implementation.
+        
+        Args:
+            code: Python source code to analyze.
+            
+        Returns:
+            Dictionary with security analysis results.
+        """
+        return self.analyze_security(code)
     
     def _generate_suggestions(
         self, 
@@ -415,6 +429,6 @@ class CrewAIScalpel:
                     "Performs security-focused analysis to identify vulnerabilities "
                     "like dangerous function usage and SQL injection."
                 ),
-                "func": self._analyze_security_sync
+                "func": self.analyze_security
             }
         ]

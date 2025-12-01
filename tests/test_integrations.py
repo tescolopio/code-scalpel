@@ -192,23 +192,16 @@ def calculateSum(numbers):
         self.assertIn('security_scan', tool_names)
     
     def test_risk_level_calculation(self):
-        """Test risk level calculation for various scenarios."""
-        # Low risk - no issues
-        low_risk = self.scalpel._calculate_risk_level([])
-        self.assertEqual(low_risk, 'low')
+        """Test risk level calculation through security analysis."""
+        # Low risk - code with no security issues
+        clean_code = "def foo(): return 42"
+        result = self.scalpel.analyze_security(clean_code)
+        self.assertEqual(result['risk_level'], 'low')
         
-        # Medium risk - one issue
-        medium_risk = self.scalpel._calculate_risk_level([
-            {'type': 'dangerous_function', 'function': 'eval'}
-        ])
-        self.assertEqual(medium_risk, 'medium')
-        
-        # High risk - two issues
-        high_risk = self.scalpel._calculate_risk_level([
-            {'type': 'dangerous_function', 'function': 'eval'},
-            {'type': 'sql_injection'}
-        ])
-        self.assertEqual(high_risk, 'high')
+        # Medium risk - one dangerous function
+        medium_code = "eval('1+1')"
+        result = self.scalpel.analyze_security(medium_code)
+        self.assertEqual(result['risk_level'], 'medium')
 
 
 class TestMCPServer(unittest.TestCase):

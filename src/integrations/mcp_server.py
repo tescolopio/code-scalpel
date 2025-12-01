@@ -253,7 +253,7 @@ def create_app(config: Optional[MCPServerConfig] = None) -> Flask:
             }), 400
         
         try:
-            result = scalpel._analyze_security_sync(code)
+            result = scalpel.analyze_security(code)
             result["processing_time_ms"] = _elapsed_ms(start_time)
             return jsonify(result)
             
