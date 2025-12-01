@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://badge.fury.io/py/code-scalpel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/status-in%20development-yellow.svg)](https://github.com/tescolopio/code-scalpel)
 
 Code Scalpel is a precision tool set for AI-driven code analysis and transformation. Using advanced techniques like Abstract Syntax Trees (ASTs), Program Dependence Graphs (PDGs), and Symbolic Execution, Code Scalpel enables AI agents to perform deep analysis and surgical modifications of code with unprecedented accuracy.
@@ -201,7 +201,7 @@ See [ROADMAP.md](ROADMAP.md) Phase 3 for detailed steps.
 
 ### 💬 Community Discussion
 
-> **📌 Featured Discussion:** [Code Scalpel: The AI Twist on Static Analysis](https://github.com/tescolopio/code-scalpel/discussions) — Join the conversation about how AI agents are transforming code analysis!
+> **📌 Featured Discussion:** *Coming soon!* — We're creating a pinned discussion titled **"Code Scalpel: The AI Twist on Static Analysis"** in [GitHub Discussions](https://github.com/tescolopio/code-scalpel/discussions). Join the conversation about how AI agents are transforming code analysis!
 
 ## 📝 License
 

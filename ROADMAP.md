@@ -78,17 +78,17 @@ This is an accelerated path to release `pip install code-scalpel==0.1.0a1`:
   [project]
   name = "code-scalpel"
   version = "0.1.0a1"
-  requires-python = ">=3.8"
+  requires-python = ">=3.9"
   classifiers = [
       "Development Status :: 3 - Alpha",
       "Intended Audience :: Developers",
       "Topic :: Software Development :: Code Analyzers",
       "License :: OSI Approved :: MIT License",
-      "Programming Language :: Python :: 3.8",
       "Programming Language :: Python :: 3.9",
       "Programming Language :: Python :: 3.10",
       "Programming Language :: Python :: 3.11",
       "Programming Language :: Python :: 3.12",
+      "Programming Language :: Python :: 3.13",
   ]
   
   [project.urls]
