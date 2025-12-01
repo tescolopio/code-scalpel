@@ -60,6 +60,77 @@ Transform Code Scalpel into the industry-standard code analysis toolkit for AI a
 
 ---
 
+## 📦 PyPI Alpha Release (v0.1.0a1) — Quick Path
+
+**Goal:** Get a minimal, working package on PyPI for early testing
+
+This is an accelerated path to release `pip install code-scalpel==0.1.0a1`:
+
+### Prerequisites Checklist
+
+- [ ] **Package Structure**
+  - [ ] Create `src/code_scalpel/` directory structure
+  - [ ] Add `__init__.py` with version and public API exports
+  - [ ] Ensure all modules have proper relative imports
+
+- [ ] **pyproject.toml Updates**
+  ```toml
+  [project]
+  name = "code-scalpel"
+  version = "0.1.0a1"
+  requires-python = ">=3.9"
+  classifiers = [
+      "Development Status :: 3 - Alpha",
+      "Intended Audience :: Developers",
+      "Topic :: Software Development :: Code Analyzers",
+      "License :: OSI Approved :: MIT License",
+      "Programming Language :: Python :: 3.9",
+      "Programming Language :: Python :: 3.10",
+      "Programming Language :: Python :: 3.11",
+      "Programming Language :: Python :: 3.12",
+      "Programming Language :: Python :: 3.13",
+  ]
+  
+  [project.urls]
+  Homepage = "https://github.com/tescolopio/code-scalpel"
+  Documentation = "https://code-scalpel.readthedocs.io"
+  Repository = "https://github.com/tescolopio/code-scalpel.git"
+  Issues = "https://github.com/tescolopio/code-scalpel/issues"
+  ```
+
+- [ ] **Dependencies** — Pin minimum versions in `pyproject.toml`
+
+- [ ] **Build & Test Locally**
+  ```bash
+  pip install build twine
+  python -m build
+  pip install dist/code_scalpel-0.1.0a1-py3-none-any.whl
+  python -c "from code_scalpel import CodeAnalyzer; print('Success!')"
+  ```
+
+- [ ] **TestPyPI First**
+  ```bash
+  twine upload --repository testpypi dist/*
+  pip install --index-url https://test.pypi.org/simple/ code-scalpel==0.1.0a1
+  ```
+
+- [ ] **Production PyPI**
+  ```bash
+  twine upload dist/*
+  pip install code-scalpel==0.1.0a1
+  ```
+
+### Minimum Viable Alpha
+
+For v0.1.0a1, the package should include:
+- ✅ Core AST analysis tools
+- ✅ Basic PDG functionality
+- ✅ Working import structure
+- ⏳ MCP server (can be v0.1.0a2)
+- ⏳ Full test coverage (can be v0.1.0a2)
+
+---
+
 ## Phase 2: Quality & Testing (Weeks 3-4) 🧪
 
 **Goal:** Achieve 80%+ test coverage and comprehensive documentation
