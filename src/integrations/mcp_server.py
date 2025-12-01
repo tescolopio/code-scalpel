@@ -1,0 +1,295 @@
+"""
+MCP Server - Model Context Protocol server for Code Scalpel.
+
+This module provides a Flask-based MCP server that exposes Code Scalpel's
+analysis capabilities via HTTP endpoints for agent queries.
+"""
+
+import time
+from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from flask import Flask, request, jsonify, Response
+
+
+@dataclass
+class MCPServerConfig:
+    """Configuration for the MCP server."""
+    host: str = "0.0.0.0"
+    port: int = 8080
+    debug: bool = False
+    cache_enabled: bool = True
+    max_code_size: int = 100000  # Maximum code size in characters
+
+
+def create_app(config: Optional[MCPServerConfig] = None) -> Flask:
+    """
+    Create and configure the Flask MCP server application.
+    
+    Args:
+        config: Optional server configuration.
+        
+    Returns:
+        Configured Flask application.
+    """
+    if config is None:
+        config = MCPServerConfig()
+    
+    app = Flask(__name__)
+    app.config['MAX_CONTENT_LENGTH'] = config.max_code_size
+    
+    # Lazy import to avoid circular dependencies
+    try:
+        from .crewai import CrewAIScalpel
+    except ImportError:
+        from integrations.crewai import CrewAIScalpel
+    scalpel = CrewAIScalpel(cache_enabled=config.cache_enabled)
+    
+    @app.route('/health', methods=['GET'])
+    def health_check() -> Response:
+        """Health check endpoint."""
+        return jsonify({
+            "status": "healthy",
+            "service": "code-scalpel-mcp",
+            "version": "0.1.0"
+        })
+    
+    @app.route('/analyze', methods=['POST'])
+    def analyze_code() -> Response:
+        """
+        Analyze Python code and return analysis results.
+        
+        Request body:
+            {
+                "code": "string",  # Python code to analyze
+                "options": {       # Optional analysis options
+                    "include_security": true,
+                    "include_style": true
+                }
+            }
+        
+        Response:
+            {
+                "success": bool,
+                "analysis": {...},
+                "issues": [...],
+                "suggestions": [...],
+                "processing_time_ms": float,
+                "error": "string" (optional)
+            }
+        """
+        start_time = time.time()
+        
+        # Parse request body
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body is required",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        code = data.get('code')
+        if not code:
+            return jsonify({
+                "success": False,
+                "error": "Code field is required",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        if not isinstance(code, str):
+            return jsonify({
+                "success": False,
+                "error": "Code must be a string",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        if len(code) > config.max_code_size:
+            return jsonify({
+                "success": False,
+                "error": f"Code exceeds maximum size of {config.max_code_size} characters",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        try:
+            # Perform analysis
+            result = scalpel.analyze(code)
+            
+            response = {
+                "success": result.success,
+                "analysis": result.analysis,
+                "issues": result.issues,
+                "suggestions": result.suggestions,
+                "processing_time_ms": _elapsed_ms(start_time)
+            }
+            
+            if result.error:
+                response["error"] = result.error
+            
+            return jsonify(response)
+            
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": f"Internal error: {str(e)}",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 500
+    
+    @app.route('/refactor', methods=['POST'])
+    def refactor_code() -> Response:
+        """
+        Refactor Python code based on analysis.
+        
+        Request body:
+            {
+                "code": "string",           # Python code to refactor
+                "task": "string" (optional) # Refactoring task description
+            }
+        
+        Response:
+            {
+                "success": bool,
+                "original_code": "string",
+                "refactored_code": "string" (optional),
+                "analysis": {...},
+                "suggestions": [...],
+                "processing_time_ms": float,
+                "error": "string" (optional)
+            }
+        """
+        start_time = time.time()
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body is required",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        code = data.get('code')
+        if not code:
+            return jsonify({
+                "success": False,
+                "error": "Code field is required",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        if not isinstance(code, str):
+            return jsonify({
+                "success": False,
+                "error": "Code must be a string",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        task = data.get('task', 'improve code quality')
+        
+        try:
+            result = scalpel.refactor(code, task)
+            
+            response = {
+                "success": result.success,
+                "original_code": result.original_code,
+                "refactored_code": result.refactored_code,
+                "analysis": result.analysis,
+                "suggestions": result.suggestions,
+                "processing_time_ms": _elapsed_ms(start_time)
+            }
+            
+            if result.error:
+                response["error"] = result.error
+            
+            return jsonify(response)
+            
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": f"Internal error: {str(e)}",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 500
+    
+    @app.route('/security', methods=['POST'])
+    def security_scan() -> Response:
+        """
+        Perform security-focused analysis on Python code.
+        
+        Request body:
+            {
+                "code": "string"  # Python code to analyze
+            }
+        
+        Response:
+            {
+                "success": bool,
+                "issues": [...],
+                "risk_level": "string",
+                "recommendations": [...],
+                "processing_time_ms": float,
+                "error": "string" (optional)
+            }
+        """
+        start_time = time.time()
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body is required",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        code = data.get('code')
+        if not code:
+            return jsonify({
+                "success": False,
+                "error": "Code field is required",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        if not isinstance(code, str):
+            return jsonify({
+                "success": False,
+                "error": "Code must be a string",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 400
+        
+        try:
+            result = scalpel._analyze_security_sync(code)
+            result["processing_time_ms"] = _elapsed_ms(start_time)
+            return jsonify(result)
+            
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": f"Internal error: {str(e)}",
+                "processing_time_ms": _elapsed_ms(start_time)
+            }), 500
+    
+    return app
+
+
+def _elapsed_ms(start_time: float) -> float:
+    """Calculate elapsed time in milliseconds."""
+    return (time.time() - start_time) * 1000
+
+
+def run_server(
+    host: str = "0.0.0.0",
+    port: int = 8080,
+    debug: bool = False
+) -> None:
+    """
+    Run the MCP server.
+    
+    Args:
+        host: Host to bind to.
+        port: Port to bind to.
+        debug: Whether to run in debug mode.
+    """
+    config = MCPServerConfig(host=host, port=port, debug=debug)
+    app = create_app(config)
+    app.run(host=host, port=port, debug=debug)
+
+
+# Allow running directly as a script
+if __name__ == '__main__':
+    run_server(debug=True)

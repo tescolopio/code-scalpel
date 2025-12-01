@@ -1,4 +1,14 @@
-from src.integrations import AutogenCodeAnalysisAgent
+"""
+Example demonstrating AutogenScalpel for code analysis.
+"""
+
+import sys
+import os
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from integrations import AutogenScalpel
 
 # Example code to analyze
 code = """
@@ -13,25 +23,29 @@ def calculate_factorial(n):
     return result
 """
 
-# Configure the agent
-config = {
-    "llm_config": [
-        {"model": "gpt-4", "temperature": 0.7}
-    ]
-}
-
 import asyncio
 
 async def main():
-    # Create and use the agent
-    agent = AutogenCodeAnalysisAgent(config)
-    result = await agent.analyze_code(code)
-
+    # Create the Scalpel analyzer
+    scalpel = AutogenScalpel()
+    
+    # Analyze the code
+    result = await scalpel.analyze_async(code)
+    
     print("Analysis Results:")
-    print(result["analysis"])
+    print(f"  Parsed: {result.ast_analysis.get('parsed')}")
+    print(f"  Style Issues: {result.ast_analysis.get('style_issues_count')}")
+    print(f"  Security Issues: {result.ast_analysis.get('security_issues_count')}")
+    
     print("\nSuggestions:")
-    for suggestion in result["suggestions"]:
-        print(f"- {suggestion}")
+    for suggestion in result.suggestions:
+        print(f"  - {suggestion}")
+    
+    # Demonstrate tool description for Autogen integration
+    tool_desc = scalpel.get_tool_description()
+    print(f"\nTool Name: {tool_desc['name']}")
+    print(f"Description: {tool_desc['description']}")
 
 # Run the async main function
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

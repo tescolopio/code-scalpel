@@ -1,5 +1,5 @@
 import ast
-from typing import Dict, List, Optional, Union, Callable
+from typing import Dict, List, Optional, Union, Callable, Tuple
 import astor
 from dataclasses import dataclass
 from collections import defaultdict
