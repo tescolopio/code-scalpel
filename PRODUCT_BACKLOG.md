@@ -5,6 +5,31 @@
 
 ---
 
+## Project Scope & Definition
+
+> **⚠️ Important Clarification:** Code Scalpel is **NOT** a mobile application, web app, or end-user GUI tool. It is a **developer toolkit and library** designed specifically for programmatic use by AI Agents, AI coding assistants, and automation systems.
+
+### What Code Scalpel IS:
+- 🔧 **A Python Library/Toolkit** - Installable via pip for use in Python projects
+- 🤖 **An MCP Server** - Exposes code analysis capabilities to AI agents via Model Context Protocol
+- 🔌 **An AI Integration Layer** - Provides tools for Autogen, CrewAI, Langchain, and other AI frameworks
+- 📊 **A Code Analysis Engine** - AST analysis, PDG building, symbolic execution for deep code understanding
+- 🔬 **A Programmatic API** - Designed for automation, CI/CD pipelines, and AI-driven workflows
+
+### What Code Scalpel is NOT:
+- ❌ Not a mobile application
+- ❌ Not a web application with a GUI
+- ❌ Not an end-user code editor or IDE
+- ❌ Not a standalone desktop application
+
+### Primary Use Cases:
+1. **AI Coding Assistants** - Cursor, Cline, GitHub Copilot, Claude Desktop using MCP
+2. **Agentic Workflows** - AI agents performing code review, refactoring, security analysis
+3. **CI/CD Integration** - Automated code quality checks and analysis in pipelines
+4. **Research & Education** - Academic research on code analysis and program understanding
+
+---
+
 ## Executive Summary
 
 This backlog transforms Code Scalpel from a development prototype into a production-ready AI code analysis toolkit with full MCP server support, enabling AI agents to perform deep code analysis using ASTs, PDGs, and Symbolic Execution through a standardized protocol.
@@ -1325,9 +1350,10 @@ Epic 7 (Multi-Lang) → Epic 8 (Performance)
 - Some tasks can be parallelized across multiple contributors
 - Focus on MCP integration as the key differentiator
 - Quality and documentation are non-negotiable for production
+- **Scope Clarification (2025-12-01):** Code Scalpel is a Python toolkit/MCP server for AI agents, NOT a mobile application
 
 ---
 
-**Last Updated:** 2025-11-10
-**Version:** 1.0
-**Status:** Initial Draft
+**Last Updated:** 2025-12-01
+**Version:** 1.1
+**Status:** Phase 1 Scope Update - Clarified project scope as AI toolkit/MCP server

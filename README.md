@@ -7,6 +7,8 @@
 
 Code Scalpel is a precision tool set for AI-driven code analysis and transformation. Using advanced techniques like Abstract Syntax Trees (ASTs), Program Dependence Graphs (PDGs), and Symbolic Execution, Code Scalpel enables AI agents to perform deep analysis and surgical modifications of code with unprecedented accuracy.
 
+> **⚠️ Project Scope:** Code Scalpel is a **Python toolkit and MCP server** designed for use by AI agents and automation systems. It is **NOT** a mobile application, web app, or GUI tool. Target users include AI coding assistants (Cursor, Cline, Claude Desktop), AI agent frameworks (Autogen, CrewAI, Langchain), and DevOps pipelines.
+
 > **🚧 Status:** Code Scalpel is currently being transformed from a development prototype into a production-ready toolkit with full Model Context Protocol (MCP) support. See our [ROADMAP.md](ROADMAP.md) for details.
 
 ## 🌟 Features

@@ -6,6 +6,12 @@ This index helps you navigate all planning and development documentation for the
 
 ---
 
+## Project Scope
+
+> **⚠️ Scope Clarification:** Code Scalpel is a **Python toolkit and MCP server** for AI agents and automation systems. It is **NOT** a mobile application, web app, or GUI tool. See [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) for the detailed project scope definition.
+
+---
+
 ## 📖 Quick Navigation
 
 ### 🎯 Start Here
@@ -328,6 +334,6 @@ This index helps you navigate all planning and development documentation for the
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2025-11-10  
+**Document Version:** 1.1 (Phase 1 Scope Update)  
+**Last Updated:** 2025-12-01  
 **Maintained by:** Code Scalpel Team

@@ -6,6 +6,18 @@
 
 ---
 
+## Project Scope Definition
+
+> **⚠️ Important:** Code Scalpel is a **Python toolkit and MCP server** designed for use by AI agents and programmatic automation—it is **NOT** a mobile application, web app, or end-user GUI tool.
+
+**Target Users:**
+- AI Coding Assistants (Cursor, Cline, Claude Desktop via MCP)
+- AI Agent Frameworks (Autogen, CrewAI, Langchain)
+- DevOps/CI/CD Pipelines (automated code analysis)
+- Developers building AI-powered code tools
+
+---
+
 ## Overview
 
 This document provides an executive summary of the Code Scalpel production readiness initiative. The project aims to transform Code Scalpel from a development prototype into a production-ready AI code analysis toolkit with Model Context Protocol (MCP) support.
@@ -454,6 +466,6 @@ With the comprehensive backlog now in place, clear priorities established, and a
 ---
 
 **Prepared by:** GitHub Copilot Agent  
-**Date:** 2025-11-10  
-**Version:** 1.0  
-**Status:** Final - Ready for Review and Approval
+**Date:** 2025-12-01 (Updated)  
+**Version:** 1.1 - Phase 1 Scope Update  
+**Status:** Updated - Clarified project scope as AI toolkit/MCP server (not mobile application)
