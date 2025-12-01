@@ -1,30 +1,34 @@
 import ast
 import logging
-from typing import Optional, Union, Dict, Any, Callable
+from typing import Optional, Dict, Callable, List
 import tokenize
 from io import StringIO
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
+
 class ASTBuilder:
     """
     Advanced AST builder with preprocessing and validation capabilities.
     """
+
     def __init__(self):
         self.preprocessing_hooks: List[Callable[[str], str]] = []
         self.validation_hooks: List[Callable[[ast.AST], None]] = []
         self.ast_cache: Dict[str, ast.AST] = {}
 
-    def build_ast(self, code: str, preprocess: bool = True, validate: bool = True) -> Optional[ast.AST]:
+    def build_ast(
+        self, code: str, preprocess: bool = True, validate: bool = True
+    ) -> Optional[ast.AST]:
         """
         Build an AST from Python code with optional preprocessing and validation.
-        
+
         Args:
             code (str): The Python code to parse.
             preprocess (bool): Whether to apply preprocessing hooks.
             validate (bool): Whether to apply validation hooks.
-        
+
         Returns:
             Optional[ast.AST]: The parsed AST, or None if an error occurred.
         """
@@ -34,12 +38,12 @@ class ASTBuilder:
         try:
             if preprocess:
                 code = self._preprocess_code(code)
-            
+
             tree = ast.parse(code)
-            
+
             if validate:
                 self._validate_ast(tree)
-            
+
             self.ast_cache[code] = tree
             return tree
         except SyntaxError as e:
@@ -50,15 +54,17 @@ class ASTBuilder:
             return None
 
     @lru_cache(maxsize=100)
-    def build_ast_from_file(self, filepath: str, preprocess: bool = True, validate: bool = True) -> Optional[ast.AST]:
+    def build_ast_from_file(
+        self, filepath: str, preprocess: bool = True, validate: bool = True
+    ) -> Optional[ast.AST]:
         """
         Build an AST from a Python source file with caching.
-        
+
         Args:
             filepath (str): The path to the Python source file.
             preprocess (bool): Whether to apply preprocessing hooks.
             validate (bool): Whether to apply validation hooks.
-        
+
         Returns:
             Optional[ast.AST]: The parsed AST, or None if an error occurred.
         """
@@ -92,14 +98,14 @@ class ASTBuilder:
     def _preprocess_code(self, code: str) -> str:
         """Apply all preprocessing hooks to the code."""
         processed_code = code
-        
+
         # Remove comments
         processed_code = self._remove_comments(processed_code)
-        
+
         # Apply custom preprocessing hooks
         for hook in self.preprocessing_hooks:
             processed_code = hook(processed_code)
-            
+
         return processed_code
 
     def _validate_ast(self, tree: ast.AST) -> None:
@@ -113,9 +119,9 @@ class ASTBuilder:
         result = []
         prev_toktype = tokenize.INDENT
         first_line = True
-        
+
         tokens = tokenize.generate_tokens(StringIO(code).readline)
-        
+
         for toktype, ttext, (slineno, scol), (elineno, ecol), ltext in tokens:
             if toktype == tokenize.COMMENT:
                 continue
@@ -135,7 +141,7 @@ class ASTBuilder:
                 result.append(ttext)
             prev_toktype = toktype
             first_line = False
-            
+
         return "".join(result)
 
     def _handle_syntax_error(self, error: SyntaxError) -> None:

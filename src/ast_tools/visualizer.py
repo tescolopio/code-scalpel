@@ -1,20 +1,21 @@
 import ast
 import logging
-from typing import Dict, List, Optional, Set, Any, Tuple
+from typing import Dict, Optional, Set
 from graphviz import Digraph
 import networkx as nx
 from dataclasses import dataclass
 import json
-from pathlib import Path
 import html
 from itertools import zip_longest
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class VisualizationConfig:
     """Configuration for AST visualization."""
+
     node_colors: Dict[str, str] = None
     edge_colors: Dict[str, str] = None
     node_shapes: Dict[str, str] = None
@@ -24,33 +25,37 @@ class VisualizationConfig:
     show_source_code: bool = True
     max_label_length: int = 50
 
+
 class ASTVisualizer:
     """Advanced AST visualization with customizable styling and multiple output formats."""
-    
+
     def __init__(self, config: Optional[VisualizationConfig] = None):
         self.config = config or VisualizationConfig()
         self._default_colors = {
-            'ast.FunctionDef': '#a8d5e5',
-            'ast.ClassDef': '#95c8d8',
-            'ast.Call': '#d1e8ef',
-            'ast.Name': '#e8f4f8',
-            'ast.Constant': '#f0f9fc'
+            "ast.FunctionDef": "#a8d5e5",
+            "ast.ClassDef": "#95c8d8",
+            "ast.Call": "#d1e8ef",
+            "ast.Name": "#e8f4f8",
+            "ast.Constant": "#f0f9fc",
         }
         self._default_shapes = {
-            'ast.FunctionDef': 'box',
-            'ast.ClassDef': 'box3d',
-            'ast.Call': 'ellipse',
-            'ast.Name': 'oval',
-            'ast.Constant': 'diamond'
+            "ast.FunctionDef": "box",
+            "ast.ClassDef": "box3d",
+            "ast.Call": "ellipse",
+            "ast.Name": "oval",
+            "ast.Constant": "diamond",
         }
 
-    def visualize(self, tree: ast.AST, 
-                 output_file: str = "ast_visualization",
-                 format: str = "png",
-                 view: bool = True) -> None:
+    def visualize(
+        self,
+        tree: ast.AST,
+        output_file: str = "ast_visualization",
+        format: str = "png",
+        view: bool = True,
+    ) -> None:
         """
         Create a visualization of the AST with advanced formatting.
-        
+
         Args:
             tree: The AST to visualize
             output_file: Base name for the output file
@@ -59,19 +64,19 @@ class ASTVisualizer:
         """
         try:
             dot = self._create_digraph()
-            
+
             # Track node relationships for layout optimization
             self.node_relationships = defaultdict(set)
-            
+
             # Create the visualization
             self._build_visualization(tree, dot)
-            
+
             # Optimize layout
             self._optimize_layout(dot)
-            
+
             # Save in requested format
             dot.render(output_file, format=format, view=view, cleanup=True)
-            
+
             # Generate additional outputs if requested
             if self.config.show_source_code:
                 self._generate_html_view(tree, output_file)
@@ -79,38 +84,40 @@ class ASTVisualizer:
             logger.error(f"Error visualizing AST: {str(e)}")
             raise
 
-    def visualize_diff(self, tree1: ast.AST, tree2: ast.AST,
-                      output_file: str = "ast_diff") -> None:
+    def visualize_diff(
+        self, tree1: ast.AST, tree2: ast.AST, output_file: str = "ast_diff"
+    ) -> None:
         """Visualize differences between two ASTs."""
         try:
             dot = self._create_digraph()
-            
+
             # Analyze differences
             changes = self._analyze_differences(tree1, tree2)
-            
+
             # Create visualization with highlighted differences
             self._build_diff_visualization(tree1, tree2, changes, dot)
-            
+
             dot.render(output_file, view=True)
         except Exception as e:
             logger.error(f"Error visualizing AST differences: {str(e)}")
             raise
 
-    def create_interactive_visualization(self, tree: ast.AST,
-                                      output_file: str = "interactive_ast.html") -> None:
+    def create_interactive_visualization(
+        self, tree: ast.AST, output_file: str = "interactive_ast.html"
+    ) -> None:
         """Create an interactive HTML visualization using d3.js."""
         try:
             # Convert AST to networkx graph
             G = self._ast_to_networkx(tree)
-            
+
             # Generate JSON data for d3.js
             json_data = self._generate_d3_json(G)
-            
+
             # Create interactive HTML
             html_content = self._generate_interactive_html(json_data)
-            
+
             # Save to file
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(html_content)
         except Exception as e:
             logger.error(f"Error creating interactive visualization: {str(e)}")
@@ -118,53 +125,65 @@ class ASTVisualizer:
 
     def _create_digraph(self) -> Digraph:
         """Create and configure the Digraph object."""
-        dot = Digraph(comment='Abstract Syntax Tree Visualization')
-        dot.attr(rankdir='TB')
-        dot.attr(splines='ortho')
+        dot = Digraph(comment="Abstract Syntax Tree Visualization")
+        dot.attr(rankdir="TB")
+        dot.attr(splines="ortho")
         return dot
 
-    def _build_visualization(self, node: ast.AST, dot: Digraph, 
-                           parent_id: Optional[str] = None,
-                           edge_label: Optional[str] = None) -> str:
+    def _build_visualization(
+        self,
+        node: ast.AST,
+        dot: Digraph,
+        parent_id: Optional[str] = None,
+        edge_label: Optional[str] = None,
+    ) -> str:
         """Recursively build the visualization."""
         node_id = str(id(node))
-        
+
         # Create node label
         label = self._create_node_label(node)
-        
+
         # Get node styling
         style = self._get_node_style(node)
-        
+
         # Add node to graph
         dot.node(node_id, label, **style)
-        
+
         # Add edge if there's a parent
         if parent_id:
             edge_style = self._get_edge_style(node)
             if edge_label:
-                edge_style['label'] = edge_label
+                edge_style["label"] = edge_label
             dot.edge(parent_id, node_id, **edge_style)
-        
+
         # Process child nodes
         for field, value in ast.iter_fields(node):
             if isinstance(value, list):
                 for idx, item in enumerate(value):
                     if isinstance(item, ast.AST):
-                        self._build_visualization(item, dot, node_id, 
-                                               edge_label=field if self.config.show_attributes else None)
+                        self._build_visualization(
+                            item,
+                            dot,
+                            node_id,
+                            edge_label=field if self.config.show_attributes else None,
+                        )
             elif isinstance(value, ast.AST):
-                self._build_visualization(value, dot, node_id,
-                                       edge_label=field if self.config.show_attributes else None)
-        
+                self._build_visualization(
+                    value,
+                    dot,
+                    node_id,
+                    edge_label=field if self.config.show_attributes else None,
+                )
+
         return node_id
 
     def _create_node_label(self, node: ast.AST) -> str:
         """Create a detailed node label."""
         label_parts = [node.__class__.__name__]
-        
-        if self.config.show_line_numbers and hasattr(node, 'lineno'):
+
+        if self.config.show_line_numbers and hasattr(node, "lineno"):
             label_parts.append(f"Line: {node.lineno}")
-        
+
         # Add node-specific information
         if isinstance(node, ast.FunctionDef):
             label_parts.append(f"Function: {node.name}")
@@ -181,71 +200,65 @@ class ASTVisualizer:
         elif isinstance(node, ast.Constant):
             value = str(node.value)
             if len(value) > self.config.max_label_length:
-                value = value[:self.config.max_label_length] + "..."
+                value = value[: self.config.max_label_length] + "..."
             label_parts.append(f"Value: {value}")
-        
+
         return "\n".join(label_parts)
 
     def _get_node_style(self, node: ast.AST) -> Dict[str, str]:
         """Get styling for a node."""
         node_type = node.__class__.__name__
         style = {
-            'shape': self._default_shapes.get(f'ast.{node_type}', 'box'),
-            'style': 'filled',
-            'fillcolor': self._default_colors.get(f'ast.{node_type}', '#ffffff')
+            "shape": self._default_shapes.get(f"ast.{node_type}", "box"),
+            "style": "filled",
+            "fillcolor": self._default_colors.get(f"ast.{node_type}", "#ffffff"),
         }
-        
+
         # Apply custom styling if configured
-        if self.config.node_colors and f'ast.{node_type}' in self.config.node_colors:
-            style['fillcolor'] = self.config.node_colors[f'ast.{node_type}']
-        if self.config.node_shapes and f'ast.{node_type}' in self.config.node_shapes:
-            style['shape'] = self.config.node_shapes[f'ast.{node_type}']
-            
+        if self.config.node_colors and f"ast.{node_type}" in self.config.node_colors:
+            style["fillcolor"] = self.config.node_colors[f"ast.{node_type}"]
+        if self.config.node_shapes and f"ast.{node_type}" in self.config.node_shapes:
+            style["shape"] = self.config.node_shapes[f"ast.{node_type}"]
+
         # Highlight node if configured
         if self.config.highlight_nodes and id(node) in self.config.highlight_nodes:
-            style['penwidth'] = '3.0'
-            style['color'] = 'red'
-            
+            style["penwidth"] = "3.0"
+            style["color"] = "red"
+
         return style
 
     def _get_edge_style(self, node: ast.AST) -> Dict[str, str]:
         """Get styling for an edge."""
         edge_type = node.__class__.__name__
-        style = {
-            'arrowhead': 'normal',
-            'color': '#666666'
-        }
-        
-        if self.config.edge_colors and f'ast.{edge_type}' in self.config.edge_colors:
-            style['color'] = self.config.edge_colors[f'ast.{edge_type}']
-            
+        style = {"arrowhead": "normal", "color": "#666666"}
+
+        if self.config.edge_colors and f"ast.{edge_type}" in self.config.edge_colors:
+            style["color"] = self.config.edge_colors[f"ast.{edge_type}"]
+
         return style
 
-    def _analyze_differences(self, tree1: ast.AST, tree2: ast.AST) -> Dict[str, Set[int]]:
+    def _analyze_differences(
+        self, tree1: ast.AST, tree2: ast.AST
+    ) -> Dict[str, Set[int]]:
         """Analyze differences between two ASTs."""
-        changes = {
-            'added': set(),
-            'removed': set(),
-            'modified': set()
-        }
-        
-        def compare_nodes(node1: Optional[ast.AST], 
-                         node2: Optional[ast.AST]) -> None:
+        changes = {"added": set(), "removed": set(), "modified": set()}
+
+        def compare_nodes(node1: Optional[ast.AST], node2: Optional[ast.AST]) -> None:
             if node1 is None and node2 is not None:
-                changes['added'].add(id(node2))
+                changes["added"].add(id(node2))
             elif node1 is not None and node2 is None:
-                changes['removed'].add(id(node1))
+                changes["removed"].add(id(node1))
             elif not self._nodes_equal(node1, node2):
-                changes['modified'].add(id(node1))
-                changes['modified'].add(id(node2))
-            
+                changes["modified"].add(id(node1))
+                changes["modified"].add(id(node2))
+
             # Compare children
             children1 = list(ast.iter_child_nodes(node1)) if node1 else []
             children2 = list(ast.iter_child_nodes(node2)) if node2 else []
-            
+
             for child1, child2 in zip_longest(children1, children2):
                 compare_nodes(child1, child2)
-        
+
         compare_nodes(tree1, tree2)
         return changes
 
@@ -276,8 +289,8 @@ class ASTVisualizer:
         </body>
         </html>
         """
-        
-        with open(f"{base_filename}.html", 'w') as f:
+
+        with open(f"{base_filename}.html", "w") as f:
             f.write(html_content)
 
     def _optimize_layout(self, dot: Digraph) -> None:
@@ -287,8 +300,11 @@ class ASTVisualizer:
             if len(children) > 1:
                 sorted_children = sorted(children)
                 for i in range(len(sorted_children) - 1):
-                    dot.edge(str(sorted_children[i]), str(sorted_children[i + 1]),
-                            style='invis')
+                    dot.edge(
+                        str(sorted_children[i]),
+                        str(sorted_children[i + 1]),
+                        style="invis",
+                    )
 
     def _nodes_equal(self, node1: ast.AST, node2: ast.AST) -> bool:
         """Check if two AST nodes are equal."""
@@ -302,6 +318,7 @@ class ASTVisualizer:
     def _ast_to_networkx(self, tree: ast.AST) -> nx.DiGraph:
         """Convert AST to networkx graph."""
         G = nx.DiGraph()
+
         def add_edges(node: ast.AST, parent: Optional[ast.AST] = None):
             node_id = id(node)
             G.add_node(node_id, label=self._create_node_label(node))
@@ -309,14 +326,15 @@ class ASTVisualizer:
                 G.add_edge(id(parent), node_id)
             for child in ast.iter_child_nodes(node):
                 add_edges(child, node)
+
         add_edges(tree)
         return G
 
     def _generate_d3_json(self, G: nx.DiGraph) -> str:
         """Generate JSON data for d3.js visualization."""
         data = {
-            'nodes': [{'id': n, 'label': G.nodes[n]['label']} for n in G.nodes],
-            'edges': [{'source': u, 'target': v} for u, v in G.edges]
+            "nodes": [{"id": n, "label": G.nodes[n]["label"]} for n in G.nodes],
+            "edges": [{"source": u, "target": v} for u, v in G.edges],
         }
         return json.dumps(data, indent=2)
 

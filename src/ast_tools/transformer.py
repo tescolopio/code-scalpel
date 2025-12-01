@@ -2,18 +2,20 @@ import ast
 from typing import Dict, List, Optional, Union, Callable
 import astor
 from dataclasses import dataclass
-from collections import defaultdict
+
 
 @dataclass
 class TransformationRule:
     """Defines a transformation rule."""
+
     pattern: Union[str, ast.AST]  # Code pattern to match
     replacement: Union[str, ast.AST]  # Replacement pattern
     condition: Optional[Callable] = None  # Optional condition for applying the rule
 
+
 class ASTTransformer(ast.NodeTransformer):
     """Advanced AST transformer with pattern matching and complex transformations."""
-    
+
     def __init__(self):
         super().__init__()
         self.var_mapping: Dict[str, str] = {}
@@ -26,9 +28,11 @@ class ASTTransformer(ast.NodeTransformer):
         """Add a new transformation rule."""
         self.transformation_rules.append(rule)
 
-    def rename_variable(self, old_name: str, new_name: str, scope: Optional[str] = None) -> None:
+    def rename_variable(
+        self, old_name: str, new_name: str, scope: Optional[str] = None
+    ) -> None:
         """Register a variable rename transformation."""
-        self.var_mapping[(old_name, scope if scope else '')] = new_name
+        self.var_mapping[(old_name, scope if scope else "")] = new_name
 
     def rename_function(self, old_name: str, new_name: str) -> None:
         """Register a function rename transformation."""
@@ -44,11 +48,12 @@ class ASTTransformer(ast.NodeTransformer):
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """Transform variable names with scope awareness."""
         current_scope = self._get_current_scope()
-        
+
         # Check scoped mapping first, then global mapping
-        new_name = self.var_mapping.get((node.id, current_scope)) or \
-                  self.var_mapping.get((node.id, ''))
-        
+        new_name = self.var_mapping.get(
+            (node.id, current_scope)
+        ) or self.var_mapping.get((node.id, ""))
+
         if new_name:
             self.modified = True
             return ast.Name(id=new_name, ctx=node.ctx)
@@ -64,7 +69,7 @@ class ASTTransformer(ast.NodeTransformer):
 
         # Transform function body
         node.body = [self.visit(stmt) for stmt in node.body]
-        
+
         # Transform decorators
         if node.decorator_list:
             node.decorator_list = [self.visit(d) for d in node.decorator_list]
@@ -78,22 +83,22 @@ class ASTTransformer(ast.NodeTransformer):
                 if not rule.condition or rule.condition(node):
                     self.modified = True
                     return self._apply_replacement(node, rule.replacement)
-        
+
         # Transform function name and arguments
         node.func = self.visit(node.func)
         node.args = [self.visit(arg) for arg in node.args]
         node.keywords = [self.visit(kw) for kw in node.keywords]
-        
+
         return node
 
-    def extract_method(self, node: ast.AST, 
-                      new_func_name: str,
-                      args: List[str] = None) -> Tuple[ast.FunctionDef, ast.Call]:
+    def extract_method(
+        self, node: ast.AST, new_func_name: str, args: List[str] = None
+    ) -> Tuple[ast.FunctionDef, ast.Call]:
         """Extract a code block into a new method."""
         # Analyze used variables
         used_vars = set()
         defined_vars = set()
-        
+
         class VarCollector(ast.NodeVisitor):
             def visit_Name(self, n):
                 if isinstance(n.ctx, ast.Load):
@@ -102,10 +107,10 @@ class ASTTransformer(ast.NodeTransformer):
                     defined_vars.add(n.id)
 
         VarCollector().visit(node)
-        
+
         # Determine parameters
         params = list(used_vars - defined_vars) if not args else args
-        
+
         # Create new function
         new_func = ast.FunctionDef(
             name=new_func_name,
@@ -114,19 +119,19 @@ class ASTTransformer(ast.NodeTransformer):
                 posonlyargs=[],
                 kwonlyargs=[],
                 kw_defaults=[],
-                defaults=[]
+                defaults=[],
             ),
             body=[node] if isinstance(node, ast.stmt) else [ast.Expr(node)],
-            decorator_list=[]
+            decorator_list=[],
         )
-        
+
         # Create function call
         call = ast.Call(
             func=ast.Name(id=new_func_name, ctx=ast.Load()),
             args=[ast.Name(id=p, ctx=ast.Load()) for p in params],
-            keywords=[]
+            keywords=[],
         )
-        
+
         return new_func, call
 
     def inline_variable(self, node: ast.Name) -> Optional[ast.AST]:
@@ -142,10 +147,10 @@ class ASTTransformer(ast.NodeTransformer):
         tree = ast.parse(code)
         self.modified = False
         transformed = self.visit(tree)
-        
+
         # Fix any AST inconsistencies
         ast.fix_missing_locations(transformed)
-        
+
         return astor.to_source(transformed)
 
     def _matches_pattern(self, node: ast.AST, pattern: Union[str, ast.AST]) -> bool:
@@ -154,7 +159,7 @@ class ASTTransformer(ast.NodeTransformer):
             pattern = ast.parse(pattern).body[0]
             if isinstance(pattern, ast.Expr):
                 pattern = pattern.value
-        
+
         # Compare AST structures
         return self._compare_nodes(node, pattern)
 
@@ -162,11 +167,11 @@ class ASTTransformer(ast.NodeTransformer):
         """Compare two AST nodes for structural equality."""
         if type(node1) != type(node2):
             return False
-            
+
         for field in node1._fields:
             val1 = getattr(node1, field)
             val2 = getattr(node2, field)
-            
+
             if isinstance(val1, list):
                 if not isinstance(val2, list) or len(val1) != len(val2):
                     return False
@@ -178,22 +183,23 @@ class ASTTransformer(ast.NodeTransformer):
                     return False
             elif val1 != val2:
                 return False
-                
+
         return True
 
-    def _apply_replacement(self, node: ast.AST, 
-                          replacement: Union[str, ast.AST]) -> ast.AST:
+    def _apply_replacement(
+        self, node: ast.AST, replacement: Union[str, ast.AST]
+    ) -> ast.AST:
         """Apply a replacement pattern."""
         if isinstance(replacement, str):
             replacement = ast.parse(replacement).body[0]
             if isinstance(replacement, ast.Expr):
                 replacement = replacement.value
-        
+
         # Copy relevant attributes from original node
-        for attr in ['lineno', 'col_offset']:
+        for attr in ["lineno", "col_offset"]:
             if hasattr(node, attr):
                 setattr(replacement, attr, getattr(node, attr))
-        
+
         return replacement
 
     def _get_current_scope(self) -> str:
@@ -201,4 +207,4 @@ class ASTTransformer(ast.NodeTransformer):
         for node in reversed(self.context):
             if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                 return node.name
-        return ''
+        return ""

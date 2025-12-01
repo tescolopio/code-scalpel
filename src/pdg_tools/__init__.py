@@ -1,24 +1,28 @@
 # src/pdg_tools/__init__.py
 
+from .builder import PDGBuilder, build_pdg, NodeType, Scope
 from .analyzer import (
-    find_data_dependencies,
-    find_control_dependencies,
-    find_all_paths,
-    calculate_cyclomatic_complexity,
-    # ... other analysis functions
+    PDGAnalyzer,
+    DependencyType,
+    DataFlowAnomaly,
+    SecurityVulnerability,
 )
-from .builder import build_pdg
-from .slicer import slice_pdg
-from .visualizer import visualize_pdg
-from .utils import  replace_node, insert_node, remove_node
+from .slicer import ProgramSlicer, SlicingCriteria, SliceType, SliceInfo
 
 __all__ = [
+    # Builder
+    "PDGBuilder",
     "build_pdg",
-    "visualize_pdg",
-    "slice_pdg",
-    "find_data_dependencies",
-    "find_control_dependencies",
-    "find_all_paths",
-    "calculate_cyclomatic_complexity",
-    # ... other public names
+    "NodeType",
+    "Scope",
+    # Analyzer
+    "PDGAnalyzer",
+    "DependencyType",
+    "DataFlowAnomaly",
+    "SecurityVulnerability",
+    # Slicer
+    "ProgramSlicer",
+    "SlicingCriteria",
+    "SliceType",
+    "SliceInfo",
 ]
