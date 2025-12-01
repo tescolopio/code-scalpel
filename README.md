@@ -197,7 +197,7 @@ To release `pip install code-scalpel==0.1.0a1`, the following must be completed:
 6. **PyPI Account** - Configure TestPyPI first, then production PyPI
 7. **Upload** - Use `twine upload` to publish
 
-See [ROADMAP.md](ROADMAP.md) Phase 3 for detailed steps.
+See the PyPI Alpha Release section in [ROADMAP.md](ROADMAP.md) for detailed steps.
 
 ### 💬 Community Discussion
 
