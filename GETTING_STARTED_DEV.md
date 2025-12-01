@@ -4,6 +4,24 @@
 
 ---
 
+## Project Scope
+
+> **⚠️ Important:** Code Scalpel is a **Python toolkit and MCP server** for AI agents—it is **NOT** a mobile application, web app, or GUI tool.
+
+**What Code Scalpel is:**
+- A Python library installable via pip
+- An MCP (Model Context Protocol) server for AI coding assistants
+- An integration layer for AI frameworks (Autogen, CrewAI, Langchain)
+- A code analysis engine (AST, PDG, Symbolic Execution)
+
+**Target Users:**
+- AI Coding Assistants (Cursor, Cline, Claude Desktop)
+- AI Agent Frameworks (Autogen, CrewAI, Langchain)
+- DevOps/CI/CD Pipelines
+- Developers building AI-powered tools
+
+---
+
 ## Overview
 
 Code Scalpel is transforming from a development prototype into a production-ready AI code analysis toolkit with Model Context Protocol (MCP) support. This guide helps you get started with contributing to this effort.
@@ -330,5 +348,5 @@ Code Scalpel is becoming a community project. Every contribution, no matter how 
 
 ---
 
-**Last Updated:** 2025-11-10
+**Last Updated:** 2025-12-01 (Phase 1 Scope Update)
 **Next Steps:** Start with Epic 1, Feature 1.1 - Fix Package Structure

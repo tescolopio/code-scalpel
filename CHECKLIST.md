@@ -2,6 +2,8 @@
 
 **Quick reference for tracking progress toward production readiness**
 
+> **Project Scope:** Code Scalpel is a **Python toolkit and MCP server** for AI agents and automation pipelines. It is NOT a mobile application, web app, or GUI tool. Target users are AI coding assistants (Cursor, Cline, Claude Desktop), AI agent frameworks (Autogen, CrewAI, Langchain), and DevOps pipelines.
+
 ---
 
 ## 🏗️ Phase 1: Foundation (Weeks 1-2)
@@ -326,10 +328,11 @@ Legend:
 - Update status weekly
 - Adjust priorities as needed
 - Link to relevant PRs/issues for each item
+- **Note (2025-12-01):** Code Scalpel is an AI toolkit/MCP server, NOT a mobile application
 
 ---
 
-**Last Updated:** 2025-11-10  
+**Last Updated:** 2025-12-01  
 **Current Phase:** Phase 1 - Foundation  
 **Next Milestone:** Package Works (Week 1)  
 **Overall Progress:** 0% → Target: 100% in 12 weeks
