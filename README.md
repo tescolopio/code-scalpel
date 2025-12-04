@@ -18,13 +18,13 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 ### 🔍 Deep Code Analysis
 - **AST Analysis**: Parse and analyze code structure with surgical precision
 - **Dependency Tracking**: Build and analyze Program Dependence Graphs
-- **Symbolic Execution**: Understand possible execution paths and constraints
 - **Dead Code Detection**: Identify and remove unused code segments
+- **Security Scanning**: Detect dangerous patterns (eval, exec, SQL injection)
 
 ### 🤖 AI Agent Integration
 - **Autogen Ready**: Seamless integration with Microsoft's Autogen framework
 - **CrewAI Compatible**: Create specialized code analysis crews
-- **Claude Optimized**: Structured for effective use with Anthropic's Claude
+- **MCP Server**: Model Context Protocol server for Claude Desktop, Cursor, Cline
 - **Extensible**: Easy to integrate with other AI agent frameworks
 
 ### 🛠️ Code Surgery Tools
@@ -33,6 +33,11 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 - **Security Analysis**: Detect potential vulnerabilities
 - **Refactoring**: Suggest and apply code improvements
 
+### 🧪 Experimental Features
+> **⚠️ The following features are under active development and not production-ready:**
+
+- **Symbolic Execution**: Path analysis and constraint solving (incomplete - see [ROADMAP.md](ROADMAP.md))
+
 ## **How We're Different** 🆚
 
 Code Scalpel builds upon the foundations of static analysis while adding powerful AI agent capabilities. Here's how we compare to [SMAT-Lab/Scalpel](https://github.com/SMAT-Lab/Scalpel):
@@ -40,10 +45,10 @@ Code Scalpel builds upon the foundations of static analysis while adding powerfu
 | Feature | **Code Scalpel** | **SMAT-Lab/Scalpel** |
 |---------|-----------------|---------------------|
 | **🤖 AI Agents** | ✅ **Yes** — Autogen, CrewAI, Langchain | ❌ No |
-| **🔌 MCP Server** | 🚧 Planned — Model Context Protocol | ❌ No |
-| **🔍 Symbolic Execution** | ✅ **Yes** — Z3-powered path analysis | ❌ No |
+| **🔌 MCP Server** | ✅ **Yes** — Model Context Protocol | ❌ No |
 | **📊 PDG Analysis** | ✅ **Yes** — Full data/control flow | ✅ Yes |
 | **🌳 AST Analysis** | ✅ **Yes** | ✅ Yes |
+| **🔍 Symbolic Execution** | 🧪 Experimental — Under development | ❌ No |
 | **📞 Call Graph** | 🚧 Planned | ✅ Yes |
 | **🔤 SSA Form** | 🚧 Planned | ✅ Yes |
 | **🎯 Target Users** | **AI Agents & Automation** | Research & Academia |
@@ -136,10 +141,14 @@ analyzer.visualize_pdg(pdg, "analysis.png")
 - Dead code detection
 
 ### Symbolic Execution
-- Path condition analysis
-- Constraint solving
-- Bug detection
-- Test case generation
+> **🧪 EXPERIMENTAL** - This feature is under active development.
+
+- Path condition analysis (incomplete)
+- Constraint solving (incomplete)
+- Bug detection (planned)
+- Test case generation (planned)
+
+See [ROADMAP.md](ROADMAP.md) for the implementation timeline.
 
 ## 🤝 Contributing
 

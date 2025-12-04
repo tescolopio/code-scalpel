@@ -492,7 +492,7 @@ class PDGTransformer:
         try:
             ast.literal_eval(str(value))
             return True
-        except:
+        except (ValueError, SyntaxError, TypeError):
             return False
 
     def _uses_constants(self, data: dict, constants: dict[str, Any]) -> bool:
