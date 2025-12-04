@@ -56,7 +56,8 @@ cover/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-*.ipynb
+# Allow notebooks in examples directory
+!examples/*.ipynb
 
 # IDEs and editors
 # PyCharm
