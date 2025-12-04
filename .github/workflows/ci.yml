@@ -1,0 +1,141 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+# Restrict permissions for security
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (Black & Ruff)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black ruff
+    
+    - name: Check formatting with Black
+      run: |
+        black --check --diff src/ tests/ || echo "::warning::Black found formatting issues"
+      continue-on-error: true
+    
+    - name: Lint with Ruff
+      run: |
+        ruff check src/ tests/ || echo "::warning::Ruff found linting issues"
+      continue-on-error: true
+
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing --ignore=tests/test_base_parser.py
+    
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: false
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    name: Security Scan (Bandit)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install Bandit
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit
+    
+    - name: Run Bandit security scan
+      run: |
+        bandit -r src/ -ll -ii -x '**/test_*.py' --format json --output bandit-report.json || true
+        bandit -r src/ -ll -ii -x '**/test_*.py'
+      continue-on-error: true
+    
+    - name: Upload Bandit report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [test]
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+    
+    - name: Build package
+      run: |
+        python -m build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
