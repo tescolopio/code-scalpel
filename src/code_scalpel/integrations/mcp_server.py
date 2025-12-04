@@ -16,7 +16,8 @@ from flask import Flask, Response, jsonify, request
 class MCPServerConfig:
     """Configuration for the MCP server."""
 
-    host: str = "0.0.0.0"
+    # SECURITY: Default to localhost only. Use --host 0.0.0.0 explicitly for network access.
+    host: str = "127.0.0.1"
     port: int = 8080
     debug: bool = False
     cache_enabled: bool = True
@@ -337,7 +338,7 @@ def _elapsed_ms(start_time: float) -> float:
     return (time.time() - start_time) * 1000
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8080, debug: bool = False) -> None:
+def run_server(host: str = "127.0.0.1", port: int = 8080, debug: bool = False) -> None:
     """
     Run the MCP server.
 
