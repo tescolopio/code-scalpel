@@ -10,7 +10,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 # Import directly from the module to avoid __init__.py import issues
-from pdg_tools import builder as pdg_builder_module
+from code_scalpel.pdg_tools import builder as pdg_builder_module
 
 PDGBuilder = pdg_builder_module.PDGBuilder
 build_pdg = pdg_builder_module.build_pdg

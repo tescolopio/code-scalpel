@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 # Import directly from the module to avoid __init__.py import issues
-from pdg_tools import analyzer as pdg_analyzer_module
+from code_scalpel.pdg_tools import analyzer as pdg_analyzer_module
 
 PDGAnalyzer = pdg_analyzer_module.PDGAnalyzer
 DependencyType = pdg_analyzer_module.DependencyType

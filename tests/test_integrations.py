@@ -10,8 +10,8 @@ import asyncio
 # Add src directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from integrations import AutogenScalpel, CrewAIScalpel, AnalysisResult, RefactorResult
-from integrations.mcp_server import create_app
+from code_scalpel.integrations import AutogenScalpel, CrewAIScalpel, AnalysisResult, RefactorResult
+from code_scalpel.integrations.mcp_server import create_app
 
 
 class TestAutogenScalpel(unittest.TestCase):

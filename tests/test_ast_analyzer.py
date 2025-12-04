@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 # Import directly from the module to avoid __init__.py import issues
-from ast_tools import analyzer as ast_analyzer_module
+from code_scalpel.ast_tools import analyzer as ast_analyzer_module
 
 ASTAnalyzer = ast_analyzer_module.ASTAnalyzer
 FunctionMetrics = ast_analyzer_module.FunctionMetrics
