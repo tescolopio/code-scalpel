@@ -1,13 +1,13 @@
 # src/pdg_tools/__init__.py
 
-from .builder import PDGBuilder, build_pdg, NodeType, Scope
 from .analyzer import (
-    PDGAnalyzer,
-    DependencyType,
     DataFlowAnomaly,
+    DependencyType,
+    PDGAnalyzer,
     SecurityVulnerability,
 )
-from .slicer import ProgramSlicer, SlicingCriteria, SliceType, SliceInfo
+from .builder import NodeType, PDGBuilder, Scope, build_pdg
+from .slicer import ProgramSlicer, SliceInfo, SliceType, SlicingCriteria
 
 __all__ = [
     # Builder

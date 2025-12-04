@@ -1,8 +1,9 @@
-import networkx as nx
-from typing import Dict, Set, Optional, Union
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from collections import defaultdict
+from typing import Optional, Union
+
+import networkx as nx
 
 
 class SliceType(Enum):
@@ -21,10 +22,10 @@ class SliceType(Enum):
 class SlicingCriteria:
     """Criteria for program slicing."""
 
-    nodes: Set[str]
-    variables: Set[str]
+    nodes: set[str]
+    variables: set[str]
     line_range: Optional[tuple[int, int]] = None
-    dependency_types: Set[str] = None
+    dependency_types: set[str] = None
     include_control: bool = True
     include_data: bool = True
 
@@ -33,9 +34,9 @@ class SlicingCriteria:
 class SliceInfo:
     """Information about a program slice."""
 
-    nodes: Set[str]
-    edges: Set[tuple[str, str]]
-    variables: Set[str]
+    nodes: set[str]
+    edges: set[tuple[str, str]]
+    variables: set[str]
     line_range: tuple[int, int]
     size: int
     complexity: int
@@ -119,7 +120,7 @@ class ProgramSlicer:
         variables = set()
         line_numbers = []
 
-        for node, data in sliced_pdg.nodes(data=True):
+        for _node, data in sliced_pdg.nodes(data=True):
             if "defines" in data:
                 variables.update(data["defines"])
             if "uses" in data:
@@ -154,7 +155,7 @@ class ProgramSlicer:
         chop_nodes = set(forward_slice.nodes()) & set(backward_slice.nodes())
         return self._induce_subgraph(chop_nodes)
 
-    def decompose_slice(self, criteria: SlicingCriteria) -> Dict[str, nx.DiGraph]:
+    def decompose_slice(self, criteria: SlicingCriteria) -> dict[str, nx.DiGraph]:
         """
         Decompose a slice into meaningful components.
 
@@ -264,7 +265,7 @@ class ProgramSlicer:
 
         return self._induce_subgraph(combined_nodes)
 
-    def _get_data_dependencies(self, node: str) -> Set[str]:
+    def _get_data_dependencies(self, node: str) -> set[str]:
         """Get all nodes that the given node data-depends on."""
         deps = set()
         for pred, _, data in self.pdg.in_edges(node, data=True):
@@ -272,7 +273,7 @@ class ProgramSlicer:
                 deps.add(pred)
         return deps
 
-    def _get_control_dependencies(self, node: str) -> Set[str]:
+    def _get_control_dependencies(self, node: str) -> set[str]:
         """Get all nodes that the given node control-depends on."""
         deps = set()
         for pred, _, data in self.pdg.in_edges(node, data=True):
@@ -280,7 +281,7 @@ class ProgramSlicer:
                 deps.add(pred)
         return deps
 
-    def _get_data_dependents(self, node: str) -> Set[str]:
+    def _get_data_dependents(self, node: str) -> set[str]:
         """Get all nodes that data-depend on the given node."""
         deps = set()
         for _, succ, data in self.pdg.out_edges(node, data=True):
@@ -288,7 +289,7 @@ class ProgramSlicer:
                 deps.add(succ)
         return deps
 
-    def _get_control_dependents(self, node: str) -> Set[str]:
+    def _get_control_dependents(self, node: str) -> set[str]:
         """Get all nodes that control-depend on the given node."""
         deps = set()
         for _, succ, data in self.pdg.out_edges(node, data=True):
@@ -296,7 +297,7 @@ class ProgramSlicer:
                 deps.add(succ)
         return deps
 
-    def _get_direct_data_dependencies(self, node: str) -> Set[str]:
+    def _get_direct_data_dependencies(self, node: str) -> set[str]:
         """Get only direct data dependencies (no transitive closure)."""
         return {
             pred
@@ -307,14 +308,14 @@ class ProgramSlicer:
     def _calculate_slice_complexity(self, sliced_pdg: nx.DiGraph) -> int:
         """Calculate complexity of a slice."""
         complexity = 0
-        for node, data in sliced_pdg.nodes(data=True):
+        for _node, data in sliced_pdg.nodes(data=True):
             if data.get("type") in ("if", "while", "for"):
                 complexity += 1
             elif data.get("type") == "call":
                 complexity += 2
         return complexity
 
-    def _induce_subgraph(self, nodes: Set[str]) -> nx.DiGraph:
+    def _induce_subgraph(self, nodes: set[str]) -> nx.DiGraph:
         """Create a subgraph from the given nodes, preserving edge attributes."""
         return self.pdg.subgraph(nodes).copy()
 

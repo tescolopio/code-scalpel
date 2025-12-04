@@ -1,7 +1,8 @@
 # src/util_tools/string_utils.py
 
 import re
-from typing import List, Tuple, Optional
+from typing import Optional
+
 
 def clean_code(code: str) -> str:
     """
@@ -21,6 +22,7 @@ def clean_code(code: str) -> str:
     code = " ".join(code.split())
     return code
 
+
 def extract_function_signature(code: str) -> str:
     """
     Extracts the function signature from a Python function definition.
@@ -37,7 +39,8 @@ def extract_function_signature(code: str) -> str:
     else:
         return ""
 
-def split_string(s: str, delimiter: str) -> List[str]:
+
+def split_string(s: str, delimiter: str) -> list[str]:
     """
     Splits a string based on a delimiter.
 
@@ -50,7 +53,8 @@ def split_string(s: str, delimiter: str) -> List[str]:
     """
     return s.split(delimiter)
 
-def join_strings(strings: List[str], delimiter: str) -> str:
+
+def join_strings(strings: list[str], delimiter: str) -> str:
     """
     Joins a list of strings with a delimiter.
 
@@ -62,6 +66,7 @@ def join_strings(strings: List[str], delimiter: str) -> str:
       str: The joined string.
     """
     return delimiter.join(strings)
+
 
 def convert_case(s: str, to_upper: bool = True) -> str:
     """
@@ -75,6 +80,7 @@ def convert_case(s: str, to_upper: bool = True) -> str:
       str: The converted string.
     """
     return s.upper() if to_upper else s.lower()
+
 
 def replace_substring(s: str, old: str, new: str) -> str:
     """
@@ -90,6 +96,7 @@ def replace_substring(s: str, old: str, new: str) -> str:
     """
     return s.replace(old, new)
 
+
 def trim_whitespace(s: str) -> str:
     """
     Trims leading and trailing whitespace from a string.
@@ -101,6 +108,7 @@ def trim_whitespace(s: str) -> str:
       str: The trimmed string.
     """
     return s.strip()
+
 
 def search_pattern(s: str, pattern: str) -> Optional[re.Match]:
     """
@@ -115,7 +123,8 @@ def search_pattern(s: str, pattern: str) -> Optional[re.Match]:
     """
     return re.search(pattern, s)
 
-def extract_matching_groups(s: str, pattern: str) -> List[Tuple[str]]:
+
+def extract_matching_groups(s: str, pattern: str) -> list[tuple[str]]:
     """
     Extracts matching groups from a string based on a pattern.
 
@@ -127,6 +136,7 @@ def extract_matching_groups(s: str, pattern: str) -> List[Tuple[str]]:
       List[Tuple[str]]: The list of matching groups.
     """
     return re.findall(pattern, s)
+
 
 def replace_pattern(s: str, pattern: str, replacement: str) -> str:
     """
@@ -142,6 +152,7 @@ def replace_pattern(s: str, pattern: str, replacement: str) -> str:
     """
     return re.sub(pattern, replacement, s)
 
+
 def format_code_snippet(code: str, indent: int = 4) -> str:
     """
     Formats a code snippet with consistent indentation.
@@ -153,9 +164,10 @@ def format_code_snippet(code: str, indent: int = 4) -> str:
     Returns:
       str: The formatted code snippet.
     """
-    lines = code.split('\n')
+    lines = code.split("\n")
     formatted_lines = [line.strip() for line in lines]
-    return '\n'.join(' ' * indent + line for line in formatted_lines)
+    return "\n".join(" " * indent + line for line in formatted_lines)
+
 
 def wrap_lines(s: str, width: int) -> str:
     """
@@ -168,7 +180,8 @@ def wrap_lines(s: str, width: int) -> str:
     Returns:
       str: The wrapped string.
     """
-    return '\n'.join([s[i:i+width] for i in range(0, len(s), width)])
+    return "\n".join([s[i : i + width] for i in range(0, len(s), width)])
+
 
 def validate_identifier(identifier: str) -> bool:
     """
@@ -182,7 +195,8 @@ def validate_identifier(identifier: str) -> bool:
     """
     return identifier.isidentifier()
 
-def extract_keywords(code: str) -> List[str]:
+
+def extract_keywords(code: str) -> list[str]:
     """
     Extracts Python keywords from code.
 
@@ -192,10 +206,41 @@ def extract_keywords(code: str) -> List[str]:
     Returns:
       List[str]: The list of extracted keywords.
     """
-    keywords = set([
-        'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break',
-        'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally',
-        'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal',
-        'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield'
-    ])
+    keywords = {
+        "False",
+        "None",
+        "True",
+        "and",
+        "as",
+        "assert",
+        "async",
+        "await",
+        "break",
+        "class",
+        "continue",
+        "def",
+        "del",
+        "elif",
+        "else",
+        "except",
+        "finally",
+        "for",
+        "from",
+        "global",
+        "if",
+        "import",
+        "in",
+        "is",
+        "lambda",
+        "nonlocal",
+        "not",
+        "or",
+        "pass",
+        "raise",
+        "return",
+        "try",
+        "while",
+        "with",
+        "yield",
+    }
     return [word for word in code.split() if word in keywords]

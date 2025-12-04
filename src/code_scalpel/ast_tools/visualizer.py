@@ -1,13 +1,14 @@
 import ast
-import logging
-from typing import Dict, Optional, Set
-from graphviz import Digraph
-import networkx as nx
-from dataclasses import dataclass
-import json
 import html
-from itertools import zip_longest
+import json
+import logging
 from collections import defaultdict
+from dataclasses import dataclass
+from itertools import zip_longest
+from typing import Optional
+
+import networkx as nx
+from graphviz import Digraph
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +17,10 @@ logger = logging.getLogger(__name__)
 class VisualizationConfig:
     """Configuration for AST visualization."""
 
-    node_colors: Dict[str, str] = None
-    edge_colors: Dict[str, str] = None
-    node_shapes: Dict[str, str] = None
-    highlight_nodes: Set[int] = None
+    node_colors: dict[str, str] = None
+    edge_colors: dict[str, str] = None
+    node_shapes: dict[str, str] = None
+    highlight_nodes: set[int] = None
     show_attributes: bool = True
     show_line_numbers: bool = True
     show_source_code: bool = True
@@ -159,7 +160,7 @@ class ASTVisualizer:
         # Process child nodes
         for field, value in ast.iter_fields(node):
             if isinstance(value, list):
-                for idx, item in enumerate(value):
+                for _idx, item in enumerate(value):
                     if isinstance(item, ast.AST):
                         self._build_visualization(
                             item,
@@ -205,7 +206,7 @@ class ASTVisualizer:
 
         return "\n".join(label_parts)
 
-    def _get_node_style(self, node: ast.AST) -> Dict[str, str]:
+    def _get_node_style(self, node: ast.AST) -> dict[str, str]:
         """Get styling for a node."""
         node_type = node.__class__.__name__
         style = {
@@ -227,7 +228,7 @@ class ASTVisualizer:
 
         return style
 
-    def _get_edge_style(self, node: ast.AST) -> Dict[str, str]:
+    def _get_edge_style(self, node: ast.AST) -> dict[str, str]:
         """Get styling for an edge."""
         edge_type = node.__class__.__name__
         style = {"arrowhead": "normal", "color": "#666666"}
@@ -239,7 +240,7 @@ class ASTVisualizer:
 
     def _analyze_differences(
         self, tree1: ast.AST, tree2: ast.AST
-    ) -> Dict[str, Set[int]]:
+    ) -> dict[str, set[int]]:
         """Analyze differences between two ASTs."""
         changes = {"added": set(), "removed": set(), "modified": set()}
 
@@ -296,7 +297,7 @@ class ASTVisualizer:
     def _optimize_layout(self, dot: Digraph) -> None:
         """Optimize the graph layout."""
         # Add invisible edges for better layout
-        for parent, children in self.node_relationships.items():
+        for _parent, children in self.node_relationships.items():
             if len(children) > 1:
                 sorted_children = sorted(children)
                 for i in range(len(sorted_children) - 1):

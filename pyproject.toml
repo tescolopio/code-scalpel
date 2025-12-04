@@ -54,8 +54,8 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
+    "black>=24.0.0",
+    "ruff>=0.4.0",
     "mypy>=1.0.0",
     "build>=1.0.0",
     "twine>=4.0.0",
@@ -88,6 +88,49 @@ include = [
     "/LICENSE",
 ]
 
+# ============================================================================
+# CODE QUALITY ENFORCEMENT
+# ============================================================================
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "venv",
+]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+ignore = [
+    "E721",
+    "E722",
+    "E501",
+    "B008",
+    "B904",
+    "B019",
+    "B007",
+    "B012",
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"examples/*" = ["E402", "F401"]
+"tests/*" = ["S101"]
+
+# ============================================================================
+# TESTING CONFIGURATION
+# ============================================================================
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
@@ -96,26 +139,15 @@ addopts = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["src/code_scalpel"]
-omit = ["*/tests/*", "*/__pycache__/*"]
+branch = true
 
 [tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-]
+fail_under = 24
+show_missing = true
 
-[tool.black]
-line-length = 100
-target-version = ["py39", "py310", "py311", "py312"]
-include = '\.pyi?$'
-
-[tool.ruff]
-line-length = 100
-target-version = "py39"
-select = ["E", "F", "W", "I", "UP", "B", "C4"]
-ignore = ["E501"]
+# ============================================================================
+# TYPE CHECKING
+# ============================================================================
 
 [tool.mypy]
 python_version = "3.9"

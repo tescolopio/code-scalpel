@@ -1,20 +1,21 @@
 """Integration tests for agent flows and error handling."""
 
-import pytest
 import ast
-import networkx as nx
-import sys
 import os
+import sys
 from unittest.mock import Mock, patch
+
+import networkx as nx
+import pytest
 
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 # Import directly from modules to avoid __init__.py import issues
-from code_scalpel.pdg_tools import builder as pdg_builder_module
-from code_scalpel.pdg_tools import analyzer as pdg_analyzer_module
-from code_scalpel.pdg_tools import slicer as slicer_module
 from code_scalpel.ast_tools import analyzer as ast_analyzer_module
+from code_scalpel.pdg_tools import analyzer as pdg_analyzer_module
+from code_scalpel.pdg_tools import builder as pdg_builder_module
+from code_scalpel.pdg_tools import slicer as slicer_module
 
 PDGBuilder = pdg_builder_module.PDGBuilder
 build_pdg = pdg_builder_module.build_pdg

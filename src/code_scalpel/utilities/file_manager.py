@@ -2,7 +2,8 @@
 
 import os
 import shutil
-from typing import List, Dict, Any
+from typing import Any
+
 
 def read_file(filepath: str) -> str:
     """
@@ -15,10 +16,11 @@ def read_file(filepath: str) -> str:
       str: The contents of the file.
     """
     try:
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             return f.read()
     except FileNotFoundError:
         raise FileNotFoundError(f"File not found: {filepath}")
+
 
 def write_file(filepath: str, content: str):
     """
@@ -34,6 +36,7 @@ def write_file(filepath: str, content: str):
     except OSError as e:
         raise OSError(f"Error writing to file {filepath}: {e}")
 
+
 def create_directory(directory: str):
     """
     Creates a directory if it doesn't exist.
@@ -45,6 +48,7 @@ def create_directory(directory: str):
         os.makedirs(directory, exist_ok=True)
     except OSError as e:
         raise OSError(f"Error creating directory {directory}: {e}")
+
 
 def delete_file(filepath: str):
     """
@@ -60,6 +64,7 @@ def delete_file(filepath: str):
     except OSError as e:
         raise OSError(f"Error deleting file {filepath}: {e}")
 
+
 def delete_directory(directory: str):
     """
     Deletes a directory and its contents.
@@ -73,6 +78,7 @@ def delete_directory(directory: str):
         raise FileNotFoundError(f"Directory not found: {directory}")
     except OSError as e:
         raise OSError(f"Error deleting directory {directory}: {e}")
+
 
 def copy_file(src: str, dst: str):
     """
@@ -89,6 +95,7 @@ def copy_file(src: str, dst: str):
     except OSError as e:
         raise OSError(f"Error copying file from {src} to {dst}: {e}")
 
+
 def move_file(src: str, dst: str):
     """
     Moves a file from src to dst.
@@ -104,7 +111,8 @@ def move_file(src: str, dst: str):
     except OSError as e:
         raise OSError(f"Error moving file from {src} to {dst}: {e}")
 
-def list_files(directory: str) -> List[str]:
+
+def list_files(directory: str) -> list[str]:
     """
     Lists all files in a directory.
 
@@ -115,13 +123,18 @@ def list_files(directory: str) -> List[str]:
       List[str]: A list of file paths.
     """
     try:
-        return [os.path.join(directory, f) for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+        return [
+            os.path.join(directory, f)
+            for f in os.listdir(directory)
+            if os.path.isfile(os.path.join(directory, f))
+        ]
     except FileNotFoundError:
         raise FileNotFoundError(f"Directory not found: {directory}")
     except OSError as e:
         raise OSError(f"Error listing files in directory {directory}: {e}")
 
-def list_directories(directory: str) -> List[str]:
+
+def list_directories(directory: str) -> list[str]:
     """
     Lists all directories in a directory.
 
@@ -132,13 +145,18 @@ def list_directories(directory: str) -> List[str]:
       List[str]: A list of directory paths.
     """
     try:
-        return [os.path.join(directory, d) for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
+        return [
+            os.path.join(directory, d)
+            for d in os.listdir(directory)
+            if os.path.isdir(os.path.join(directory, d))
+        ]
     except FileNotFoundError:
         raise FileNotFoundError(f"Directory not found: {directory}")
     except OSError as e:
         raise OSError(f"Error listing directories in directory {directory}: {e}")
 
-def get_file_metadata(filepath: str) -> Dict[str, Any]:
+
+def get_file_metadata(filepath: str) -> dict[str, Any]:
     """
     Gets metadata for a file.
 
@@ -151,14 +169,15 @@ def get_file_metadata(filepath: str) -> Dict[str, Any]:
     try:
         stat = os.stat(filepath)
         return {
-            'size': stat.st_size,
-            'modified_time': stat.st_mtime,
-            'created_time': stat.st_ctime
+            "size": stat.st_size,
+            "modified_time": stat.st_mtime,
+            "created_time": stat.st_ctime,
         }
     except FileNotFoundError:
         raise FileNotFoundError(f"File not found: {filepath}")
     except OSError as e:
         raise OSError(f"Error getting metadata for file {filepath}: {e}")
+
 
 def join_paths(*paths: str) -> str:
     """
@@ -172,7 +191,8 @@ def join_paths(*paths: str) -> str:
     """
     return os.path.join(*paths)
 
-def split_path(path: str) -> List[str]:
+
+def split_path(path: str) -> list[str]:
     """
     Splits a path into its components.
 
@@ -183,6 +203,7 @@ def split_path(path: str) -> List[str]:
       List[str]: A list of path components.
     """
     return path.split(os.sep)
+
 
 def normalize_path(path: str) -> str:
     """
@@ -196,6 +217,7 @@ def normalize_path(path: str) -> str:
     """
     return os.path.normpath(path)
 
+
 def is_valid_path(path: str) -> bool:
     """
     Checks if a path is valid.
@@ -208,12 +230,13 @@ def is_valid_path(path: str) -> bool:
     """
     return os.path.exists(path)
 
+
 # ------------------------------------------------------------------------------
 # Further Expansion Ideas:
 # ------------------------------------------------------------------------------
 
 # 1. File System Monitoring:
-#   - Add functions to monitor file system changes (e.g., file creation, 
+#   - Add functions to monitor file system changes (e.g., file creation,
 #     modification, deletion).
 
 # ------------------------------------------------------------------------------

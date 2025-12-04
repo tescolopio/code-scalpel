@@ -1,9 +1,10 @@
 import ast
 import logging
-from typing import Dict, List, Optional, Tuple, Any, Set
-from dataclasses import dataclass
-import astor
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Optional
+
+import astor
 
 logger = logging.getLogger(__name__)
 
@@ -13,13 +14,13 @@ class FunctionMetrics:
     """Metrics for a function."""
 
     name: str
-    args: List[str]
-    kwargs: List[Tuple[str, Optional[str]]]  # (arg_name, default_value)
+    args: list[str]
+    kwargs: list[tuple[str, Optional[str]]]  # (arg_name, default_value)
     return_type: Optional[str]
     complexity: int
     line_count: int
-    calls_made: List[str]
-    variables_used: Set[str]
+    calls_made: list[str]
+    variables_used: set[str]
 
 
 @dataclass
@@ -27,11 +28,11 @@ class ClassMetrics:
     """Metrics for a class."""
 
     name: str
-    bases: List[str]
-    methods: List[str]
-    attributes: Dict[str, Optional[str]]  # attribute_name -> type_hint
-    instance_vars: Set[str]
-    class_vars: Set[str]
+    bases: list[str]
+    methods: list[str]
+    attributes: dict[str, Optional[str]]  # attribute_name -> type_hint
+    instance_vars: set[str]
+    class_vars: set[str]
 
 
 class ASTAnalyzer:
@@ -40,9 +41,9 @@ class ASTAnalyzer:
     """
 
     def __init__(self, cache_enabled: bool = True):
-        self.ast_cache: Dict[str, ast.AST] = {}
+        self.ast_cache: dict[str, ast.AST] = {}
         self.cache_enabled = cache_enabled
-        self.current_context: List[str] = []  # Track current function/class context
+        self.current_context: list[str] = []  # Track current function/class context
 
     def parse_to_ast(self, code: str) -> ast.AST:
         """Parse Python code into an AST with caching."""
@@ -146,7 +147,7 @@ class ASTAnalyzer:
             class_vars=class_vars,
         )
 
-    def analyze_code_style(self, tree: ast.AST) -> Dict[str, Any]:
+    def analyze_code_style(self, tree: ast.AST) -> dict[str, Any]:
         """Analyze code style and potential issues."""
         issues = defaultdict(list)
 
@@ -166,7 +167,7 @@ class ASTAnalyzer:
 
         return dict(issues)
 
-    def find_security_issues(self, tree: ast.AST) -> List[Dict[str, Any]]:
+    def find_security_issues(self, tree: ast.AST) -> list[dict[str, Any]]:
         """Identify potential security issues in the code."""
         issues = []
 
@@ -215,7 +216,7 @@ class ASTAnalyzer:
         """Count the number of lines in a node."""
         return node.end_lineno - node.lineno + 1 if hasattr(node, "end_lineno") else 1
 
-    def _extract_function_calls(self, node: ast.AST) -> List[str]:
+    def _extract_function_calls(self, node: ast.AST) -> list[str]:
         """Extract all function calls within a node."""
         calls = []
         for child in ast.walk(node):
@@ -228,7 +229,7 @@ class ASTAnalyzer:
                     )
         return calls
 
-    def _extract_variables(self, node: ast.AST) -> Set[str]:
+    def _extract_variables(self, node: ast.AST) -> set[str]:
         """Extract all variables used within a node."""
         variables = set()
         for child in ast.walk(node):
@@ -236,7 +237,7 @@ class ASTAnalyzer:
                 variables.add(child.id)
         return variables
 
-    def _extract_instance_vars(self, init_method: ast.FunctionDef) -> Set[str]:
+    def _extract_instance_vars(self, init_method: ast.FunctionDef) -> set[str]:
         """Extract instance variables from __init__ method."""
         instance_vars = set()
         for node in ast.walk(init_method):
@@ -275,7 +276,7 @@ class ASTAnalyzer:
                     f"Function '{node.name}' should use lowercase_with_underscores"
                 )
 
-    def _check_sql_injection(self, tree: ast.AST, issues: List[Dict[str, Any]]) -> None:
+    def _check_sql_injection(self, tree: ast.AST, issues: list[dict[str, Any]]) -> None:
         """Check for potential SQL injection vulnerabilities."""
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):

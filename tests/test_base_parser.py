@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 import unittest
 
 # Add the src directory to the Python path
@@ -14,7 +14,6 @@ from code_scalpel.code_parser.base_parser import (
 
 
 class TestCodeParser(unittest.TestCase):
-
     def setUp(self):
         self.parser = CodeParser()
 

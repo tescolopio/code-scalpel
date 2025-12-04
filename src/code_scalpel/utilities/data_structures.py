@@ -1,61 +1,72 @@
-from typing import Dict, List, Set, Optional, Union, Any, TypeVar, Generic, Iterator, Callable
-from dataclasses import dataclass, field
-from enum import Enum
 import heapq
 from collections import defaultdict, deque
-import weakref
-from abc import ABC, abstractmethod
-import json
-from functools import total_ordering
+from collections.abc import Iterator
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Optional,
+    Tuple,
+    TypeVar,
+)
 
-T = TypeVar('T')
-K = TypeVar('K')
-V = TypeVar('V')
+T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
+
 
 @dataclass
 class Position:
     """Source code position information."""
+
     line: int
     column: int
     end_line: Optional[int] = None
     end_column: Optional[int] = None
 
+
 class SymbolType(Enum):
     """Types of symbols in code."""
-    VARIABLE = 'variable'
-    FUNCTION = 'function'
-    CLASS = 'class'
-    MODULE = 'module'
-    PARAMETER = 'parameter'
-    IMPORT = 'import'
+
+    VARIABLE = "variable"
+    FUNCTION = "function"
+    CLASS = "class"
+    MODULE = "module"
+    PARAMETER = "parameter"
+    IMPORT = "import"
+
 
 @dataclass
 class Symbol:
     """Symbol table entry."""
+
     name: str
     type: SymbolType
     position: Position
     scope: str
-    attributes: Dict[str, Any] = field(default_factory=dict)
-    references: List[Position] = field(default_factory=list)
+    attributes: dict[str, Any] = field(default_factory=dict)
+    references: list[Position] = field(default_factory=list)
+
 
 class TreeNode(Generic[T]):
     """Enhanced tree node with traversal and search capabilities."""
-    
+
     def __init__(self, data: T):
         self.data = data
-        self.children: List[TreeNode[T]] = []
+        self.children: list[TreeNode[T]] = []
         self.parent: Optional[TreeNode[T]] = None
         self._depth: Optional[int] = None
         self._height: Optional[int] = None
 
-    def add_child(self, child: 'TreeNode[T]'):
+    def add_child(self, child: "TreeNode[T]"):
         """Add child node with parent reference."""
         child.parent = self
         self.children.append(child)
         self._invalidate_cache()
 
-    def remove_child(self, child: 'TreeNode[T]'):
+    def remove_child(self, child: "TreeNode[T]"):
         """Remove child node."""
         if child in self.children:
             child.parent = None
@@ -82,7 +93,7 @@ class TreeNode(Generic[T]):
             yield node.data
             queue.extend(node.children)
 
-    def find(self, predicate: Callable[[T], bool]) -> Optional['TreeNode[T]']:
+    def find(self, predicate: Callable[[T], bool]) -> Optional["TreeNode[T]"]:
         """Find first node matching predicate."""
         if predicate(self.data):
             return self
@@ -91,7 +102,7 @@ class TreeNode(Generic[T]):
                 return result
         return None
 
-    def find_all(self, predicate: Callable[[T], bool]) -> Iterator['TreeNode[T]']:
+    def find_all(self, predicate: Callable[[T], bool]) -> Iterator["TreeNode[T]"]:
         """Find all nodes matching predicate."""
         if predicate(self.data):
             yield self
@@ -109,7 +120,9 @@ class TreeNode(Generic[T]):
     def height(self) -> int:
         """Get node height (length of longest path to leaf)."""
         if self._height is None:
-            self._height = max((child.height for child in self.children), default=-1) + 1
+            self._height = (
+                max((child.height for child in self.children), default=-1) + 1
+            )
         return self._height
 
     def _invalidate_cache(self):
@@ -119,14 +132,15 @@ class TreeNode(Generic[T]):
         if self.parent:
             self.parent._invalidate_cache()
 
+
 class Graph(Generic[T]):
     """Enhanced graph with advanced algorithms."""
-    
+
     def __init__(self, directed: bool = False):
         self.directed = directed
-        self.nodes: Dict[T, Set[T]] = defaultdict(set)
-        self.node_data: Dict[T, Any] = {}
-        self.edge_data: Dict[Tuple[T, T], Any] = {}
+        self.nodes: dict[T, set[T]] = defaultdict(set)
+        self.node_data: dict[T, Any] = {}
+        self.edge_data: dict[Tuple[T, T], Any] = {}
 
     def add_node(self, node: T, data: Any = None):
         """Add node with optional data."""
@@ -162,7 +176,7 @@ class Graph(Generic[T]):
             if node in self.node_data:
                 del self.node_data[node]
 
-    def get_neighbors(self, node: T) -> Set[T]:
+    def get_neighbors(self, node: T) -> set[T]:
         """Get neighboring nodes."""
         return self.nodes.get(node, set())
 
@@ -181,22 +195,24 @@ class Graph(Generic[T]):
     def dfs(self, start: T) -> Iterator[T]:
         """Depth-first search traversal."""
         visited = set()
+
         def _dfs(node: T):
             visited.add(node)
             yield node
             for neighbor in self.nodes[node]:
                 if neighbor not in visited:
                     yield from _dfs(neighbor)
+
         yield from _dfs(start)
 
-    def shortest_path(self, start: T, end: T) -> Optional[List[T]]:
+    def shortest_path(self, start: T, end: T) -> Optional[list[T]]:
         """Find shortest path between nodes."""
         if start not in self.nodes or end not in self.nodes:
             return None
-            
+
         visited = {start}
         queue = deque([(start, [start])])
-        
+
         while queue:
             node, path = queue.popleft()
             if node == end:
@@ -207,19 +223,19 @@ class Graph(Generic[T]):
                     queue.append((neighbor, path + [neighbor]))
         return None
 
-    def topological_sort(self) -> Optional[List[T]]:
+    def topological_sort(self) -> Optional[list[T]]:
         """Topological sort (for directed acyclic graphs)."""
         if not self.directed:
             return None
-            
+
         in_degree = defaultdict(int)
         for node in self.nodes:
             for neighbor in self.nodes[node]:
                 in_degree[neighbor] += 1
-                
+
         queue = deque([node for node in self.nodes if in_degree[node] == 0])
         result = []
-        
+
         while queue:
             node = queue.popleft()
             result.append(node)
@@ -227,17 +243,18 @@ class Graph(Generic[T]):
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
-                    
+
         if len(result) != len(self.nodes):
             return None  # Graph has cycles
         return result
 
+
 class SymbolTable:
     """Symbol table for code analysis."""
-    
+
     def __init__(self):
-        self.scopes: Dict[str, Dict[str, Symbol]] = defaultdict(dict)
-        self.current_scope: List[str] = ['global']
+        self.scopes: dict[str, dict[str, Symbol]] = defaultdict(dict)
+        self.current_scope: list[str] = ["global"]
 
     def enter_scope(self, name: str):
         """Enter a new scope."""
@@ -250,39 +267,40 @@ class SymbolTable:
 
     def add_symbol(self, symbol: Symbol):
         """Add symbol to current scope."""
-        scope = '.'.join(self.current_scope)
+        scope = ".".join(self.current_scope)
         symbol.scope = scope
         self.scopes[scope][symbol.name] = symbol
 
     def lookup(self, name: str) -> Optional[Symbol]:
         """Look up symbol in current and parent scopes."""
         for i in range(len(self.current_scope), 0, -1):
-            scope = '.'.join(self.current_scope[:i])
+            scope = ".".join(self.current_scope[:i])
             if name in self.scopes[scope]:
                 return self.scopes[scope][name]
         return None
 
-    def get_symbols_in_scope(self, scope: str) -> Dict[str, Symbol]:
+    def get_symbols_in_scope(self, scope: str) -> dict[str, Symbol]:
         """Get all symbols in a scope."""
         return dict(self.scopes[scope])
 
+
 class CallGraph(Graph[str]):
     """Function call graph."""
-    
+
     def __init__(self):
         super().__init__(directed=True)
-        self.call_counts: Dict[Tuple[str, str], int] = defaultdict(int)
+        self.call_counts: dict[Tuple[str, str], int] = defaultdict(int)
 
     def add_call(self, caller: str, callee: str, position: Position):
         """Add function call."""
-        self.add_edge(caller, callee, {'positions': [position]})
+        self.add_edge(caller, callee, {"positions": [position]})
         self.call_counts[(caller, callee)] += 1
 
-    def get_callers(self, function: str) -> Set[str]:
+    def get_callers(self, function: str) -> set[str]:
         """Get functions that call the given function."""
         return {node for node in self.nodes if function in self.nodes[node]}
 
-    def get_callees(self, function: str) -> Set[str]:
+    def get_callees(self, function: str) -> set[str]:
         """Get functions called by the given function."""
         return self.get_neighbors(function)
 
@@ -290,45 +308,50 @@ class CallGraph(Graph[str]):
         """Get number of calls between functions."""
         return self.call_counts[(caller, callee)]
 
+
 class WeightedGraph(Graph[T]):
     """Graph with weighted edges."""
-    
+
     def add_edge(self, source: T, target: T, weight: float):
         """Add weighted edge."""
-        super().add_edge(source, target, {'weight': weight})
+        super().add_edge(source, target, {"weight": weight})
 
-    def dijkstra(self, start: T) -> Dict[T, float]:
+    def dijkstra(self, start: T) -> dict[T, float]:
         """Dijkstra's shortest path algorithm."""
-        distances = {node: float('inf') for node in self.nodes}
+        distances = {node: float("inf") for node in self.nodes}
         distances[start] = 0
         pq = [(0, start)]
         visited = set()
-        
+
         while pq:
             dist, node = heapq.heappop(pq)
             if node in visited:
                 continue
             visited.add(node)
-            
+
             for neighbor in self.nodes[node]:
-                weight = self.edge_data[(node, neighbor)]['weight']
+                weight = self.edge_data[(node, neighbor)]["weight"]
                 if distances[node] + weight < distances[neighbor]:
                     distances[neighbor] = distances[node] + weight
                     heapq.heappush(pq, (distances[neighbor], neighbor))
-                    
+
         return distances
+
 
 def create_tree(data: T) -> TreeNode[T]:
     """Create a new tree node."""
     return TreeNode(data)
 
+
 def create_graph(directed: bool = False) -> Graph[T]:
     """Create a new graph."""
     return Graph(directed)
 
+
 def create_symbol_table() -> SymbolTable:
     """Create a new symbol table."""
     return SymbolTable()
+
 
 def create_call_graph() -> CallGraph:
     """Create a new call graph."""

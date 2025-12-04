@@ -1,9 +1,10 @@
-import networkx as nx
-from graphviz import Digraph
-from typing import Dict, List, Set, Optional, Tuple
+import json
 from dataclasses import dataclass
 from enum import Enum
-import json
+from typing import Optional
+
+import networkx as nx
+from graphviz import Digraph
 
 
 class VisualizationFormat(Enum):
@@ -19,16 +20,16 @@ class VisualizationFormat(Enum):
 class VisualizationConfig:
     """Configuration for PDG visualization."""
 
-    node_colors: Dict[str, str] = None
-    edge_colors: Dict[str, str] = None
-    node_shapes: Dict[str, str] = None
-    edge_styles: Dict[str, str] = None
-    font_sizes: Dict[str, int] = None
+    node_colors: dict[str, str] = None
+    edge_colors: dict[str, str] = None
+    node_shapes: dict[str, str] = None
+    edge_styles: dict[str, str] = None
+    font_sizes: dict[str, int] = None
     layout: str = "dot"
     dpi: int = 300
-    highlight_nodes: Set[str] = None
-    highlight_edges: Set[Tuple[str, str]] = None
-    cluster_groups: Dict[str, List[str]] = None
+    highlight_nodes: set[str] = None
+    highlight_edges: set[tuple[str, str]] = None
+    cluster_groups: dict[str, list[str]] = None
     show_attributes: bool = True
     label_wrapping: int = 30
 
@@ -124,7 +125,7 @@ class PDGVisualizer:
             f.write(html_content)
 
     def highlight_subgraph(
-        self, nodes: Set[str], color: str = "#ff0000", temporary: bool = True
+        self, nodes: set[str], color: str = "#ff0000", temporary: bool = True
     ) -> None:
         """Highlight a subgraph of nodes."""
         if temporary:
@@ -195,7 +196,7 @@ class PDGVisualizer:
             # Add edge
             dot.edge(str(edge[0]), str(edge[1]), **style)
 
-    def _create_node_label(self, node: str, attrs: Dict) -> str:
+    def _create_node_label(self, node: str, attrs: dict) -> str:
         """Create a formatted node label."""
         label_parts = [str(node)]
 
@@ -223,7 +224,7 @@ class PDGVisualizer:
 
         return "\n".join(label_parts)
 
-    def _get_node_style(self, node: str, attrs: Dict) -> Dict[str, str]:
+    def _get_node_style(self, node: str, attrs: dict) -> dict[str, str]:
         """Get styling for a node."""
         node_type = attrs.get("type", "default")
 
@@ -240,7 +241,7 @@ class PDGVisualizer:
 
         return style
 
-    def _get_edge_style(self, edge_attrs: Dict) -> Dict[str, str]:
+    def _get_edge_style(self, edge_attrs: dict) -> dict[str, str]:
         """Get styling for an edge."""
         edge_type = edge_attrs.get("type", "default")
 
@@ -285,7 +286,7 @@ class PDGVisualizer:
             dot.attr(overlap="false")
             dot.attr(splines="true")
 
-    def _convert_to_d3_format(self, pdg: nx.DiGraph) -> Dict:
+    def _convert_to_d3_format(self, pdg: nx.DiGraph) -> dict:
         """Convert PDG to D3.js compatible format."""
         return {
             "nodes": [
@@ -307,7 +308,7 @@ class PDGVisualizer:
         }
 
     def _generate_interactive_html(
-        self, graph_data: Dict, include_details: bool
+        self, graph_data: dict, include_details: bool
     ) -> str:
         """Generate HTML content for interactive visualization."""
         return f"""

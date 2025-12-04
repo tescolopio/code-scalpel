@@ -1,5 +1,5 @@
 # Core imports
-from .analyzer import ASTAnalyzer, FunctionMetrics, ClassMetrics
+from .analyzer import ASTAnalyzer, ClassMetrics, FunctionMetrics
 from .builder import ASTBuilder
 
 # These imports might fail due to incomplete implementations, handle gracefully
@@ -12,7 +12,7 @@ try:
     from .visualizer import ASTVisualizer
 except ImportError:
     ASTVisualizer = None
-    
+
 try:
     from .validator import ASTValidator
 except ImportError:
@@ -20,9 +20,9 @@ except ImportError:
 
 try:
     from .utils import (
-        is_constant, 
-        get_node_type, 
-        get_all_names, 
+        get_all_names,
+        get_node_type,
+        is_constant,
     )
 except ImportError:
     is_constant = None

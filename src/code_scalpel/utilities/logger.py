@@ -1,24 +1,18 @@
 import logging
 import logging.handlers
-from typing import Dict, List, Set, Optional, Union, Any
-from dataclasses import dataclass
-from enum import Enum
-import os
-from pathlib import Path
-import json
-import yaml
-from datetime import datetime
 import threading
-from queue import Queue
-import socket
-import sys
-import traceback
-from functools import wraps
 import time
 from contextlib import contextmanager  # Import contextmanager
+from dataclasses import dataclass
+from enum import Enum
+from functools import wraps
+from queue import Queue
+from typing import Any, Optional
+
 
 class LogLevel(Enum):
     """Custom logging levels."""
+
     TRACE = 5
     DEBUG = logging.DEBUG
     INFO = logging.INFO
@@ -26,9 +20,11 @@ class LogLevel(Enum):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
+
 @dataclass
 class LogConfig:
     """Configuration for logger."""
+
     name: str
     level: LogLevel = LogLevel.INFO
     file_path: Optional[str] = None
@@ -48,27 +44,29 @@ class LogConfig:
     remote_host: Optional[str] = None
     remote_port: Optional[int] = None
 
+
 class ColorFormatter(logging.Formatter):
     """Formatter that adds colors to log messages."""
-    
+
     COLORS = {
-        logging.DEBUG: '\033[36m',    # Cyan
-        logging.INFO: '\033[32m',     # Green
-        logging.WARNING: '\033[33m',  # Yellow
-        logging.ERROR: '\033[31m',    # Red
-        logging.CRITICAL: '\033[35m'  # Magenta
+        logging.DEBUG: "\033[36m",  # Cyan
+        logging.INFO: "\033[32m",  # Green
+        logging.WARNING: "\033[33m",  # Yellow
+        logging.ERROR: "\033[31m",  # Red
+        logging.CRITICAL: "\033[35m",  # Magenta
     }
-    RESET = '\033[0m'
-    
+    RESET = "\033[0m"
+
     def format(self, record):
         if not record.exc_info:
             level_color = self.COLORS.get(record.levelno)
-            record.msg = f'{level_color}{record.msg}{self.RESET}'
+            record.msg = f"{level_color}{record.msg}{self.RESET}"
         return super().format(record)
+
 
 class AsyncHandler(logging.Handler):
     """Asynchronous log handler."""
-    
+
     def __init__(self, handler):
         super().__init__()
         self.handler = handler
@@ -89,10 +87,11 @@ class AsyncHandler(logging.Handler):
             finally:
                 self.queue.task_done()
 
+
 class ContextFilter(logging.Filter):
     """Filter for adding contextual information to log records."""
-    
-    def __init__(self, context: Dict[str, Any]):
+
+    def __init__(self, context: dict[str, Any]):
         super().__init__()
         self.context = context
 
@@ -101,71 +100,72 @@ class ContextFilter(logging.Filter):
             setattr(record, key, value)
         return True
 
+
 class EnhancedLogger:
     """Advanced logger with multiple outputs and features."""
-    
+
     def __init__(self, config: LogConfig):
         self.config = config
         self.logger = logging.getLogger(config.name)
-        self.context: Dict[str, Any] = {}
+        self.context: dict[str, Any] = {}
         self._setup_logger()
 
     def _setup_logger(self):
         """Setup logger with all configured handlers."""
         # Set base level
         self.logger.setLevel(self.config.level.value)
-        
+
         # Create formatter
         formatter = self._create_formatter()
-        
+
         # Setup handlers
         handlers = []
-        
+
         # File handler
         if self.config.file_path:
             file_handler = self._setup_file_handler(formatter)
             handlers.append(file_handler)
-        
+
         # Console handler
         if self.config.console_output:
             console_handler = self._setup_console_handler(formatter)
             handlers.append(console_handler)
-        
+
         # Remote handler
         if self.config.enable_remote:
             remote_handler = self._setup_remote_handler(formatter)
             handlers.append(remote_handler)
-        
+
         # Apply async wrapper if enabled
         if self.config.enable_async:
             handlers = [AsyncHandler(h) for h in handlers]
-        
+
         # Add handlers to logger
         for handler in handlers:
             self.logger.addHandler(handler)
-        
+
         # Add context filter
         self.logger.addFilter(ContextFilter(self.context))
 
     def _create_formatter(self) -> logging.Formatter:
         """Create log formatter based on configuration."""
         parts = []
-        
+
         if self.config.include_timestamp:
-            parts.append('%(asctime)s')
+            parts.append("%(asctime)s")
         if self.config.include_process:
-            parts.append('%(process)d')
+            parts.append("%(process)d")
         if self.config.include_thread:
-            parts.append('%(threadName)s')
+            parts.append("%(threadName)s")
         if self.config.include_function:
-            parts.append('%(funcName)s')
+            parts.append("%(funcName)s")
         if self.config.include_line:
-            parts.append('%(lineno)d')
-            
-        parts.extend(['%(levelname)s', '%(name)s', '%(message)s'])
-        
-        format_string = self.config.format_string or ' - '.join(parts)
-        
+            parts.append("%(lineno)d")
+
+        parts.extend(["%(levelname)s", "%(name)s", "%(message)s"])
+
+        format_string = self.config.format_string or " - ".join(parts)
+
         if self.config.enable_colors:
             return ColorFormatter(format_string)
         return logging.Formatter(format_string)
@@ -176,17 +176,17 @@ class EnhancedLogger:
             handler = logging.handlers.RotatingFileHandler(
                 self.config.file_path,
                 maxBytes=self.config.rotation_size,
-                backupCount=self.config.max_files or 5
+                backupCount=self.config.max_files or 5,
             )
         elif self.config.rotation_time:
             handler = logging.handlers.TimedRotatingFileHandler(
                 self.config.file_path,
                 when=self.config.rotation_time,
-                backupCount=self.config.max_files or 5
+                backupCount=self.config.max_files or 5,
             )
         else:
             handler = logging.FileHandler(self.config.file_path)
-            
+
         handler.setFormatter(formatter)
         return handler
 
@@ -200,8 +200,8 @@ class EnhancedLogger:
         """Setup remote logging handler."""
         handler = logging.handlers.SysLogHandler(
             address=(
-                self.config.remote_host or 'localhost',
-                self.config.remote_port or 514
+                self.config.remote_host or "localhost",
+                self.config.remote_port or 514,
             )
         )
         handler.setFormatter(formatter)
@@ -260,6 +260,7 @@ class EnhancedLogger:
 
     def log_function(self, level: LogLevel = LogLevel.INFO):
         """Decorator to log function calls."""
+
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -267,31 +268,31 @@ class EnhancedLogger:
                 self.log(
                     level.value,
                     f"Entering {func.__name__}",
-                    extra={'args': args, 'kwargs': kwargs}
+                    extra={"args": args, "kwargs": kwargs},
                 )
                 try:
                     result = func(*args, **kwargs)
                     self.log(
                         level.value,
                         f"Exiting {func.__name__}",
-                        extra={
-                            'duration': time.time() - start_time,
-                            'result': result
-                        }
+                        extra={"duration": time.time() - start_time, "result": result},
                     )
                     return result
                 except Exception as e:
                     self.exception(
                         f"Error in {func.__name__}: {str(e)}",
-                        extra={'duration': time.time() - start_time}
+                        extra={"duration": time.time() - start_time},
                     )
                     raise
+
             return wrapper
+
         return decorator
 
-def create_logger(name: str,
-                 level: LogLevel = LogLevel.INFO,
-                 **kwargs) -> EnhancedLogger:
+
+def create_logger(
+    name: str, level: LogLevel = LogLevel.INFO, **kwargs
+) -> EnhancedLogger:
     """Create a new logger instance."""
     config = LogConfig(name=name, level=level, **kwargs)
     return EnhancedLogger(config)

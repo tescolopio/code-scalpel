@@ -1,9 +1,11 @@
 from collections import defaultdict
-from typing import Optional, Dict, List, Any, Callable
+from typing import Callable, Optional
+
 import esprima
 import esprima.error_handler
 
-from ..base_parser import BaseParser, ParseResult, PreprocessorConfig, Language
+from ..base_parser import BaseParser, Language, ParseResult, PreprocessorConfig
+
 
 class JavaScriptParser(BaseParser):
     """
@@ -18,25 +20,26 @@ class JavaScriptParser(BaseParser):
     Methods:
         _preprocess_code(code: str, config: Optional[PreprocessorConfig]) -> str:
             Preprocess the JavaScript code based on the provided configuration.
-        
+
         _parse_javascript(code: str) -> ParseResult:
             Parses JavaScript code with detailed analysis and returns the result.
-        
+
         _analyze_javascript_code(ast: esprima.nodes.Node) -> Dict[str, int]:
             Analyzes the JavaScript code structure and returns metrics.
-        
+
         _visit_node(node: esprima.nodes.Node, metrics: Dict[str, int]) -> None:
             Visits nodes in the AST and updates metrics.
-        
+
         _check_javascript_code(ast: esprima.nodes.Node) -> List[str]:
             Checks for potential code issues and returns warnings.
-        
+
         _visit_for_warnings(node: esprima.nodes.Node, warnings: List[str], find_identifiers: Callable) -> None:
             Visits nodes in the AST and collects warnings.
-        
+
         get_children(node: esprima.nodes.Node) -> List[esprima.nodes.Node]:
             Returns the child nodes of a given node.
     """
+
     def _preprocess_code(self, code: str, config: Optional[PreprocessorConfig]) -> str:
         """
         Preprocess the JavaScript code.
@@ -46,7 +49,9 @@ class JavaScriptParser(BaseParser):
         :return: The preprocessed code.
         """
         if config is None:
-            config = PreprocessorConfig(remove_comments=False, normalize_whitespace=False)
+            config = PreprocessorConfig(
+                remove_comments=False, normalize_whitespace=False
+            )
         if config.remove_comments:
             code = self._remove_comments(code, Language.JAVASCRIPT)
         if config.normalize_whitespace:
@@ -83,15 +88,15 @@ class JavaScriptParser(BaseParser):
                 warnings=warnings,
                 tokens=[],  # Tokens not implemented for JavaScript
                 metrics=dict(metrics),
-                language=Language.JAVASCRIPT
+                language=Language.JAVASCRIPT,
             )
 
         except esprima.error_handler.Error as e:
             error_info = {
-                'type': type(e).__name__,
-                'message': e.message,
-                'line': e.lineNumber,
-                'column': e.column
+                "type": type(e).__name__,
+                "message": e.message,
+                "line": e.lineNumber,
+                "column": e.column,
             }
             errors.append(error_info)
             return ParseResult(
@@ -100,10 +105,10 @@ class JavaScriptParser(BaseParser):
                 warnings=warnings,
                 tokens=[],  # Tokens not implemented for JavaScript
                 metrics=dict(metrics),
-                language=Language.JAVASCRIPT
+                language=Language.JAVASCRIPT,
             )
 
-    def _analyze_javascript_code(self, ast: esprima.nodes.Node) -> Dict[str, int]:
+    def _analyze_javascript_code(self, ast: esprima.nodes.Node) -> dict[str, int]:
         """
         Analyzes the JavaScript code structure and returns metrics.
 
@@ -114,7 +119,7 @@ class JavaScriptParser(BaseParser):
         self._visit_node(ast, metrics)
         return dict(metrics)
 
-    def _visit_node(self, node: esprima.nodes.Node, metrics: Dict[str, int]) -> None:
+    def _visit_node(self, node: esprima.nodes.Node, metrics: dict[str, int]) -> None:
         """
         Visit nodes in the AST and update metrics.
 
@@ -122,17 +127,16 @@ class JavaScriptParser(BaseParser):
         :param metrics: The metrics dictionary to update.
         """
         # Count different node types
-        metrics[f'count_{type(node).__name__}'] += 1
+        metrics[f"count_{type(node).__name__}"] += 1
 
         # Analyze complexity
         if isinstance(node, esprima.nodes.FunctionDeclaration):
-            metrics['function_count'] += 1
-            metrics['max_function_complexity'] = max(
-                metrics['max_function_complexity'],
-                self._calculate_complexity(node)
+            metrics["function_count"] += 1
+            metrics["max_function_complexity"] = max(
+                metrics["max_function_complexity"], self._calculate_complexity(node)
             )
         elif isinstance(node, esprima.nodes.ClassDeclaration):
-            metrics['class_count'] += 1
+            metrics["class_count"] += 1
 
         # Recursively visit child nodes
         for child in self.get_children(node):
@@ -147,12 +151,19 @@ class JavaScriptParser(BaseParser):
         """
         complexity = 1  # Base complexity
         for child in self.get_children(node):
-            if isinstance(child, (esprima.nodes.IfStatement, esprima.nodes.ForStatement, esprima.nodes.WhileStatement)):
+            if isinstance(
+                child,
+                (
+                    esprima.nodes.IfStatement,
+                    esprima.nodes.ForStatement,
+                    esprima.nodes.WhileStatement,
+                ),
+            ):
                 complexity += 1
             complexity += self._calculate_complexity(child)
         return complexity
 
-    def _check_javascript_code(self, ast: esprima.nodes.Node) -> List[str]:
+    def _check_javascript_code(self, ast: esprima.nodes.Node) -> list[str]:
         """
         Check for potential code issues.
 
@@ -161,7 +172,9 @@ class JavaScriptParser(BaseParser):
         """
         warnings = []
 
-        def find_identifiers(node: esprima.nodes.Node, name: str) -> List[esprima.nodes.Identifier]:
+        def find_identifiers(
+            node: esprima.nodes.Node, name: str
+        ) -> list[esprima.nodes.Identifier]:
             """Find identifiers with the given name in the AST."""
             identifiers = []
 
@@ -177,7 +190,9 @@ class JavaScriptParser(BaseParser):
         self._visit_for_warnings(ast, warnings, find_identifiers)
         return warnings
 
-    def _visit_for_warnings(self, node: esprima.nodes.Node, warnings: List[str], find_identifiers: Callable) -> None:
+    def _visit_for_warnings(
+        self, node: esprima.nodes.Node, warnings: list[str], find_identifiers: Callable
+    ) -> None:
         """
         Visit nodes in the AST and collect warnings.
 
@@ -188,19 +203,26 @@ class JavaScriptParser(BaseParser):
         # Check for unused variables
         if isinstance(node, esprima.nodes.VariableDeclarator):
             if not find_identifiers(node, node.id.name):
-                warnings.append(f"Unused variable '{node.id.name}' at line {node.loc.start.line}")
+                warnings.append(
+                    f"Unused variable '{node.id.name}' at line {node.loc.start.line}"
+                )
 
         # Check for unreachable code
-        if isinstance(node, esprima.nodes.ReturnStatement) and hasattr(node, 'parent'):
+        if isinstance(node, esprima.nodes.ReturnStatement) and hasattr(node, "parent"):
             parent_children = self.get_children(node.parent)
-            if any(isinstance(n, esprima.nodes.Statement) for n in parent_children[parent_children.index(node) + 1:]):
-                warnings.append(f"Unreachable code after return statement at line {node.loc.start.line}")
+            if any(
+                isinstance(n, esprima.nodes.Statement)
+                for n in parent_children[parent_children.index(node) + 1 :]
+            ):
+                warnings.append(
+                    f"Unreachable code after return statement at line {node.loc.start.line}"
+                )
 
         # Recursively visit child nodes
         for child in self.get_children(node):
             self._visit_for_warnings(child, warnings, find_identifiers)
 
-    def get_children(self, node: esprima.nodes.Node) -> List[esprima.nodes.Node]:
+    def get_children(self, node: esprima.nodes.Node) -> list[esprima.nodes.Node]:
         """
         Returns the child nodes of a given node.
 
@@ -209,7 +231,9 @@ class JavaScriptParser(BaseParser):
         """
         children = []
         if isinstance(node, list):
-            children.extend([item for item in node if isinstance(item, esprima.nodes.Node)])
+            children.extend(
+                [item for item in node if isinstance(item, esprima.nodes.Node)]
+            )
         elif isinstance(node, dict):
             children.extend([v for k, v in node.items() if isinstance(v, (dict, list))])
         elif isinstance(node, esprima.nodes.Node):
@@ -218,7 +242,9 @@ class JavaScriptParser(BaseParser):
                     children.append(field)
         return children
 
-    def _set_parent_nodes(self, node: esprima.nodes.Node, parent: Optional[esprima.nodes.Node] = None) -> None:
+    def _set_parent_nodes(
+        self, node: esprima.nodes.Node, parent: Optional[esprima.nodes.Node] = None
+    ) -> None:
         """
         Set parent nodes for the AST.
 

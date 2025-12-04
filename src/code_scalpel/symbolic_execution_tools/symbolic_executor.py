@@ -1,43 +1,51 @@
-from typing import Dict, List, Set, Optional, Union, Any, Tuple, Generator
+import ast
+import logging
+from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-import ast
+from typing import Any, Optional
+
 import z3
-from collections import defaultdict, deque
-import logging
-from contextlib import contextmanager
+
 
 class SymbolicType(Enum):
     """Types of symbolic values."""
-    INTEGER = 'integer'
-    FLOAT = 'float'
-    BOOLEAN = 'boolean'
-    STRING = 'string'
-    ARRAY = 'array'
-    OBJECT = 'object'
-    FUNCTION = 'function'
+
+    INTEGER = "integer"
+    FLOAT = "float"
+    BOOLEAN = "boolean"
+    STRING = "string"
+    ARRAY = "array"
+    OBJECT = "object"
+    FUNCTION = "function"
+
 
 @dataclass
 class SymbolicValue:
     """Represents a symbolic value."""
+
     expr: Any  # Z3 expression
     type: SymbolicType
     concrete_value: Optional[Any] = None
-    source_location: Optional[Tuple[int, int]] = None
-    constraints: List[Any] = None
+    source_location: Optional[tuple[int, int]] = None
+    constraints: list[Any] = None
+
 
 @dataclass
 class ExecutionContext:
     """Represents the current execution context."""
-    symbolic_state: Dict[str, SymbolicValue]
-    path_condition: List[Any]
-    loop_iterations: Dict[str, int]
-    call_stack: List[str]
+
+    symbolic_state: dict[str, SymbolicValue]
+    path_condition: list[Any]
+    loop_iterations: dict[str, int]
+    call_stack: list[str]
     return_value: Optional[SymbolicValue] = None
+
 
 class SymbolicExecutor:
     """Advanced symbolic executor with comprehensive language feature support."""
-    
+
     def __init__(self, constraint_solver):
         self.solver = constraint_solver
         self.contexts = [ExecutionContext({}, [], {}, [])]
@@ -51,13 +59,13 @@ class SymbolicExecutor:
         """Get the current execution context."""
         return self.contexts[-1]
 
-    def execute(self, code: str) -> Dict[str, Any]:
+    def execute(self, code: str) -> dict[str, Any]:
         """
         Execute code symbolically.
-        
+
         Args:
             code: Python source code
-            
+
         Returns:
             Final symbolic state
         """
@@ -69,19 +77,17 @@ class SymbolicExecutor:
             self.logger.error(f"Execution error: {str(e)}")
             raise
 
-    def create_symbolic_variable(self, name: str, 
-                               type_: SymbolicType,
-                               constraints: List[Any] = None) -> SymbolicValue:
+    def create_symbolic_variable(
+        self, name: str, type_: SymbolicType, constraints: list[Any] = None
+    ) -> SymbolicValue:
         """Create a new symbolic variable."""
         z3_type = self._get_z3_type(type_)
         symbolic_expr = self.solver.create_variable(name, z3_type)
-        
+
         value = SymbolicValue(
-            expr=symbolic_expr,
-            type=type_,
-            constraints=constraints or []
+            expr=symbolic_expr, type=type_, constraints=constraints or []
         )
-        
+
         self.current_context.symbolic_state[name] = value
         return value
 
@@ -137,18 +143,17 @@ class SymbolicExecutor:
     def _execute_function_def(self, node: ast.FunctionDef) -> None:
         """Execute a function definition."""
         self.function_definitions[node.name] = node
-        
+
         # Handle decorators
-        decorators = [self._execute_node(decorator) 
-                     for decorator in node.decorator_list]
-        
+        [self._execute_node(decorator) for decorator in node.decorator_list]
+
         # Create function symbol
         func_symbol = SymbolicValue(
             expr=None,
             type=SymbolicType.FUNCTION,
-            source_location=(node.lineno, node.col_offset)
+            source_location=(node.lineno, node.col_offset),
         )
-        
+
         self.current_context.symbolic_state[node.name] = func_symbol
 
     def _execute_call(self, node: ast.Call) -> SymbolicValue:
@@ -158,40 +163,42 @@ class SymbolicExecutor:
             func_name = node.func.id
             if func_name in self.function_definitions:
                 return self._execute_user_function(
-                    self.function_definitions[func_name],
-                    node.args,
-                    node.keywords
+                    self.function_definitions[func_name], node.args, node.keywords
                 )
             else:
                 return self._execute_builtin_function(
-                    func_name,
-                    node.args,
-                    node.keywords
+                    func_name, node.args, node.keywords
                 )
         elif isinstance(node.func, ast.Attribute):
             return self._execute_method_call(node)
-            
+
         self.logger.warning(f"Unsupported function call: {ast.dump(node)}")
         return None
 
-    def _execute_user_function(self, func_def: ast.FunctionDef,
-                             args: List[ast.AST],
-                             keywords: List[ast.keyword]) -> SymbolicValue:
+    def _execute_user_function(
+        self,
+        func_def: ast.FunctionDef,
+        args: list[ast.AST],
+        keywords: list[ast.keyword],
+    ) -> SymbolicValue:
         """Execute a user-defined function."""
         # Create new context
-        self.contexts.append(ExecutionContext({}, [], {}, 
-                                           self.current_context.call_stack + [func_def.name]))
-        
+        self.contexts.append(
+            ExecutionContext(
+                {}, [], {}, self.current_context.call_stack + [func_def.name]
+            )
+        )
+
         try:
             # Bind arguments
             self._bind_arguments(func_def, args, keywords)
-            
+
             # Execute function body
             for stmt in func_def.body:
                 result = self._execute_node(stmt)
                 if isinstance(stmt, ast.Return):
                     return result
-            
+
             return None
         finally:
             # Restore context
@@ -200,7 +207,7 @@ class SymbolicExecutor:
     def _execute_if(self, node: ast.If) -> Optional[SymbolicValue]:
         """Execute an if statement."""
         condition = self._execute_node(node.test)
-        
+
         # True branch
         with self._branch_scope(condition.expr):
             if self._is_feasible(condition.expr):
@@ -208,7 +215,7 @@ class SymbolicExecutor:
                     result = self._execute_node(stmt)
                     if isinstance(stmt, ast.Return):
                         return result
-        
+
         # False branch
         with self._branch_scope(z3.Not(condition.expr)):
             if self._is_feasible(z3.Not(condition.expr)):
@@ -216,30 +223,30 @@ class SymbolicExecutor:
                     result = self._execute_node(stmt)
                     if isinstance(stmt, ast.Return):
                         return result
-        
+
         return None
 
     def _execute_while(self, node: ast.While) -> None:
         """Execute a while loop."""
         loop_id = f"while_{id(node)}"
         iteration = 0
-        
+
         while iteration < self.loop_bounds[loop_id]:
             condition = self._execute_node(node.test)
-            
+
             with self._branch_scope(condition.expr):
                 if not self._is_feasible(condition.expr):
                     break
-                    
+
                 for stmt in node.body:
                     result = self._execute_node(stmt)
                     if isinstance(stmt, (ast.Break, ast.Return)):
                         return result
                     if isinstance(stmt, ast.Continue):
                         break
-                        
+
             iteration += 1
-        
+
         # Execute else block if loop completes normally
         if iteration < self.loop_bounds[loop_id]:
             for stmt in node.orelse:
@@ -258,8 +265,9 @@ class SymbolicExecutor:
             for handler in node.handlers:
                 if self._matches_exception(e, handler.type):
                     if handler.name:
-                        self.current_context.symbolic_state[handler.name] = \
-                            SymbolicValue(e, SymbolicType.OBJECT)
+                        self.current_context.symbolic_state[
+                            handler.name
+                        ] = SymbolicValue(e, SymbolicType.OBJECT)
                     for stmt in handler.body:
                         result = self._execute_node(stmt)
                         if isinstance(stmt, ast.Return):
@@ -277,7 +285,7 @@ class SymbolicExecutor:
         """Execute a binary operation."""
         left = self._execute_node(node.left)
         right = self._execute_node(node.right)
-        
+
         # Handle different operators
         if isinstance(node.op, ast.Add):
             expr = left.expr + right.expr
@@ -296,21 +304,21 @@ class SymbolicExecutor:
         else:
             self.logger.warning(f"Unsupported operator: {type(node.op)}")
             return None
-            
+
         return SymbolicValue(
             expr=expr,
             type=self._get_result_type(left.type, right.type),
-            source_location=(node.lineno, node.col_offset)
+            source_location=(node.lineno, node.col_offset),
         )
 
     def _execute_compare(self, node: ast.Compare) -> SymbolicValue:
         """Execute a comparison operation."""
         comparisons = []
         left = self._execute_node(node.left)
-        
+
         for op, right_node in zip(node.ops, node.comparators):
             right = self._execute_node(right_node)
-            
+
             if isinstance(op, ast.Eq):
                 comparisons.append(left.expr == right.expr)
             elif isinstance(op, ast.NotEq):
@@ -326,14 +334,14 @@ class SymbolicExecutor:
             else:
                 self.logger.warning(f"Unsupported comparison: {type(op)}")
                 return None
-            
+
             left = right
-            
+
         expr = z3.And(*comparisons) if comparisons else None
         return SymbolicValue(
             expr=expr,
             type=SymbolicType.BOOLEAN,
-            source_location=(node.lineno, node.col_offset)
+            source_location=(node.lineno, node.col_offset),
         )
 
     @contextmanager
@@ -342,7 +350,7 @@ class SymbolicExecutor:
         self.current_context.path_condition.append(condition)
         self.solver.push()
         self.solver.add_constraint(condition)
-        
+
         try:
             yield
         finally:
@@ -356,20 +364,21 @@ class SymbolicExecutor:
     def _get_z3_type(self, symbolic_type: SymbolicType) -> str:
         """Convert symbolic type to Z3 type."""
         type_map = {
-            SymbolicType.INTEGER: 'int',
-            SymbolicType.FLOAT: 'real',
-            SymbolicType.BOOLEAN: 'bool',
-            SymbolicType.STRING: 'string'
+            SymbolicType.INTEGER: "int",
+            SymbolicType.FLOAT: "real",
+            SymbolicType.BOOLEAN: "bool",
+            SymbolicType.STRING: "string",
         }
-        return type_map.get(symbolic_type, 'int')
+        return type_map.get(symbolic_type, "int")
 
     def _setup_logging(self):
         """Setup logging configuration."""
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
-        self.logger = logging.getLogger('SymbolicExecutor')
+        self.logger = logging.getLogger("SymbolicExecutor")
+
 
 def create_executor(solver) -> SymbolicExecutor:
     """Create a new symbolic executor instance."""

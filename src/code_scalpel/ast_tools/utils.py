@@ -1,15 +1,15 @@
 import ast
-from typing import Dict, List, Set, Any, Callable, Union
-from collections import defaultdict
 import tokenize
+from collections import defaultdict
 from io import StringIO
+from typing import Any, Callable, Union
 
 
 class ASTUtils:
     """Utility functions for working with ASTs."""
 
     @staticmethod
-    def get_all_names(tree: ast.AST) -> Set[str]:
+    def get_all_names(tree: ast.AST) -> set[str]:
         """Get all names used in the AST."""
         names = set()
         for node in ast.walk(tree):
@@ -18,7 +18,7 @@ class ASTUtils:
         return names
 
     @staticmethod
-    def get_function_info(node: ast.FunctionDef) -> Dict[str, Any]:
+    def get_function_info(node: ast.FunctionDef) -> dict[str, Any]:
         """Get detailed information about a function."""
         return {
             "name": node.name,
@@ -35,19 +35,19 @@ class ASTUtils:
         }
 
     @staticmethod
-    def find_all(tree: ast.AST, condition: Callable[[ast.AST], bool]) -> List[ast.AST]:
+    def find_all(tree: ast.AST, condition: Callable[[ast.AST], bool]) -> list[ast.AST]:
         """Find all nodes matching a condition."""
         return [node for node in ast.walk(tree) if condition(node)]
 
     @staticmethod
-    def get_node_source(node: ast.AST, source_lines: List[str]) -> str:
+    def get_node_source(node: ast.AST, source_lines: list[str]) -> str:
         """Get the source code for a node."""
         if hasattr(node, "lineno") and hasattr(node, "end_lineno"):
             return "\n".join(source_lines[node.lineno - 1 : node.end_lineno])
         return ast.unparse(node)
 
     @staticmethod
-    def analyze_dependencies(tree: ast.AST) -> Dict[str, Set[str]]:
+    def analyze_dependencies(tree: ast.AST) -> dict[str, set[str]]:
         """Analyze variable dependencies in the code."""
         deps = defaultdict(set)
 
@@ -82,7 +82,7 @@ class ASTUtils:
     @classmethod
     def find_similar_nodes(
         cls, tree: ast.AST, pattern: Union[str, ast.AST], threshold: float = 0.8
-    ) -> List[ast.AST]:
+    ) -> list[ast.AST]:
         """Find nodes similar to a pattern."""
         if isinstance(pattern, str):
             pattern = ast.parse(pattern).body[0]
@@ -108,16 +108,14 @@ class ASTUtils:
 
         tokens = tokenize.generate_tokens(StringIO(code).readline)
 
-        for toktype, ttext, (slineno, scol), (elineno, ecol), ltext in tokens:
+        for toktype, ttext, (_slineno, _scol), (_elineno, _ecol), _ltext in tokens:
             if toktype == tokenize.COMMENT:
                 continue
             elif toktype == tokenize.STRING:
                 if prev_toktype != tokenize.INDENT:
                     result.append(" ")
                 result.append(ttext)
-            elif toktype == tokenize.NEWLINE:
-                result.append(ttext)
-            elif toktype == tokenize.INDENT:
+            elif toktype == tokenize.NEWLINE or toktype == tokenize.INDENT:
                 result.append(ttext)
             elif toktype == tokenize.DEDENT:
                 pass
@@ -131,7 +129,7 @@ class ASTUtils:
         return "".join(result)
 
     @staticmethod
-    def traverse_ast(tree: ast.AST, strategy: str = "depth-first") -> List[ast.AST]:
+    def traverse_ast(tree: ast.AST, strategy: str = "depth-first") -> list[ast.AST]:
         """Traverse the AST using the specified strategy."""
         nodes = []
         if strategy == "depth-first":

@@ -1,14 +1,17 @@
 # src/util_tools/process_manager.py
 
 import subprocess
-from typing import Tuple, Optional, Dict, Any
+from typing import Optional
 
-def run_command(command: str, 
-                capture_output: bool = True, 
-                input_data: Optional[str] = None,
-                env: Optional[Dict[str, str]] = None,
-                cwd: Optional[str] = None,
-                timeout: Optional[float] = None) -> Tuple[int, str, str]:
+
+def run_command(
+    command: str,
+    capture_output: bool = True,
+    input_data: Optional[str] = None,
+    env: Optional[dict[str, str]] = None,
+    cwd: Optional[str] = None,
+    timeout: Optional[float] = None,
+) -> tuple[int, str, str]:
     """
     Runs an external command and returns the output.
 
@@ -35,7 +38,7 @@ def run_command(command: str,
             input=input_data,
             env=env,
             cwd=cwd,
-            timeout=timeout
+            timeout=timeout,
         )
         return result.returncode, result.stdout, result.stderr
     except FileNotFoundError:
@@ -44,6 +47,7 @@ def run_command(command: str,
         return 1, "", f"Error: Command timed out after {timeout} seconds"
     except Exception as e:
         return 1, "", f"Error running command: {e}"
+
 
 def terminate_process(process: subprocess.Popen) -> bool:
     """
@@ -63,6 +67,7 @@ def terminate_process(process: subprocess.Popen) -> bool:
         print(f"Error terminating process: {e}")
         return False
 
+
 def get_process_status(process: subprocess.Popen) -> str:
     """
     Gets the status of a process.
@@ -74,13 +79,16 @@ def get_process_status(process: subprocess.Popen) -> str:
       str: The status of the process ('running', 'terminated', or 'unknown').
     """
     if process.poll() is None:
-        return 'running'
+        return "running"
     elif process.returncode is not None:
-        return 'terminated'
+        return "terminated"
     else:
-        return 'unknown'
+        return "unknown"
 
-def wait_for_process(process: subprocess.Popen, timeout: Optional[float] = None) -> Tuple[int, str, str]:
+
+def wait_for_process(
+    process: subprocess.Popen, timeout: Optional[float] = None
+) -> tuple[int, str, str]:
     """
     Waits for a process to finish and returns the output.
 
@@ -101,6 +109,7 @@ def wait_for_process(process: subprocess.Popen, timeout: Optional[float] = None)
         process.terminate()
         stdout, stderr = process.communicate()
         return 1, stdout, f"Error: Process timed out after {timeout} seconds"
+
 
 def sanitize_command(command: str) -> str:
     """

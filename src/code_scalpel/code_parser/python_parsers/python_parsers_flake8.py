@@ -1,15 +1,22 @@
 # python_parser.py
-from ..base_parser import BaseParser, ParseResult, PreprocessorConfig, Language
 import ast
-from typing import Dict, List, Optional, Any  # Import Any
-from collections import defaultdict
-import tokenize
-from io import StringIO
-import subprocess
 import json
+import subprocess
+import tokenize
+from collections import defaultdict
+from io import StringIO
+from typing import Any, Optional  # Import Any
+
+from ..base_parser import BaseParser, Language, ParseResult, PreprocessorConfig
+
 
 class PythonParser(BaseParser):
-    def parse_code(self, code: str, preprocess: bool = True, config: Optional[PreprocessorConfig] = None) -> ParseResult:
+    def parse_code(
+        self,
+        code: str,
+        preprocess: bool = True,
+        config: Optional[PreprocessorConfig] = None,
+    ) -> ParseResult:
         if preprocess:
             code = self._preprocess_code(code, config or PreprocessorConfig())
         return self._parse_python(code)
@@ -27,29 +34,29 @@ class PythonParser(BaseParser):
         errors = []
         warnings = []
         metrics = defaultdict(int)
-        
+
         try:
             # Parse into AST
             tree = ast.parse(code)
-            
+
             # Get token stream
             tokens = list(tokenize.generate_tokens(StringIO(code).readline))
-            
+
             # Analyze code structure
             metrics.update(self._analyze_python_code(tree))
-            
+
             # Check for potential issues using flake8
             warnings.extend(self._check_python_code_with_flake8(code))
-            
+
             return ParseResult(
                 ast=tree,
                 errors=errors,
                 warnings=warnings,
                 tokens=tokens,
                 metrics=dict(metrics),
-                language=Language.PYTHON
+                language=Language.PYTHON,
             )
-            
+
         except SyntaxError as e:
             errors.append(self._format_syntax_error(e))
             return ParseResult(
@@ -58,49 +65,45 @@ class PythonParser(BaseParser):
                 warnings=warnings,
                 tokens=[],
                 metrics=dict(metrics),
-                language=Language.PYTHON
+                language=Language.PYTHON,
             )
-        
-    def _analyze_python_code(self, tree: ast.AST) -> Dict[str, int]:
+
+    def _analyze_python_code(self, tree: ast.AST) -> dict[str, int]:
         """Analyze Python code structure."""
         metrics = defaultdict(int)
-        
+
         for node in ast.walk(tree):
             # Count different node types
-            metrics[f'count_{type(node).__name__}'] += 1
-            
+            metrics[f"count_{type(node).__name__}"] += 1
+
             # Analyze complexity
             if isinstance(node, ast.FunctionDef):
-                metrics['function_count'] += 1
-                metrics['max_function_complexity'] = max(
-                    metrics['max_function_complexity'],
-                    self._calculate_complexity(node)
+                metrics["function_count"] += 1
+                metrics["max_function_complexity"] = max(
+                    metrics["max_function_complexity"], self._calculate_complexity(node)
                 )
             elif isinstance(node, ast.ClassDef):
-                metrics['class_count'] += 1
-                
+                metrics["class_count"] += 1
+
         return dict(metrics)
-    
-    def _check_python_code_with_flake8(self, code: str) -> List[str]:
+
+    def _check_python_code_with_flake8(self, code: str) -> list[str]:
         """Check for potential code issues using flake8."""
         warnings = []
-        
+
         # Run flake8 as a subprocess
         result = subprocess.run(
-            ['flake8', '--format=json', '-'],
-            input=code,
-            text=True,
-            capture_output=True
+            ["flake8", "--format=json", "-"], input=code, text=True, capture_output=True
         )
-        
+
         if result.returncode != 0 and result.stdout:
             flake8_output = json.loads(result.stdout)
-            for filename, issues in flake8_output.items():
+            for _filename, issues in flake8_output.items():
                 for issue in issues:
                     warnings.append(
                         f"{issue['code']} at line {issue['line']}, column {issue['column']}: {issue['text']}"
                     )
-        
+
         return warnings
 
     def _calculate_complexity(self, node: ast.FunctionDef) -> int:
@@ -111,11 +114,11 @@ class PythonParser(BaseParser):
                 complexity += 1
         return complexity
 
-    def _format_syntax_error(self, e: SyntaxError) -> Dict[str, Any]:
+    def _format_syntax_error(self, e: SyntaxError) -> dict[str, Any]:
         """Format a syntax error for inclusion in the error list."""
         return {
-            'type': 'SyntaxError',
-            'message': e.msg,
-            'line': e.lineno,
-            'column': e.offset
+            "type": "SyntaxError",
+            "message": e.msg,
+            "line": e.lineno,
+            "column": e.offset,
         }

@@ -1,10 +1,11 @@
-import networkx as nx
-from typing import Dict, List, Set, Tuple, Any
-from dataclasses import dataclass
-from enum import Enum
-from collections import defaultdict
 import ast
 import copy
+from collections import defaultdict
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+import networkx as nx
 
 
 class TransformationType(Enum):
@@ -24,11 +25,11 @@ class TransformationResult:
     """Result of a PDG transformation."""
 
     success: bool
-    modified_nodes: Set[str]
-    added_nodes: Set[str]
-    removed_nodes: Set[str]
+    modified_nodes: set[str]
+    added_nodes: set[str]
+    removed_nodes: set[str]
     description: str
-    metrics: Dict[str, Any]
+    metrics: dict[str, Any]
 
 
 class PDGTransformer:
@@ -36,7 +37,7 @@ class PDGTransformer:
 
     def __init__(self, pdg: nx.DiGraph):
         self.pdg = pdg
-        self.history: List[Tuple[TransformationType, TransformationResult]] = []
+        self.history: list[tuple[TransformationType, TransformationResult]] = []
         self.node_counter = defaultdict(int)
 
     def transform(
@@ -118,7 +119,7 @@ class PDGTransformer:
             raise ValueError(f"Unknown refactoring type: {refactoring_type}")
 
     def merge_nodes(
-        self, nodes: List[str], new_node_id: str, new_data: Dict
+        self, nodes: list[str], new_node_id: str, new_data: dict
     ) -> TransformationResult:
         """Merge multiple nodes into a single node."""
         if not all(node in self.pdg for node in nodes):
@@ -162,7 +163,7 @@ class PDGTransformer:
             metrics={"nodes_merged": len(nodes)},
         )
 
-    def split_node(self, node: str, split_data: List[Dict]) -> TransformationResult:
+    def split_node(self, node: str, split_data: list[dict]) -> TransformationResult:
         """Split a node into multiple nodes."""
         if node not in self.pdg:
             return TransformationResult(
@@ -365,7 +366,7 @@ class PDGTransformer:
         )
 
     def _extract_method(
-        self, nodes: List[str], method_name: str, parameters: List[str] = None
+        self, nodes: list[str], method_name: str, parameters: list[str] = None
     ) -> TransformationResult:
         """Extract a set of nodes into a new method."""
         if not all(node in self.pdg for node in nodes):
@@ -444,7 +445,7 @@ class PDGTransformer:
         )
 
     def _move_node(
-        self, node: str, new_predecessors: List[str], new_successors: List[str]
+        self, node: str, new_predecessors: list[str], new_successors: list[str]
     ) -> TransformationResult:
         """Move a node to a different location in the PDG."""
         if node not in self.pdg:
@@ -494,13 +495,13 @@ class PDGTransformer:
         except:
             return False
 
-    def _uses_constants(self, data: Dict, constants: Dict[str, Any]) -> bool:
+    def _uses_constants(self, data: dict, constants: dict[str, Any]) -> bool:
         """Check if node data uses any known constants."""
         if "uses" in data:
             return any(var in constants for var in data["uses"])
         return False
 
-    def _replace_constants(self, data: Dict, constants: Dict[str, Any]) -> Dict:
+    def _replace_constants(self, data: dict, constants: dict[str, Any]) -> dict:
         """Replace constant references in node data."""
         new_data = copy.deepcopy(data)
         if "value" in new_data:
@@ -510,7 +511,7 @@ class PDGTransformer:
                 )
         return new_data
 
-    def _find_loop_invariant_nodes(self, loop_node: str) -> Set[str]:
+    def _find_loop_invariant_nodes(self, loop_node: str) -> set[str]:
         """Find nodes that are invariant within a loop."""
         loop_body = self._get_loop_body(loop_node)
         invariant_nodes = set()
@@ -530,12 +531,9 @@ class PDGTransformer:
             return False
 
         # Node must not have side effects
-        if node_data.get("has_side_effects", False):
-            return False
+        return not node_data.get("has_side_effects", False)
 
-        return True
-
-    def _move_nodes_before_loop(self, loop_node: str, nodes: Set[str]) -> Set[str]:
+    def _move_nodes_before_loop(self, loop_node: str, nodes: set[str]) -> set[str]:
         """Move nodes to execute before a loop."""
         new_nodes = set()
 
@@ -551,7 +549,7 @@ class PDGTransformer:
 
         return new_nodes
 
-    def _get_loop_body(self, loop_node: str) -> Set[str]:
+    def _get_loop_body(self, loop_node: str) -> set[str]:
         """
         Get the set of nodes that form the body of a loop.
 

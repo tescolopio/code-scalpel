@@ -1,9 +1,10 @@
 """Unit tests for PDG analyzer functionality."""
 
-import pytest
-import networkx as nx
-import sys
 import os
+import sys
+
+import networkx as nx
+import pytest
 
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))

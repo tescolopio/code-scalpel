@@ -1,7 +1,8 @@
 import ast
-from typing import Dict, List, Optional, Union, Callable, Tuple
-import astor
 from dataclasses import dataclass
+from typing import Callable, Optional, Union
+
+import astor
 
 
 @dataclass
@@ -18,10 +19,10 @@ class ASTTransformer(ast.NodeTransformer):
 
     def __init__(self):
         super().__init__()
-        self.var_mapping: Dict[str, str] = {}
-        self.func_mapping: Dict[str, str] = {}
-        self.transformation_rules: List[TransformationRule] = []
-        self.context: List[ast.AST] = []
+        self.var_mapping: dict[str, str] = {}
+        self.func_mapping: dict[str, str] = {}
+        self.transformation_rules: list[TransformationRule] = []
+        self.context: list[ast.AST] = []
         self.modified = False
 
     def add_transformation_rule(self, rule: TransformationRule) -> None:
@@ -92,8 +93,8 @@ class ASTTransformer(ast.NodeTransformer):
         return node
 
     def extract_method(
-        self, node: ast.AST, new_func_name: str, args: List[str] = None
-    ) -> Tuple[ast.FunctionDef, ast.Call]:
+        self, node: ast.AST, new_func_name: str, args: list[str] = None
+    ) -> tuple[ast.FunctionDef, ast.Call]:
         """Extract a code block into a new method."""
         # Analyze used variables
         used_vars = set()
@@ -109,7 +110,7 @@ class ASTTransformer(ast.NodeTransformer):
         VarCollector().visit(node)
 
         # Determine parameters
-        params = list(used_vars - defined_vars) if not args else args
+        params = args if args else list(used_vars - defined_vars)
 
         # Create new function
         new_func = ast.FunctionDef(

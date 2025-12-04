@@ -1,8 +1,8 @@
 import ast
-from typing import List, Dict, Optional
+import re
 from dataclasses import dataclass
 from enum import Enum
-import re
+from typing import Optional
 
 
 class Severity(Enum):
@@ -27,7 +27,7 @@ class ValidationIssue:
 class ASTValidator:
     """Advanced AST validator with configurable rules and detailed reporting."""
 
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: Optional[dict] = None):
         self.config = {
             "max_line_length": 80,
             "max_function_length": 50,
@@ -39,9 +39,9 @@ class ASTValidator:
             "max_cognitive_complexity": 15,
             **(config or {}),
         }
-        self.issues: List[ValidationIssue] = []
+        self.issues: list[ValidationIssue] = []
 
-    def validate(self, tree: ast.AST, code: str) -> List[ValidationIssue]:
+    def validate(self, tree: ast.AST, code: str) -> list[ValidationIssue]:
         """Perform all validations on the AST."""
         self.issues = []
 

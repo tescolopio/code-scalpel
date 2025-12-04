@@ -1,9 +1,10 @@
-from typing import Dict, List, Set, Optional, Tuple
 import ast
-import networkx as nx
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from collections import defaultdict
+from typing import Optional
+
+import networkx as nx
 
 
 class NodeType(Enum):
@@ -30,7 +31,7 @@ class Scope:
     name: str
     node_id: str
     parent: Optional["Scope"] = None
-    variables: Dict[str, str] = None  # var_name -> defining_node_id
+    variables: dict[str, str] = None  # var_name -> defining_node_id
 
     def __post_init__(self):
         if self.variables is None:
@@ -42,17 +43,17 @@ class PDGBuilder(ast.NodeVisitor):
 
     def __init__(self, track_constants: bool = True, interprocedural: bool = True):
         self.graph = nx.DiGraph()
-        self.scopes: List[Scope] = []
-        self.control_deps: List[str] = []
-        self.loop_deps: List[str] = []
-        self.exception_deps: List[str] = []
+        self.scopes: list[Scope] = []
+        self.control_deps: list[str] = []
+        self.loop_deps: list[str] = []
+        self.exception_deps: list[str] = []
         self.call_graph: nx.DiGraph = nx.DiGraph()
         self.track_constants = track_constants
         self.interprocedural = interprocedural
         self.current_function: Optional[str] = None
         self.node_counter = defaultdict(int)
 
-    def build(self, code: str) -> Tuple[nx.DiGraph, nx.DiGraph]:
+    def build(self, code: str) -> tuple[nx.DiGraph, nx.DiGraph]:
         """Build PDG and call graph from code."""
         tree = ast.parse(code)
         self.visit(tree)
@@ -132,7 +133,7 @@ class PDGBuilder(ast.NodeVisitor):
         )
 
         # Enter class scope
-        scope = self.enter_scope("class", node.name, node_id)
+        self.enter_scope("class", node.name, node_id)
 
         # Process class body
         for stmt in node.body:
@@ -337,7 +338,7 @@ class PDGBuilder(ast.NodeVisitor):
         self.node_counter[prefix] += 1
         return f"{prefix}_{self.node_counter[prefix]}"
 
-    def _extract_variables(self, node: ast.AST) -> Set[str]:
+    def _extract_variables(self, node: ast.AST) -> set[str]:
         """Extract all variables used in an AST node."""
         variables = set()
         for child in ast.walk(node):
@@ -348,7 +349,7 @@ class PDGBuilder(ast.NodeVisitor):
 
 def build_pdg(
     code: str, track_constants: bool = True, interprocedural: bool = True
-) -> Tuple[nx.DiGraph, nx.DiGraph]:
+) -> tuple[nx.DiGraph, nx.DiGraph]:
     """
     Build a Program Dependence Graph from Python code.
 

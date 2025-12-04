@@ -1,9 +1,9 @@
 import ast
 import logging
-from typing import Optional, Dict, Callable, List
 import tokenize
-from io import StringIO
 from functools import lru_cache
+from io import StringIO
+from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +14,9 @@ class ASTBuilder:
     """
 
     def __init__(self):
-        self.preprocessing_hooks: List[Callable[[str], str]] = []
-        self.validation_hooks: List[Callable[[ast.AST], None]] = []
-        self.ast_cache: Dict[str, ast.AST] = {}
+        self.preprocessing_hooks: list[Callable[[str], str]] = []
+        self.validation_hooks: list[Callable[[ast.AST], None]] = []
+        self.ast_cache: dict[str, ast.AST] = {}
 
     def build_ast(
         self, code: str, preprocess: bool = True, validate: bool = True
@@ -122,16 +122,14 @@ class ASTBuilder:
 
         tokens = tokenize.generate_tokens(StringIO(code).readline)
 
-        for toktype, ttext, (slineno, scol), (elineno, ecol), ltext in tokens:
+        for toktype, ttext, (_slineno, _scol), (_elineno, _ecol), _ltext in tokens:
             if toktype == tokenize.COMMENT:
                 continue
             elif toktype == tokenize.STRING:
                 if prev_toktype != tokenize.INDENT:
                     result.append(" ")
                 result.append(ttext)
-            elif toktype == tokenize.NEWLINE:
-                result.append(ttext)
-            elif toktype == tokenize.INDENT:
+            elif toktype == tokenize.NEWLINE or toktype == tokenize.INDENT:
                 result.append(ttext)
             elif toktype == tokenize.DEDENT:
                 pass

@@ -1,10 +1,11 @@
-import networkx as nx
-from typing import Dict, List, Set, Optional, Tuple, Any
+import hashlib
+import json
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-import json
-import hashlib
-from collections import defaultdict
+from typing import Any, Optional
+
+import networkx as nx
 
 
 @dataclass
@@ -13,11 +14,11 @@ class NodeInfo:
 
     id: str
     type: str
-    data: Dict[str, Any]
-    dependencies: List[Tuple[str, str]]
-    dependents: List[Tuple[str, str]]
+    data: dict[str, Any]
+    dependencies: list[tuple[str, str]]
+    dependents: list[tuple[str, str]]
     scope: Optional[str]
-    metrics: Dict[str, Any]
+    metrics: dict[str, Any]
 
 
 class DependencyType(Enum):
@@ -66,8 +67,8 @@ class PDGUtils:
 
     @staticmethod
     def find_paths(
-        pdg: nx.DiGraph, source: str, target: str, dep_types: Optional[Set[str]] = None
-    ) -> List[List[str]]:
+        pdg: nx.DiGraph, source: str, target: str, dep_types: Optional[set[str]] = None
+    ) -> list[list[str]]:
         """Find all paths between nodes considering dependency types."""
         if not pdg.has_node(source) or not pdg.has_node(target):
             return []
@@ -75,7 +76,7 @@ class PDGUtils:
         paths = []
         visited = set()
 
-        def dfs(current: str, path: List[str]):
+        def dfs(current: str, path: list[str]):
             if current == target:
                 paths.append(path[:])
                 return
@@ -91,7 +92,7 @@ class PDGUtils:
         return paths
 
     @staticmethod
-    def calculate_node_metrics(pdg: nx.DiGraph, node: str) -> Dict[str, Any]:
+    def calculate_node_metrics(pdg: nx.DiGraph, node: str) -> dict[str, Any]:
         """Calculate various metrics for a node."""
         return {
             "in_degree": pdg.in_degree(node),
@@ -103,7 +104,7 @@ class PDGUtils:
         }
 
     @staticmethod
-    def get_dependency_types(pdg: nx.DiGraph, node: str) -> Dict[str, int]:
+    def get_dependency_types(pdg: nx.DiGraph, node: str) -> dict[str, int]:
         """Get count of different dependency types for a node."""
         dep_types = defaultdict(int)
 
@@ -129,7 +130,7 @@ class PDGUtils:
         return None
 
     @staticmethod
-    def find_common_ancestors(pdg: nx.DiGraph, nodes: List[str]) -> Set[str]:
+    def find_common_ancestors(pdg: nx.DiGraph, nodes: list[str]) -> set[str]:
         """Find common ancestors of multiple nodes."""
         if not nodes:
             return set()
@@ -138,7 +139,7 @@ class PDGUtils:
         return set.intersection(*ancestors)
 
     @staticmethod
-    def find_common_descendants(pdg: nx.DiGraph, nodes: List[str]) -> Set[str]:
+    def find_common_descendants(pdg: nx.DiGraph, nodes: list[str]) -> set[str]:
         """Find common descendants of multiple nodes."""
         if not nodes:
             return set()
@@ -148,7 +149,7 @@ class PDGUtils:
 
     @staticmethod
     def get_subgraph_between(
-        pdg: nx.DiGraph, start_nodes: List[str], end_nodes: List[str]
+        pdg: nx.DiGraph, start_nodes: list[str], end_nodes: list[str]
     ) -> nx.DiGraph:
         """Extract subgraph between start and end nodes."""
         # Find all nodes in paths between start and end nodes
@@ -162,7 +163,7 @@ class PDGUtils:
         return pdg.subgraph(nodes_in_paths).copy()
 
     @staticmethod
-    def compute_node_hash(node_data: Dict[str, Any]) -> str:
+    def compute_node_hash(node_data: dict[str, Any]) -> str:
         """Compute a stable hash for node data."""
         # Sort dictionary to ensure stable hash
         sorted_items = sorted(node_data.items(), key=lambda x: str(x[0]))
@@ -174,14 +175,14 @@ class PDGUtils:
     @staticmethod
     def find_similar_nodes(
         pdg: nx.DiGraph, node: str, similarity_threshold: float = 0.8
-    ) -> List[str]:
+    ) -> list[str]:
         """Find nodes with similar structure and dependencies."""
-        node_hash = PDGUtils.compute_node_hash(pdg.nodes[node])
+        PDGUtils.compute_node_hash(pdg.nodes[node])
         similar_nodes = []
 
         for other_node in pdg.nodes:
             if other_node != node:
-                other_hash = PDGUtils.compute_node_hash(pdg.nodes[other_node])
+                PDGUtils.compute_node_hash(pdg.nodes[other_node])
                 similarity = PDGUtils.calculate_node_similarity(pdg, node, other_node)
                 if similarity >= similarity_threshold:
                     similar_nodes.append(other_node)
@@ -204,7 +205,7 @@ class PDGUtils:
         return 0.4 * type_similarity + 0.6 * dep_similarity
 
     @staticmethod
-    def find_node_clusters(pdg: nx.DiGraph, min_size: int = 2) -> List[Set[str]]:
+    def find_node_clusters(pdg: nx.DiGraph, min_size: int = 2) -> list[set[str]]:
         """Find clusters of related nodes."""
         # Create similarity graph
         sim_graph = nx.Graph()
@@ -265,7 +266,7 @@ class PDGUtils:
         return pdg
 
     @staticmethod
-    def _calculate_dict_similarity(dict1: Dict, dict2: Dict) -> float:
+    def _calculate_dict_similarity(dict1: dict, dict2: dict) -> float:
         """Calculate similarity between two dictionaries."""
         keys = set(dict1.keys()) | set(dict2.keys())
         if not keys:
@@ -281,7 +282,7 @@ class PDGUtils:
         return 1 - (differences / (2 * max_possible_diff))
 
     @staticmethod
-    def _clean_for_json(data: Dict) -> Dict:
+    def _clean_for_json(data: dict) -> dict:
         """Clean dictionary values for JSON serialization."""
         cleaned = {}
         for key, value in data.items():
@@ -301,7 +302,7 @@ def get_node_info(pdg: nx.DiGraph, node: str) -> NodeInfo:
     return PDGUtils.analyze_node(pdg, node)
 
 
-def find_paths(pdg: nx.DiGraph, source: str, target: str) -> List[List[str]]:
+def find_paths(pdg: nx.DiGraph, source: str, target: str) -> list[list[str]]:
     """Convenience function to find paths between nodes."""
     return PDGUtils.find_paths(pdg, source, target)
 

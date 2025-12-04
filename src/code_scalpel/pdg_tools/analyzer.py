@@ -1,9 +1,10 @@
-import networkx as nx
-from typing import Dict, List, Set, Optional, Tuple, Any
-from dataclasses import dataclass
-from enum import Enum
 import ast
 from collections import defaultdict
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Optional
+
+import networkx as nx
 
 
 class DependencyType(Enum):
@@ -22,7 +23,7 @@ class DataFlowAnomaly:
 
     type: str  # 'undefined', 'unused', 'overwrite'
     variable: str
-    location: Tuple[int, int]  # line, column
+    location: tuple[int, int]  # line, column
     severity: str
     message: str
 
@@ -34,7 +35,7 @@ class SecurityVulnerability:
     type: str
     source: str
     sink: str
-    path: List[str]
+    path: list[str]
     severity: str
     description: str
 
@@ -46,7 +47,7 @@ class PDGAnalyzer:
         self.pdg = pdg
         self.cached_results = {}
 
-    def analyze_data_flow(self) -> Dict[str, Any]:
+    def analyze_data_flow(self) -> dict[str, Any]:
         """Perform comprehensive data flow analysis."""
         if "data_flow" in self.cached_results:
             return self.cached_results["data_flow"]
@@ -62,7 +63,7 @@ class PDGAnalyzer:
         self.cached_results["data_flow"] = results
         return results
 
-    def analyze_control_flow(self) -> Dict[str, Any]:
+    def analyze_control_flow(self) -> dict[str, Any]:
         """Perform comprehensive control flow analysis."""
         return {
             "cyclomatic_complexity": self._calculate_cyclomatic_complexity(),
@@ -72,7 +73,7 @@ class PDGAnalyzer:
             "dominators": self._compute_dominators(),
         }
 
-    def perform_security_analysis(self) -> List[SecurityVulnerability]:
+    def perform_security_analysis(self) -> list[SecurityVulnerability]:
         """Perform security analysis on the PDG."""
         vulnerabilities = []
 
@@ -89,7 +90,7 @@ class PDGAnalyzer:
 
         return vulnerabilities
 
-    def find_optimization_opportunities(self) -> Dict[str, List[Dict]]:
+    def find_optimization_opportunities(self) -> dict[str, list[dict]]:
         """Identify potential code optimization opportunities."""
         return {
             "loop_invariant": self._find_loop_invariant_code(),
@@ -128,7 +129,7 @@ class PDGAnalyzer:
         traverse_dependencies(criterion)
         return slice_graph
 
-    def _find_data_flow_anomalies(self) -> List[DataFlowAnomaly]:
+    def _find_data_flow_anomalies(self) -> list[DataFlowAnomaly]:
         """Find data flow anomalies in the code."""
         anomalies = []
         definitions = defaultdict(list)
@@ -173,7 +174,7 @@ class PDGAnalyzer:
 
         return anomalies
 
-    def _perform_taint_analysis(self) -> List[SecurityVulnerability]:
+    def _perform_taint_analysis(self) -> list[SecurityVulnerability]:
         """Perform taint analysis to identify security vulnerabilities."""
         vulnerabilities = []
         sources = self._identify_taint_sources()
@@ -203,7 +204,7 @@ class PDGAnalyzer:
 
         return vulnerabilities
 
-    def _find_loop_invariant_code(self) -> List[Dict]:
+    def _find_loop_invariant_code(self) -> list[dict]:
         """Identify loop-invariant code."""
         loop_invariants = []
         loops = self._find_loops()
@@ -224,7 +225,7 @@ class PDGAnalyzer:
 
         return loop_invariants
 
-    def _analyze_value_ranges(self) -> Dict[str, Tuple[Optional[int], Optional[int]]]:
+    def _analyze_value_ranges(self) -> dict[str, tuple[Optional[int], Optional[int]]]:
         """Analyze possible value ranges for variables."""
         ranges = {}
         for node, data in self.pdg.nodes(data=True):
@@ -235,7 +236,7 @@ class PDGAnalyzer:
 
     def _compute_value_range(
         self, var: str, node: str
-    ) -> Tuple[Optional[int], Optional[int]]:
+    ) -> tuple[Optional[int], Optional[int]]:
         """Compute possible value range for a variable at a given node."""
         constraints = []
 
@@ -251,7 +252,7 @@ class PDGAnalyzer:
 
         return self._solve_constraints(constraints)
 
-    def _identify_taint_sources(self) -> Set[str]:
+    def _identify_taint_sources(self) -> set[str]:
         """Identify nodes that can introduce tainted data."""
         sources = set()
         dangerous_functions = {
@@ -277,7 +278,7 @@ class PDGAnalyzer:
 
         return sources
 
-    def _identify_taint_sinks(self) -> Set[str]:
+    def _identify_taint_sinks(self) -> set[str]:
         """Identify nodes that are sensitive to tainted data."""
         sinks = set()
         sensitive_functions = {
@@ -316,7 +317,7 @@ class PDGAnalyzer:
             return "xss"
         return "unknown"
 
-    def _is_path_sanitized(self, path: List[str]) -> bool:
+    def _is_path_sanitized(self, path: list[str]) -> bool:
         """Check if a path contains proper sanitization."""
         sanitizer_functions = {
             "escape",
@@ -340,7 +341,7 @@ class PDGAnalyzer:
                 return True
         return False
 
-    def _find_common_subexpressions(self) -> List[Dict]:
+    def _find_common_subexpressions(self) -> list[dict]:
         """Find common subexpressions that could be optimized."""
         expressions = defaultdict(list)
 
@@ -365,7 +366,7 @@ class PDGAnalyzer:
             return hash(ast.dump(expression))
         return hash(str(expression))
 
-    def _find_redundant_computations(self) -> List[Dict]:
+    def _find_redundant_computations(self) -> list[dict]:
         """Identify redundant computations that could be optimized."""
         redundant = []
 
@@ -408,7 +409,7 @@ class PDGAnalyzer:
             "is not properly sanitized."
         )
 
-    def _build_def_use_chains(self) -> Dict[str, List[str]]:
+    def _build_def_use_chains(self) -> dict[str, list[str]]:
         """Build definition-use chains for variables."""
         chains = {}
         for node, data in self.pdg.nodes(data=True):
@@ -419,23 +420,23 @@ class PDGAnalyzer:
                     chains[var].append(node)
         return chains
 
-    def _analyze_live_variables(self) -> Dict[str, Set[str]]:
+    def _analyze_live_variables(self) -> dict[str, set[str]]:
         """Analyze live variables at each program point."""
         return {}  # Stub implementation
 
-    def _analyze_reaching_definitions(self) -> Dict[str, Set[str]]:
+    def _analyze_reaching_definitions(self) -> dict[str, set[str]]:
         """Analyze reaching definitions."""
         return {}  # Stub implementation
 
     def _calculate_cyclomatic_complexity(self) -> int:
         """Calculate cyclomatic complexity."""
         complexity = 1
-        for node, data in self.pdg.nodes(data=True):
+        for _node, data in self.pdg.nodes(data=True):
             if data.get("type") in ("if", "while", "for"):
                 complexity += 1
         return complexity
 
-    def _analyze_control_dependencies(self) -> Dict[str, List[str]]:
+    def _analyze_control_dependencies(self) -> dict[str, list[str]]:
         """Analyze control dependencies."""
         deps = {}
         for u, v, data in self.pdg.edges(data=True):
@@ -445,11 +446,11 @@ class PDGAnalyzer:
                 deps[v].append(u)
         return deps
 
-    def _find_unreachable_code(self) -> List[str]:
+    def _find_unreachable_code(self) -> list[str]:
         """Find unreachable code nodes."""
         return []  # Stub implementation
 
-    def _analyze_loops(self) -> List[Dict]:
+    def _analyze_loops(self) -> list[dict]:
         """Analyze loop information."""
         loops = []
         for node, data in self.pdg.nodes(data=True):
@@ -457,19 +458,19 @@ class PDGAnalyzer:
                 loops.append({"node": node, "type": data.get("type")})
         return loops
 
-    def _compute_dominators(self) -> Dict[str, Set[str]]:
+    def _compute_dominators(self) -> dict[str, set[str]]:
         """Compute dominator tree."""
         return {}  # Stub implementation
 
-    def _analyze_information_flow(self) -> List[SecurityVulnerability]:
+    def _analyze_information_flow(self) -> list[SecurityVulnerability]:
         """Analyze information flow for security issues."""
         return []  # Stub implementation
 
-    def _check_common_vulnerabilities(self) -> List[SecurityVulnerability]:
+    def _check_common_vulnerabilities(self) -> list[SecurityVulnerability]:
         """Check for common vulnerability patterns."""
         return []  # Stub implementation
 
-    def _find_dead_code(self) -> List[Dict]:
+    def _find_dead_code(self) -> list[dict]:
         """Find dead code nodes."""
         dead_code = []
         for node, data in self.pdg.nodes(data=True):
@@ -478,7 +479,7 @@ class PDGAnalyzer:
                 dead_code.append({"node": node, "type": data.get("type")})
         return dead_code
 
-    def _find_loops(self) -> List[str]:
+    def _find_loops(self) -> list[str]:
         """Find loop nodes in the PDG."""
         loops = []
         for node, data in self.pdg.nodes(data=True):
@@ -486,7 +487,7 @@ class PDGAnalyzer:
                 loops.append(node)
         return loops
 
-    def _analyze_loop_body(self, loop: str) -> List[str]:
+    def _analyze_loop_body(self, loop: str) -> list[str]:
         """Get nodes in a loop body."""
         body = []
         for _, succ, data in self.pdg.out_edges(loop, data=True):
@@ -502,13 +503,13 @@ class PDGAnalyzer:
         """Estimate savings from optimization."""
         return 0  # Stub implementation
 
-    def _parse_condition_constraint(self, condition: str, var: str) -> Optional[Tuple]:
+    def _parse_condition_constraint(self, condition: str, var: str) -> Optional[tuple]:
         """Parse a condition into a constraint for a variable."""
         return None  # Stub implementation
 
     def _solve_constraints(
-        self, constraints: List
-    ) -> Tuple[Optional[int], Optional[int]]:
+        self, constraints: list
+    ) -> tuple[Optional[int], Optional[int]]:
         """Solve constraints to determine value range."""
         return (None, None)  # Stub implementation
 

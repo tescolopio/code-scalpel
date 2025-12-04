@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 
-from ..base_parser import BaseParser, ParseResult, PreprocessorConfig, Language
 import ast
-from typing import Dict, List, Optional, Any
-from collections import defaultdict
-import tokenize
-from io import StringIO
-import subprocess
 import json
+import subprocess
+import tokenize
+from collections import defaultdict
+from io import StringIO
+from typing import Any, Optional
+
+from ..base_parser import BaseParser, Language, ParseResult, PreprocessorConfig
+
 
 class PythonParser(BaseParser):
-    def parse_code(self, code: str, preprocess: bool = True, config: Optional[PreprocessorConfig] = None) -> ParseResult:
+    def parse_code(
+        self,
+        code: str,
+        preprocess: bool = True,
+        config: Optional[PreprocessorConfig] = None,
+    ) -> ParseResult:
         if preprocess:
             code = self._preprocess_code(code, config or PreprocessorConfig())
         return self._parse_python(code)
@@ -28,29 +35,29 @@ class PythonParser(BaseParser):
         errors = []
         warnings = []
         metrics = defaultdict(int)
-        
+
         try:
             # Parse into AST
             tree = ast.parse(code)
-            
+
             # Get token stream
             tokens = list(tokenize.generate_tokens(StringIO(code).readline))
-            
+
             # Analyze code structure
             metrics.update(self._analyze_python_code(tree))
-            
+
             # Check for potential issues using pycodestyle
             warnings.extend(self._check_python_code_with_pycodestyle(code))
-            
+
             return ParseResult(
                 ast=tree,
                 errors=errors,
                 warnings=warnings,
                 tokens=tokens,
                 metrics=dict(metrics),
-                language=Language.PYTHON
+                language=Language.PYTHON,
             )
-            
+
         except SyntaxError as e:
             errors.append(self._format_syntax_error(e))
             return ParseResult(
@@ -59,49 +66,48 @@ class PythonParser(BaseParser):
                 warnings=warnings,
                 tokens=[],
                 metrics=dict(metrics),
-                language=Language.PYTHON
+                language=Language.PYTHON,
             )
-        
-    def _analyze_python_code(self, tree: ast.AST) -> Dict[str, int]:
+
+    def _analyze_python_code(self, tree: ast.AST) -> dict[str, int]:
         """Analyze Python code structure."""
         metrics = defaultdict(int)
-        
+
         for node in ast.walk(tree):
             # Count different node types
-            metrics[f'count_{type(node).__name__}'] += 1
-            
+            metrics[f"count_{type(node).__name__}"] += 1
+
             # Analyze complexity
             if isinstance(node, ast.FunctionDef):
-                metrics['function_count'] += 1
-                metrics['max_function_complexity'] = max(
-                    metrics['max_function_complexity'],
-                    self._calculate_complexity(node)
+                metrics["function_count"] += 1
+                metrics["max_function_complexity"] = max(
+                    metrics["max_function_complexity"], self._calculate_complexity(node)
                 )
             elif isinstance(node, ast.ClassDef):
-                metrics['class_count'] += 1
-                
+                metrics["class_count"] += 1
+
         return dict(metrics)
-    
-    def _check_python_code_with_pycodestyle(self, code: str) -> List[str]:
+
+    def _check_python_code_with_pycodestyle(self, code: str) -> list[str]:
         """Check for potential code issues using pycodestyle."""
         warnings = []
-        
+
         # Run pycodestyle as a subprocess
         result = subprocess.run(
-            ['pycodestyle', '--format=json', '-'],
+            ["pycodestyle", "--format=json", "-"],
             input=code,
             text=True,
-            capture_output=True
+            capture_output=True,
         )
-        
+
         if result.returncode != 0 and result.stdout:
             pycodestyle_output = json.loads(result.stdout)
-            for filename, issues in pycodestyle_output.items():
+            for _filename, issues in pycodestyle_output.items():
                 for issue in issues:
                     warnings.append(
                         f"{issue['code']} at line {issue['line']}, column {issue['column']}: {issue['text']}"
                     )
-        
+
         return warnings
 
     def _calculate_complexity(self, node: ast.FunctionDef) -> int:
@@ -112,23 +118,27 @@ class PythonParser(BaseParser):
                 complexity += 1
         return complexity
 
-    def _format_syntax_error(self, e: SyntaxError) -> Dict[str, Any]:
+    def _format_syntax_error(self, e: SyntaxError) -> dict[str, Any]:
         """Format a syntax error for inclusion in the error list."""
         return {
-            'type': 'SyntaxError',
-            'message': e.msg,
-            'line': e.lineno,
-            'column': e.offset
+            "type": "SyntaxError",
+            "message": e.msg,
+            "line": e.lineno,
+            "column": e.offset,
         }
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Python parser using pycodestyle for analysis')
-    parser.add_argument('filename', help='Path to the Python file')
+
+    parser = argparse.ArgumentParser(
+        description="Python parser using pycodestyle for analysis"
+    )
+    parser.add_argument("filename", help="Path to the Python file")
     args = parser.parse_args()
 
     try:
-        with open(args.filename, 'r') as f:
+        with open(args.filename) as f:
             code = f.read()
     except FileNotFoundError:
         print(f"Error: {args.filename} not found.")
@@ -136,17 +146,17 @@ if __name__ == '__main__':
 
     python_parser = PythonParser()
     result = python_parser.parse_code(code)
-    
+
     if result.errors:
         print("Errors:")
         for error in result.errors:
             print(error)
-    
+
     if result.warnings:
         print("Warnings:")
         for warning in result.warnings:
             print(warning)
-    
+
     print("Metrics:")
     for key, value in result.metrics.items():
         print(f"{key}: {value}")

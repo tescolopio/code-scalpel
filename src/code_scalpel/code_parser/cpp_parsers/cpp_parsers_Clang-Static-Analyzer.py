@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import os
-import sys
 import subprocess
+import sys
+
 import base_parser
+
 
 class CppCodeParser(base_parser.BaseParser):
     def __init__(self, file_path):
@@ -39,6 +41,7 @@ class CppCodeParser(base_parser.BaseParser):
 
     def handle_entity_line(self, line):
         pass
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
