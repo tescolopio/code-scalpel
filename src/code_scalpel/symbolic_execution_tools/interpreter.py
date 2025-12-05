@@ -4,6 +4,7 @@ SymbolicInterpreter - The Nervous System of Symbolic Execution.
 This module provides the AST interpreter that:
 - Walks Python code and updates symbolic state
 - Handles branching with SMART FORKING (feasibility check before fork)
+- Handles loops with BOUNDED UNROLLING (prevents infinite loops)
 - Prunes dead paths to avoid zombie path explosion
 
 CRITICAL DESIGN DECISION: Smart Forking
@@ -21,6 +22,19 @@ SMART FORKING:
 4. Otherwise, continue down the single feasible path
 
 This prevents exponential path explosion from dead branches.
+
+CRITICAL DESIGN DECISION: Bounded Loop Unrolling
+=================================================
+Loops are the halting problem in disguise:
+    while True: pass  --> Hangs forever!
+    while x < 10:     --> Symbolic x means infinite forking!
+
+BOUNDED UNROLLING:
+1. Execute loop body up to MAX_ITERATIONS times
+2. After limit, PRUNE the path (assume loop terminates)
+3. This misses bugs at iteration N+1, but guarantees termination
+
+For bug finding (not formal verification), this is the right tradeoff.
 """
 
 from __future__ import annotations
@@ -91,26 +105,36 @@ class SymbolicInterpreter(ast.NodeVisitor):
     - Integer and boolean variables (per Phase 1 scope)
     - Arithmetic and boolean expressions
     - If/elif/else branches with SMART FORKING
+    - While loops with BOUNDED UNROLLING
+    - For loops over range() with BOUNDED UNROLLING
     - Dead path pruning
     
-    Does NOT support (yet):
-    - Loops (M5)
-    - Function calls
+    Does NOT support:
+    - Function calls (returns UNKNOWN)
     - Classes/objects
     - Strings, floats, lists, dicts
+    - Arbitrary iterables (only range())
     
     Example:
-        interp = SymbolicInterpreter()
+        interp = SymbolicInterpreter(max_loop_iterations=10)
         interp.declare_symbolic("x", IntSort())
         result = interp.execute("if x > 0: y = 1")
         print(result.states)  # Two states: x>0 and x<=0
     """
     
-    def __init__(self):
-        """Initialize the interpreter."""
+    DEFAULT_MAX_LOOP_ITERATIONS = 10
+    
+    def __init__(self, max_loop_iterations: int = DEFAULT_MAX_LOOP_ITERATIONS):
+        """
+        Initialize the interpreter.
+        
+        Args:
+            max_loop_iterations: Maximum loop iterations before pruning (default: 10)
+        """
         self._initial_state: SymbolicState = SymbolicState()
         self._type_engine: TypeInferenceEngine = TypeInferenceEngine()
         self._preconditions: List[BoolRef] = []
+        self.max_loop_iterations = max_loop_iterations
         
     # =========================================================================
     # Setup API
@@ -244,10 +268,10 @@ class SymbolicInterpreter(ast.NodeVisitor):
         elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             # Skip function/class definitions (not executed at module level)
             return [state]
-        elif isinstance(stmt, (ast.For, ast.While)):
-            # Loops not yet supported (M5)
-            # For now, skip them with a warning
-            return [state]
+        elif isinstance(stmt, ast.While):
+            return self._execute_while(stmt, state, result)
+        elif isinstance(stmt, ast.For):
+            return self._execute_for(stmt, state, result)
         elif isinstance(stmt, ast.Import) or isinstance(stmt, ast.ImportFrom):
             # Skip imports
             return [state]
@@ -668,4 +692,328 @@ class SymbolicInterpreter(ast.NodeVisitor):
             terminal_states.append(false_state)
         
         result.path_count += 1
+        return terminal_states
+    
+    # =========================================================================
+    # Loop Handling - BOUNDED UNROLLING
+    # =========================================================================
+    
+    def _execute_while(
+        self,
+        stmt: ast.While,
+        state: SymbolicState,
+        result: ExecutionResult
+    ) -> List[SymbolicState]:
+        """
+        Execute a while loop with BOUNDED UNROLLING.
+        
+        CRITICAL: This prevents infinite loops from hanging the engine.
+        
+        Strategy:
+        1. Evaluate condition
+        2. If definitely false → skip loop
+        3. If definitely true or unknown → execute body
+        4. Repeat up to MAX_ITERATIONS
+        5. After limit, prune the path (assume loop exits)
+        
+        Args:
+            stmt: AST While node
+            state: Current symbolic state
+            result: ExecutionResult to track path count
+            
+        Returns:
+            List of terminal states
+        """
+        return self._unroll_while(stmt, state, result, iteration=0)
+    
+    def _unroll_while(
+        self,
+        stmt: ast.While,
+        state: SymbolicState,
+        result: ExecutionResult,
+        iteration: int
+    ) -> List[SymbolicState]:
+        """
+        Recursive helper for while loop unrolling.
+        
+        Args:
+            stmt: AST While node
+            state: Current symbolic state
+            result: ExecutionResult
+            iteration: Current iteration count
+            
+        Returns:
+            List of terminal states
+        """
+        # Check iteration limit
+        if iteration >= self.max_loop_iterations:
+            # Exceeded limit - prune this path
+            # Return current state as if loop exited
+            result.pruned_count += 1
+            return [state]
+        
+        # Evaluate condition
+        condition = self._eval_expr(stmt.test, state)
+        
+        if condition is None:
+            # Can't evaluate condition - conservatively execute once more
+            # and then exit (prevents infinite loops on unknown conditions)
+            if iteration < self.max_loop_iterations:
+                body_states = self._execute_block(stmt.body, state, result)
+                return body_states
+            return [state]
+        
+        # SMART FORKING for loop condition
+        continue_feasible = self._is_feasible_with(state, condition)
+        exit_feasible = self._is_feasible_with(state, Not(condition))
+        
+        terminal_states = []
+        
+        if continue_feasible and exit_feasible:
+            # BOTH continuing and exiting are feasible - fork
+            result.path_count += 1
+            
+            # Path 1: Exit the loop (condition is false)
+            exit_state = state.fork()
+            exit_state.add_constraint(Not(condition))
+            # Execute else block if present
+            if stmt.orelse:
+                terminal_states.extend(
+                    self._execute_block(stmt.orelse, exit_state, result)
+                )
+            else:
+                terminal_states.append(exit_state)
+            
+            # Path 2: Continue the loop (condition is true)
+            continue_state = state.fork()
+            continue_state.add_constraint(condition)
+            body_states = self._execute_block(stmt.body, continue_state, result)
+            
+            # Recurse for each state after body execution
+            for body_state in body_states:
+                terminal_states.extend(
+                    self._unroll_while(stmt, body_state, result, iteration + 1)
+                )
+                
+        elif continue_feasible:
+            # Only continuing is feasible - enter loop body
+            state.add_constraint(condition)
+            body_states = self._execute_block(stmt.body, state, result)
+            
+            # Recurse for each state
+            for body_state in body_states:
+                terminal_states.extend(
+                    self._unroll_while(stmt, body_state, result, iteration + 1)
+                )
+                
+        elif exit_feasible:
+            # Only exiting is feasible - skip loop
+            state.add_constraint(Not(condition))
+            result.pruned_count += 1
+            
+            # Execute else block if present
+            if stmt.orelse:
+                terminal_states.extend(
+                    self._execute_block(stmt.orelse, state, result)
+                )
+            else:
+                terminal_states.append(state)
+        else:
+            # Neither feasible - dead path
+            result.pruned_count += 1
+            # Return empty - this path dies
+        
+        return terminal_states
+    
+    def _execute_for(
+        self,
+        stmt: ast.For,
+        state: SymbolicState,
+        result: ExecutionResult
+    ) -> List[SymbolicState]:
+        """
+        Execute a for loop with BOUNDED UNROLLING.
+        
+        ONLY supports for loops over range():
+        - for i in range(n)
+        - for i in range(start, stop)
+        - for i in range(start, stop, step)
+        
+        Other iterables are skipped (unsupported).
+        
+        Args:
+            stmt: AST For node
+            state: Current symbolic state
+            result: ExecutionResult
+            
+        Returns:
+            List of terminal states
+        """
+        # Check if iterating over range()
+        range_args = self._extract_range_args(stmt.iter, state)
+        
+        if range_args is None:
+            # Not a range() loop - skip it (unsupported iterable)
+            # But don't crash - just continue without executing body
+            return [state]
+        
+        start, stop, step = range_args
+        
+        # Get the loop variable name
+        if not isinstance(stmt.target, ast.Name):
+            # Complex target (tuple unpacking) - skip
+            return [state]
+        
+        loop_var = stmt.target.id
+        
+        # Unroll the range loop
+        return self._unroll_range(
+            stmt, state, result, 
+            loop_var, start, stop, step, 
+            iteration=0
+        )
+    
+    def _extract_range_args(
+        self,
+        iter_node: ast.expr,
+        state: SymbolicState
+    ) -> Optional[Tuple[int, int, int]]:
+        """
+        Extract range() arguments from the iterator expression.
+        
+        Returns (start, stop, step) or None if not a valid range() call.
+        """
+        if not isinstance(iter_node, ast.Call):
+            return None
+        
+        # Check if it's a call to range
+        func = iter_node.func
+        if not isinstance(func, ast.Name) or func.id != 'range':
+            return None
+        
+        args = iter_node.args
+        
+        # Evaluate arguments as concrete integers
+        try:
+            if len(args) == 1:
+                # range(stop)
+                stop = self._eval_to_concrete_int(args[0], state)
+                if stop is None:
+                    return None
+                return (0, stop, 1)
+            elif len(args) == 2:
+                # range(start, stop)
+                start = self._eval_to_concrete_int(args[0], state)
+                stop = self._eval_to_concrete_int(args[1], state)
+                if start is None or stop is None:
+                    return None
+                return (start, stop, 1)
+            elif len(args) >= 3:
+                # range(start, stop, step)
+                start = self._eval_to_concrete_int(args[0], state)
+                stop = self._eval_to_concrete_int(args[1], state)
+                step = self._eval_to_concrete_int(args[2], state)
+                if start is None or stop is None or step is None:
+                    return None
+                if step == 0:
+                    return None  # Invalid step
+                return (start, stop, step)
+            else:
+                return None
+        except:
+            return None
+    
+    def _eval_to_concrete_int(
+        self,
+        expr: ast.expr,
+        state: SymbolicState
+    ) -> Optional[int]:
+        """
+        Evaluate expression to a concrete Python int.
+        
+        Returns None if the expression is symbolic or unsupported.
+        """
+        if isinstance(expr, ast.Constant) and isinstance(expr.value, int):
+            return expr.value
+        elif isinstance(expr, ast.UnaryOp) and isinstance(expr.op, ast.USub):
+            inner = self._eval_to_concrete_int(expr.operand, state)
+            if inner is not None:
+                return -inner
+        
+        # Try evaluating via Z3 and checking if it's constant
+        z3_expr = self._eval_expr(expr, state)
+        if z3_expr is not None:
+            simplified = simplify(z3_expr)
+            # Check if it's a concrete integer
+            if hasattr(simplified, 'as_long'):
+                try:
+                    return simplified.as_long()
+                except:
+                    pass
+        
+        return None
+    
+    def _unroll_range(
+        self,
+        stmt: ast.For,
+        state: SymbolicState,
+        result: ExecutionResult,
+        loop_var: str,
+        start: int,
+        stop: int,
+        step: int,
+        iteration: int
+    ) -> List[SymbolicState]:
+        """
+        Unroll a range-based for loop.
+        
+        Args:
+            stmt: AST For node
+            state: Current symbolic state
+            result: ExecutionResult
+            loop_var: Name of loop variable
+            start: Current iteration value
+            stop: End value
+            step: Step value
+            iteration: Iteration count (for bounding)
+            
+        Returns:
+            List of terminal states
+        """
+        # Check if loop should continue
+        if step > 0:
+            should_continue = start < stop
+        else:
+            should_continue = start > stop
+        
+        if not should_continue:
+            # Loop is complete - execute else block if present
+            if stmt.orelse:
+                return self._execute_block(stmt.orelse, state, result)
+            return [state]
+        
+        # Check iteration limit
+        if iteration >= self.max_loop_iterations:
+            result.pruned_count += 1
+            return [state]
+        
+        # Set loop variable to current value
+        state.set_variable(loop_var, IntVal(start))
+        
+        # Execute body
+        body_states = self._execute_block(stmt.body, state, result)
+        
+        # Recurse for next iteration
+        terminal_states = []
+        next_start = start + step
+        
+        for body_state in body_states:
+            terminal_states.extend(
+                self._unroll_range(
+                    stmt, body_state, result,
+                    loop_var, next_start, stop, step,
+                    iteration + 1
+                )
+            )
+        
         return terminal_states
