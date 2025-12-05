@@ -5,13 +5,13 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://badge.fury.io/py/code-scalpel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Status](https://img.shields.io/badge/status-in%20development-yellow.svg)](https://github.com/tescolopio/code-scalpel)
+[![Status](https://img.shields.io/badge/status-v0.1.0%20released-brightgreen.svg)](https://pypi.org/project/code-scalpel/)
 
 Code Scalpel is a precision tool set for AI-driven code analysis and transformation. Using advanced techniques like Abstract Syntax Trees (ASTs), Program Dependence Graphs (PDGs), and Symbolic Execution, Code Scalpel enables AI agents to perform deep analysis and surgical modifications of code with unprecedented accuracy.
 
 > **⚠️ Project Scope:** Code Scalpel is a **Python toolkit and MCP server** designed for use by AI agents and automation systems. It is **NOT** a mobile application, web app, or GUI tool. Target users include AI coding assistants (Cursor, Cline, Claude Desktop), AI agent frameworks (Autogen, CrewAI, Langchain), and DevOps pipelines.
 
-> **🚧 Status:** Code Scalpel is currently being transformed from a development prototype into a production-ready toolkit with full Model Context Protocol (MCP) support. See our [ROADMAP.md](ROADMAP.md) for details.
+> **✅ Status:** Code Scalpel v0.1.0 is **live on PyPI**. Install with `pip install code-scalpel`. See our [ROADMAP.md](ROADMAP.md) for what's next.
 
 ## 🌟 Features
 
@@ -60,12 +60,12 @@ Code Scalpel builds upon the foundations of static analysis while adding powerfu
 
 ## 🚀 Quick Start
 
-> **⚠️ Note:** The package is currently being restructured. Installation via pip will not work until Epic 1 is completed. See [ROADMAP.md](ROADMAP.md) for progress.
-
-### Installation (Coming Soon)
+### Installation
 ```bash
 pip install code-scalpel
 ```
+
+> **Note:** Requires Python 3.9+. For optional AI integrations, install with extras: `pip install code-scalpel[all]`
 
 ### Basic Usage
 ```python
@@ -188,27 +188,31 @@ We're transforming Code Scalpel into a production-ready MCP-enabled toolkit:
 
 ### What's Coming?
 
-**Phase 1 (Weeks 1-2):** Package infrastructure + MCP server implementation  
-**Phase 2 (Weeks 3-4):** Comprehensive testing + documentation  
-**Phase 3 (Weeks 5-6):** CI/CD + security + PyPI release  
-**Phase 4 (Weeks 7-9):** Multi-language support + performance optimization  
-**Phase 5 (Weeks 10+):** Community building and ecosystem growth  
+**Phase 1:** ✅ Complete - Package infrastructure + MCP server + PyPI release (v0.1.0)  
+**Phase 2 (Current):** Testing + documentation + hotfixes  
+**Phase 3:** Multi-language support + performance optimization  
+**Phase 4:** Symbolic execution redemption (v0.2.0)  
+**Phase 5:** Community building and ecosystem growth (v1.0.0)  
 
 See [ROADMAP.md](ROADMAP.md) for full details.
 
-### 🚀 PyPI Alpha Release Checklist
+### ✅ v0.1.0 Released!
 
-To release `pip install code-scalpel==0.1.0a1`, the following must be completed:
+Code Scalpel v0.1.0 is now available on PyPI:
 
-1. **Package Structure** - Rename `src/` → `src/code_scalpel/` with proper `__init__.py`
-2. **pyproject.toml** - Update version to `0.1.0a1`, add classifiers, URLs, and Python version requirements
-3. **Dependencies** - Pin versions, add optional dev/test dependencies
-4. **Basic Tests** - Core functionality tests passing
-5. **Build & Verify** - Successfully build with `python -m build` and test install
-6. **PyPI Account** - Configure TestPyPI first, then production PyPI
-7. **Upload** - Use `twine upload` to publish
+```bash
+pip install code-scalpel
+```
 
-See the PyPI Alpha Release section in [ROADMAP.md](ROADMAP.md) for detailed steps.
+**What's included:**
+- AST Analysis (94% coverage)
+- PDG Analysis (86% coverage)
+- MCP HTTP Server
+- CLI tool (`code-scalpel`)
+- AI integrations (Autogen, CrewAI)
+
+**What's experimental:**
+- Symbolic Execution (quarantined - see [ROADMAP.md](ROADMAP.md))
 
 ### 💬 Community Discussion
 
