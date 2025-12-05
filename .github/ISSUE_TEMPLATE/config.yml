@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/tescolopio/code-scalpel/discussions
+    about: For general questions, ideas, or show-and-tell. Not for bug reports.
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/tescolopio/code-scalpel/security/advisories/new
+    about: Report security vulnerabilities privately. Do NOT open a public issue.
