@@ -64,6 +64,7 @@ class MCPClientSimulator:
             
         # Run test suite
         self._test_health_endpoint()
+        self._test_tools_endpoint()  # v0.3.1
         self._test_analyze_simple_code()
         self._test_analyze_with_security_issues()
         self._test_analyze_syntax_error()
@@ -71,6 +72,8 @@ class MCPClientSimulator:
         self._test_analyze_missing_code()
         self._test_refactor_endpoint()
         self._test_security_endpoint()
+        self._test_security_sqli_detection()  # v0.3.1
+        self._test_symbolic_endpoint()  # v0.3.1
         self._test_response_time()
         
         # Security tests
@@ -408,6 +411,138 @@ api_key = "sk-abc123xyz"
                 self.results.append(TestResult(
                     name=name, passed=False,
                     message=f"Unexpected response: {response.status_code}",
+                    response_time_ms=elapsed,
+                    details=data
+                ))
+        except Exception as e:
+            self.results.append(TestResult(
+                name=name, passed=False,
+                message=f"Exception: {e}"
+            ))
+
+    def _test_tools_endpoint(self):
+        """Test the /tools discovery endpoint (v0.3.1)."""
+        name = "Tools discovery endpoint"
+        start = time.time()
+        
+        try:
+            response = requests.get(f"{self.base_url}/tools")
+            elapsed = (time.time() - start) * 1000
+            data = response.json()
+            
+            if response.status_code == 200:
+                tools = data.get("tools", [])
+                tool_names = [t.get("name") for t in tools]
+                
+                # Check required tools exist
+                required_tools = ["analyze", "security", "symbolic", "refactor"]
+                missing = [t for t in required_tools if t not in tool_names]
+                
+                if not missing:
+                    self.results.append(TestResult(
+                        name=name, passed=True,
+                        message=f"Found {len(tools)} tools: {', '.join(tool_names)}",
+                        response_time_ms=elapsed
+                    ))
+                else:
+                    self.results.append(TestResult(
+                        name=name, passed=False,
+                        message=f"Missing tools: {missing}",
+                        response_time_ms=elapsed
+                    ))
+            else:
+                self.results.append(TestResult(
+                    name=name, passed=False,
+                    message=f"Unexpected status: {response.status_code}",
+                    response_time_ms=elapsed
+                ))
+        except Exception as e:
+            self.results.append(TestResult(
+                name=name, passed=False,
+                message=f"Exception: {e}"
+            ))
+
+    def _test_security_sqli_detection(self):
+        """Test that the security endpoint detects SQL injection (v0.3.1)."""
+        name = "Security: Detect SQL injection"
+        start = time.time()
+        
+        # Code with SQL injection vulnerability
+        code = '''
+user_id = request.args.get("id")
+cursor.execute("SELECT * FROM users WHERE id=" + user_id)
+'''
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/security",
+                json={"code": code}
+            )
+            elapsed = (time.time() - start) * 1000
+            data = response.json()
+            
+            if response.status_code == 200:
+                has_sqli = (
+                    data.get("sql_injections", 0) > 0 or
+                    data.get("has_vulnerabilities", False)
+                )
+                
+                if has_sqli:
+                    self.results.append(TestResult(
+                        name=name, passed=True,
+                        message=f"Detected SQLi (risk: {data.get('risk_level', 'unknown')})",
+                        response_time_ms=elapsed
+                    ))
+                else:
+                    self.results.append(TestResult(
+                        name=name, passed=False,
+                        message="Failed to detect SQL injection",
+                        response_time_ms=elapsed,
+                        details=data
+                    ))
+            else:
+                self.results.append(TestResult(
+                    name=name, passed=False,
+                    message=f"Status {response.status_code}",
+                    response_time_ms=elapsed
+                ))
+        except Exception as e:
+            self.results.append(TestResult(
+                name=name, passed=False,
+                message=f"Exception: {e}"
+            ))
+
+    def _test_symbolic_endpoint(self):
+        """Test the /symbolic endpoint (v0.3.1)."""
+        name = "Symbolic execution endpoint"
+        start = time.time()
+        
+        code = '''
+x = 5
+if x > 0:
+    y = x * 2
+else:
+    y = -x
+'''
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/symbolic",
+                json={"code": code}
+            )
+            elapsed = (time.time() - start) * 1000
+            data = response.json()
+            
+            if response.status_code == 200 and data.get("success"):
+                self.results.append(TestResult(
+                    name=name, passed=True,
+                    message=f"Found {data.get('total_paths', 0)} paths",
+                    response_time_ms=elapsed
+                ))
+            else:
+                self.results.append(TestResult(
+                    name=name, passed=False,
+                    message=f"Failed: {data.get('error', 'Unknown')}",
                     response_time_ms=elapsed,
                     details=data
                 ))

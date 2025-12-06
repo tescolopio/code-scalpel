@@ -3,6 +3,8 @@ MCP Server - Model Context Protocol server for Code Scalpel.
 
 This module provides a Flask-based MCP server that exposes Code Scalpel's
 analysis capabilities via HTTP endpoints for agent queries.
+
+v0.3.1: Added taint-based security scanning and symbolic execution endpoints.
 """
 
 import time
@@ -10,6 +12,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 from flask import Flask, Response, jsonify, request
+
+# Version updated to match package
+__version__ = "0.3.1"
 
 
 @dataclass
@@ -51,7 +56,7 @@ def create_app(config: Optional[MCPServerConfig] = None) -> Flask:
     def health_check() -> Response:
         """Health check endpoint."""
         return jsonify(
-            {"status": "healthy", "service": "code-scalpel-mcp", "version": "0.1.0"}
+            {"status": "healthy", "service": "code-scalpel-mcp", "version": __version__}
         )
 
     @app.route("/analyze", methods=["POST"])
@@ -329,6 +334,123 @@ def create_app(config: Optional[MCPServerConfig] = None) -> Flask:
                 ),
                 500,
             )
+
+    @app.route("/symbolic", methods=["POST"])
+    def symbolic_analysis() -> Response:
+        """
+        Perform symbolic execution analysis on Python code.
+        
+        v0.3.0+: Uses Z3-powered symbolic execution to enumerate paths.
+
+        Request body:
+            {
+                "code": "string"  # Python code to analyze
+            }
+
+        Response:
+            {
+                "success": bool,
+                "total_paths": int,
+                "feasible_paths": int,
+                "paths": [...],
+                "processing_time_ms": float,
+                "error": "string" (optional)
+            }
+        """
+        start_time = time.time()
+
+        data = request.get_json()
+        if not data:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Request body is required",
+                        "processing_time_ms": _elapsed_ms(start_time),
+                    }
+                ),
+                400,
+            )
+
+        code = data.get("code")
+        if not code:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Code field is required",
+                        "processing_time_ms": _elapsed_ms(start_time),
+                    }
+                ),
+                400,
+            )
+
+        if not isinstance(code, str):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Code must be a string",
+                        "processing_time_ms": _elapsed_ms(start_time),
+                    }
+                ),
+                400,
+            )
+
+        try:
+            result = scalpel.analyze_symbolic(code)
+            result["processing_time_ms"] = _elapsed_ms(start_time)
+            return jsonify(result)
+
+        except Exception as e:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": f"Internal error: {str(e)}",
+                        "processing_time_ms": _elapsed_ms(start_time),
+                    }
+                ),
+                500,
+            )
+
+    @app.route("/tools", methods=["GET"])
+    def list_tools() -> Response:
+        """
+        List all available MCP tools/endpoints.
+        
+        This endpoint helps agents discover what capabilities are available.
+        """
+        return jsonify({
+            "service": "code-scalpel-mcp",
+            "version": __version__,
+            "tools": [
+                {
+                    "name": "analyze",
+                    "endpoint": "/analyze",
+                    "method": "POST",
+                    "description": "Analyze Python code for style and security issues",
+                },
+                {
+                    "name": "security",
+                    "endpoint": "/security", 
+                    "method": "POST",
+                    "description": "Taint-based security scan (SQLi, XSS, Command Injection, Path Traversal)",
+                },
+                {
+                    "name": "symbolic",
+                    "endpoint": "/symbolic",
+                    "method": "POST", 
+                    "description": "Symbolic execution to enumerate paths and generate test inputs",
+                },
+                {
+                    "name": "refactor",
+                    "endpoint": "/refactor",
+                    "method": "POST",
+                    "description": "Refactor Python code based on analysis",
+                },
+            ]
+        })
 
     return app
 
