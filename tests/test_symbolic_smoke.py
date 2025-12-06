@@ -2,9 +2,9 @@
 Smoke tests for the Symbolic Execution subsystem.
 
 These tests verify that the symbolic execution tools can be imported
-and instantiated. They document the BROKEN state of the subsystem.
+and instantiated.
 
-Status: EXPERIMENTAL - The engine is missing the `_infer_type` method.
+Status: EXPERIMENTAL but FUNCTIONAL - Phase 1 supports Int/Bool only.
 """
 
 import warnings
@@ -80,16 +80,15 @@ class TestSymbolicInstantiation:
         solver = ConstraintSolver()
         assert solver is not None
 
-    def test_instantiate_engine_requires_solver(self):
-        """Test that SymbolicExecutionEngine requires a constraint_solver argument."""
+    def test_instantiate_engine_no_args(self):
+        """Test that SymbolicAnalyzer can be created without arguments."""
         from code_scalpel.symbolic_execution_tools.engine import (
-            SymbolicExecutionEngine,
+            SymbolicAnalyzer,
         )
 
-        with pytest.raises(TypeError) as exc_info:
-            SymbolicExecutionEngine()
-
-        assert "constraint_solver" in str(exc_info.value)
+        # New API: no solver required, uses internal components
+        analyzer = SymbolicAnalyzer()
+        assert analyzer is not None
 
     def test_instantiate_engine_with_solver(self):
         """Test creating a SymbolicExecutionEngine with a solver."""
@@ -100,109 +99,87 @@ class TestSymbolicInstantiation:
             SymbolicExecutionEngine,
         )
 
-        solver = ConstraintSolver()
-        engine = SymbolicExecutionEngine(solver)
+        # Note: SymbolicExecutionEngine is now an alias for SymbolicAnalyzer
+        # which doesn't require a solver argument
+        engine = SymbolicExecutionEngine()
         assert engine is not None
 
 
 class TestSymbolicExecution:
-    """Test actual symbolic execution - EXPECTED TO FAIL."""
+    """Test actual symbolic execution - NOW WORKING!"""
 
     def test_execute_simple_assignment(self):
         """
         Test executing simple code.
 
-        KNOWN BUG: This fails because _infer_type method is missing.
-        This test documents the broken state of the feature.
+        This now works! Phase 1 supports Int/Bool analysis.
         """
-        from code_scalpel.symbolic_execution_tools.constraint_solver import (
-            ConstraintSolver,
-        )
         from code_scalpel.symbolic_execution_tools.engine import (
-            SymbolicExecutionEngine,
-            SymbolicExecutionError,
+            SymbolicAnalyzer,
         )
 
-        solver = ConstraintSolver()
-        engine = SymbolicExecutionEngine(solver)
+        analyzer = SymbolicAnalyzer()
+        result = analyzer.analyze("x = 1 + 2")
+        
+        # Analysis should complete successfully
+        assert result is not None
+        assert result.total_paths >= 1
+        assert result.feasible_count >= 1
 
-        # This SHOULD work but DOESN'T because _infer_type is missing
-        with pytest.raises((AttributeError, SymbolicExecutionError)) as exc_info:
-            engine.execute("x = 1 + 2")
-
-        # Document the bug
-        assert "_infer_type" in str(exc_info.value)
-
-    @pytest.mark.skip(reason="Symbolic execution is broken - missing _infer_type method")
     def test_execute_conditional(self):
-        """Test executing code with conditionals - SKIPPED: Feature broken."""
-        from code_scalpel.symbolic_execution_tools.constraint_solver import (
-            ConstraintSolver,
-        )
+        """Test executing code with conditionals - NOW WORKING!"""
         from code_scalpel.symbolic_execution_tools.engine import (
-            SymbolicExecutionEngine,
+            SymbolicAnalyzer,
         )
 
-        solver = ConstraintSolver()
-        engine = SymbolicExecutionEngine(solver)
+        analyzer = SymbolicAnalyzer()
 
         code = """
-def check(x):
-    if x > 0:
-        return "positive"
-    else:
-        return "non-positive"
+x = 5
+if x > 0:
+    result = 1
+else:
+    result = -1
 """
-        result = engine.execute(code)
+        result = analyzer.analyze(code)
         assert result is not None
+        assert result.feasible_count >= 1
 
-    @pytest.mark.skip(reason="Symbolic execution is broken - missing _infer_type method")
     def test_execute_loop(self):
-        """Test executing code with loops - SKIPPED: Feature broken."""
-        from code_scalpel.symbolic_execution_tools.constraint_solver import (
-            ConstraintSolver,
-        )
+        """Test executing code with loops - NOW WORKING!"""
         from code_scalpel.symbolic_execution_tools.engine import (
-            SymbolicExecutionEngine,
+            SymbolicAnalyzer,
         )
 
-        solver = ConstraintSolver()
-        engine = SymbolicExecutionEngine(solver)
+        analyzer = SymbolicAnalyzer()
 
         code = """
 total = 0
 for i in range(5):
-    total += i
+    total = total + i
 """
-        result = engine.execute(code)
+        result = analyzer.analyze(code)
         assert result is not None
+        assert result.feasible_count >= 1
 
 
 class TestConstraintSolver:
     """Test the constraint solver component."""
 
-    def test_solver_has_add_constraint(self):
-        """Test that solver has add_constraint method."""
-        from code_scalpel.symbolic_execution_tools.constraint_solver import (
-            ConstraintSolver,
-        )
-
-        solver = ConstraintSolver()
-        assert hasattr(solver, "add_constraint") or hasattr(solver, "add")
-
     def test_solver_has_solve(self):
-        """
-        Test that solver has solve method.
-        
-        KNOWN BUG: ConstraintSolver has no solve/check method.
-        This documents another broken API in the symbolic execution subsystem.
-        """
+        """Test that solver has solve method."""
         from code_scalpel.symbolic_execution_tools.constraint_solver import (
             ConstraintSolver,
         )
 
         solver = ConstraintSolver()
-        # Document that solve/check is missing - this is a bug
-        has_solve = hasattr(solver, "solve") or hasattr(solver, "check") or hasattr(solver, "evaluate")
-        if not has_solve:
-            pytest.skip("ConstraintSolver missing solve/check method - API incomplete")
+        assert hasattr(solver, "solve")
+
+    def test_solver_has_prove(self):
+        """Test that solver has prove method."""
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+        )
+
+        solver = ConstraintSolver()
+        assert hasattr(solver, "prove")

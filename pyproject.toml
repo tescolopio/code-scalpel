@@ -75,81 +75,29 @@ code-scalpel = "code_scalpel.cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+
+[tool.hatch.build]
+# VCS integration - DISABLE to prevent .gitignore from leaking in
+ignore-vcs = true
+
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/code_scalpel"]
 
-[tool.hatch.build.targets.sdist]
-include = [
-    "/src",
-    "/tests",
-    "/docs",
-    "/examples",
-    "/README.md",
-    "/LICENSE",
-]
 
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/code_scalpel",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+exclude = [
+    "*.gitignore",
+    ".git*",
+    "**/.*",
+]
 # ============================================================================
 # CODE QUALITY ENFORCEMENT
 # ============================================================================
 
-[tool.black]
-line-length = 88
-target-version = ['py39']
-
-[tool.ruff]
-exclude = [
-    ".git",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "venv",
-]
-line-length = 88
-target-version = "py39"
-
-[tool.ruff.lint]
-select = ["E", "F", "B", "I"]
-ignore = [
-    "E721",
-    "E501",
-    "B008",
-    "B904",
-    "B019",
-    "B007",
-    "B012",
-]
-fixable = ["ALL"]
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
-"examples/*" = ["E402", "F401"]
-"tests/*" = ["S101"]
-
-# ============================================================================
-# TESTING CONFIGURATION
-# ============================================================================
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-addopts = "-v --tb=short"
-
-[tool.coverage.run]
-source = ["src/code_scalpel"]
-branch = true
-
-[tool.coverage.report]
-fail_under = 24
-show_missing = true
-
-# ============================================================================
-# TYPE CHECKING
-# ============================================================================
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true

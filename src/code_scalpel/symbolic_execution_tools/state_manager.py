@@ -193,6 +193,19 @@ class SymbolicState:
         """
         return list(self._variables.keys())
     
+    @property
+    def variables(self) -> Dict[str, ExprRef]:
+        """
+        Get a copy of the variables dictionary.
+        
+        Returns:
+            Dictionary mapping names to Z3 expressions
+        
+        Note:
+            Returns a copy to prevent external mutation.
+        """
+        return self._variables.copy()
+    
     # =========================================================================
     # Path Condition Management
     # =========================================================================

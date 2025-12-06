@@ -1,0 +1,55 @@
+# MANIFEST.in - Controls what goes into the source distribution (sdist)
+# 
+# Philosophy: Ship the minimum needed to install and use the package.
+# Tests, benchmarks, and development scripts are NOT included.
+
+# Include essential files
+include README.md
+include LICENSE
+include pyproject.toml
+
+# Include the actual source code
+recursive-include src *.py
+recursive-include src *.pyi
+
+# Include type hints marker
+include src/code_scalpel/py.typed
+
+# ============================================================================
+# EXPLICIT EXCLUSIONS - Do NOT ship these
+# ============================================================================
+
+# Development files
+exclude .flake8
+exclude pytest.ini
+exclude parser.bash
+exclude requirements*.txt
+
+# Documentation (users get it from GitHub/ReadTheDocs)
+exclude CHECKLIST.md
+exclude COVERAGE_ANALYSIS.md
+exclude DOCUMENTATION_INDEX.md
+exclude EXECUTIVE_SUMMARY.md
+exclude GETTING_STARTED_DEV.md
+exclude GITHUB_ISSUES_TEMPLATE.md
+exclude PRODUCT_BACKLOG.md
+exclude RELEASE_PROTOCOL.md
+exclude ROADMAP.md
+
+# Directories to exclude
+prune tests
+prune docs
+prune examples
+prune scripts
+prune benchmarks
+prune .github
+
+# Cache and build artifacts
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude *.egg-info
+global-exclude .git*
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude *.dylib

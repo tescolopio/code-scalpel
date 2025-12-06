@@ -1,383 +1,328 @@
-import ast
-import logging
-from copy import deepcopy
-from dataclasses import dataclass
+"""
+Symbolic Analysis Engine - The Heart of code-scalpel's symbolic execution.
+
+This module wires together the core components:
+- TypeInferenceEngine: Infers Z3 types from Python AST
+- SymbolicState: Tracks variables and path constraints with fork() isolation
+- SymbolicInterpreter: Walks AST with smart forking and bounded loops
+- ConstraintSolver: Marshals Z3 to Python natives for JSON/CLI consumption
+
+PHASE 1 SCOPE (RFC-001): Integers and Booleans only.
+"""
+import warnings
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import z3
 
-
-@dataclass
-class SymbolicValue:
-    """Represents a symbolic value."""
-
-    expr: Any  # Z3 expression
-    type_info: type
-    concrete_value: Optional[Any] = None
-    constraints: list[Any] = None
-    source_loc: Optional[tuple[int, int]] = None
+from .type_inference import InferredType, TypeInferenceEngine
+from .state_manager import SymbolicState
+from .interpreter import SymbolicInterpreter
+from .constraint_solver import ConstraintSolver, SolverStatus
 
 
-@dataclass
-class ExecutionState:
-    """Represents the state of symbolic execution."""
-
-    symbolic_vars: dict[str, SymbolicValue]
-    path_condition: list[Any]
-    call_stack: list[str]
-    memory: dict[str, Any]
-    loop_iterations: dict[str, int]
+# Emit warning on import - this is still experimental
+warnings.warn(
+    "symbolic_execution_tools is EXPERIMENTAL and incomplete. "
+    "The engine will fail on most inputs. Use ast_tools or pdg_tools for production.",
+    UserWarning,
+    stacklevel=2,
+)
 
 
-class PathExplorationStrategy(Enum):
-    """Strategies for path exploration."""
-
-    DFS = "depth_first"
-    BFS = "breadth_first"
-    RANDOM = "random"
-    GUIDED = "guided"
+class PathStatus(Enum):
+    """Status of an explored execution path."""
+    FEASIBLE = "feasible"
+    INFEASIBLE = "infeasible"
+    UNKNOWN = "unknown"
 
 
 @dataclass
-class ExecutionConfig:
-    """Configuration for symbolic execution."""
-
-    max_depth: int = 100
-    max_loops: int = 10
-    strategy: PathExplorationStrategy = PathExplorationStrategy.DFS
-    timeout: Optional[int] = None
-    handle_exceptions: bool = True
-    track_coverage: bool = True
-    log_level: str = "INFO"
+class PathResult:
+    """Result of exploring a single execution path."""
+    
+    path_id: int
+    status: PathStatus
+    constraints: List[z3.BoolRef]
+    variables: Dict[str, Any]  # Python native values (marshaled from Z3)
+    model: Optional[Dict[str, Any]] = None  # Concrete satisfying assignment
 
 
-class SymbolicExecutionError(Exception):
-    """Base class for symbolic execution errors."""
+@dataclass
+class AnalysisResult:
+    """
+    Complete result from symbolic analysis.
+    
+    This is the primary output format for CLI/MCP consumption.
+    All values are Python natives (int, bool) - no raw Z3 objects.
+    """
+    
+    paths: List[PathResult] = field(default_factory=list)
+    all_variables: Dict[str, InferredType] = field(default_factory=dict)
+    feasible_count: int = 0
+    infeasible_count: int = 0
+    total_paths: int = 0
+    
+    def get_feasible_paths(self) -> List[PathResult]:
+        """Return only feasible paths."""
+        return [p for p in self.paths if p.status == PathStatus.FEASIBLE]
+    
+    def get_all_models(self) -> List[Dict[str, Any]]:
+        """Return concrete models from all feasible paths."""
+        return [p.model for p in self.paths if p.model is not None]
 
-    pass
 
-
-class SymbolicExecutionEngine:
-    """Advanced symbolic execution engine with comprehensive path exploration."""
-
-    def __init__(self, constraint_solver, config: Optional[ExecutionConfig] = None):
-        self.solver = constraint_solver
-        self.config = config or ExecutionConfig()
-        self.states: list[ExecutionState] = []
-        self.current_state = self._create_initial_state()
-        self.path_history: list[list[ast.AST]] = []
-        self.coverage = set()
-        self._setup_logging()
-
-    def execute(self, code: str) -> list[dict[str, Any]]:
+class SymbolicAnalyzer:
+    """
+    High-level symbolic analysis interface.
+    
+    Wires together TypeInferenceEngine, SymbolicInterpreter, and ConstraintSolver
+    to provide a clean API for symbolic execution.
+    
+    Example:
+        >>> analyzer = SymbolicAnalyzer()
+        >>> result = analyzer.analyze('''
+        ... x = symbolic('x', int)
+        ... if x > 10:
+        ...     y = x + 5
+        ... else:
+        ...     y = x - 5
+        ... ''')
+        >>> print(result.feasible_count)
+        2
+        >>> print(result.get_all_models())
+        [{'x': 11, 'y': 16}, {'x': 0, 'y': -5}]
+    
+    Note:
+        PHASE 1: Only supports Int and Bool types. Float/String/List will raise errors.
+    """
+    
+    def __init__(
+        self,
+        max_loop_iterations: int = 10,
+        solver_timeout: int = 2000,
+    ):
         """
-        Execute code symbolically and return possible execution paths.
-
+        Initialize the symbolic analyzer.
+        
         Args:
-            code: Python source code
-
-        Returns:
-            List of possible variable assignments
+            max_loop_iterations: Maximum iterations before terminating loops (default 10)
+            solver_timeout: Z3 solver timeout in milliseconds (default 2000)
         """
-        tree = ast.parse(code)
-        self.coverage = set()
-        results = []
-
-        try:
-            self._explore_paths(tree)
-
-            # Collect results from all feasible paths
-            for state in self.states:
-                if self._is_state_feasible(state):
-                    concrete_values = self._concretize_state(state)
-                    if concrete_values:
-                        results.append(concrete_values)
-
-            return results
-        except Exception as e:
-            self.logger.error(f"Execution error: {str(e)}")
-            raise SymbolicExecutionError(str(e))
-
-    def create_symbolic_variable(
-        self, name: str, var_type: type, constraints: list[Any] = None
-    ) -> SymbolicValue:
-        """Create a new symbolic variable."""
-        z3_var = self.solver.create_variable(name, self._get_z3_type(var_type))
-
-        symbolic_value = SymbolicValue(
-            expr=z3_var, type_info=var_type, constraints=constraints or []
+        self.max_loop_iterations = max_loop_iterations
+        self.solver_timeout = solver_timeout
+        
+        # Core components - initialized fresh for each analysis
+        self._type_engine: Optional[TypeInferenceEngine] = None
+        self._interpreter: Optional[SymbolicInterpreter] = None
+        self._solver: Optional[ConstraintSolver] = None
+        
+        # Manual symbolic declarations for advanced use
+        self._preconditions: List[z3.BoolRef] = []
+        self._declared_symbols: Dict[str, z3.ExprRef] = {}
+    
+    def analyze(self, code: str) -> AnalysisResult:
+        """
+        Perform symbolic analysis on Python source code.
+        
+        Args:
+            code: Python source code string
+            
+        Returns:
+            AnalysisResult with all explored paths and their models
+            
+        Raises:
+            SyntaxError: If code cannot be parsed
+            NotImplementedError: If code uses unsupported constructs
+        """
+        # Fresh components for this analysis
+        self._type_engine = TypeInferenceEngine()
+        self._solver = ConstraintSolver(timeout_ms=self.solver_timeout)
+        self._interpreter = SymbolicInterpreter(
+            max_loop_iterations=self.max_loop_iterations
         )
-
-        self.current_state.symbolic_vars[name] = symbolic_value
-        return symbolic_value
-
-    def _explore_paths(self, node: ast.AST, depth: int = 0):
-        """Explore execution paths through the code."""
-        if depth > self.config.max_depth:
-            self.logger.warning(f"Max depth {self.config.max_depth} reached")
-            return
-
-        if isinstance(node, ast.Module):
-            for stmt in node.body:
-                self._explore_paths(stmt, depth + 1)
-        elif isinstance(node, ast.FunctionDef):
-            self._handle_function(node, depth)
-        elif isinstance(node, ast.If):
-            self._handle_if(node, depth)
-        elif isinstance(node, ast.While):
-            self._handle_while(node, depth)
-        elif isinstance(node, ast.For):
-            self._handle_for(node, depth)
-        elif isinstance(node, ast.Assign):
-            self._handle_assign(node)
-        elif isinstance(node, ast.Call):
-            self._handle_call(node, depth)
-        elif isinstance(node, ast.Try):
-            self._handle_try(node, depth)
-        else:
-            self._handle_other(node)
-
-        self.coverage.add(self._get_node_id(node))
-
-    def _handle_function(self, node: ast.FunctionDef, depth: int):
-        """Handle function definitions."""
-        # Save current state
-        old_state = deepcopy(self.current_state)
-
-        # Create new scope
-        self.current_state.call_stack.append(node.name)
-
-        # Handle parameters
-        for arg in node.args.args:
-            self.create_symbolic_variable(arg.arg, self._get_type_hint(arg))
-
-        # Execute function body
-        for stmt in node.body:
-            self._explore_paths(stmt, depth + 1)
-
-        # Restore state
-        self.current_state = old_state
-
-    def _handle_if(self, node: ast.If, depth: int):
-        """Handle if statements with path exploration."""
-        condition = self._evaluate_expression(node.test)
-
-        # True branch
-        true_state = deepcopy(self.current_state)
-        true_state.path_condition.append(condition)
-
-        if self._is_state_feasible(true_state):
-            self.current_state = true_state
-            for stmt in node.body:
-                self._explore_paths(stmt, depth + 1)
-
-        # False branch
-        false_state = deepcopy(self.current_state)
-        false_state.path_condition.append(z3.Not(condition))
-
-        if self._is_state_feasible(false_state):
-            self.current_state = false_state
-            for stmt in node.orelse:
-                self._explore_paths(stmt, depth + 1)
-
-        self.states.extend([true_state, false_state])
-
-    def _handle_while(self, node: ast.While, depth: int):
-        """Handle while loops with bounded exploration."""
-        loop_id = self._get_node_id(node)
-        self.current_state.loop_iterations[loop_id] = 0
-
-        while self.current_state.loop_iterations[loop_id] < self.config.max_loops:
-            condition = self._evaluate_expression(node.test)
-
-            # Check if loop can continue
-            continue_state = deepcopy(self.current_state)
-            continue_state.path_condition.append(condition)
-
-            if not self._is_state_feasible(continue_state):
-                break
-
-            self.current_state = continue_state
-            for stmt in node.body:
-                self._explore_paths(stmt, depth + 1)
-
-            self.current_state.loop_iterations[loop_id] += 1
-
-        # Add exit condition
-        self.current_state.path_condition.append(
-            z3.Not(self._evaluate_expression(node.test))
+        
+        # Step 1: Type inference
+        inferred_types = self._type_engine.infer(code)
+        
+        # Step 2: Execute symbolically to collect paths
+        execution_result = self._interpreter.execute(code)
+        terminal_states = execution_result.states
+        
+        # Step 3: Process each path through solver
+        result = AnalysisResult(
+            all_variables=inferred_types,
+            total_paths=len(terminal_states),
         )
-
-    def _handle_assign(self, node: ast.Assign):
-        """Handle assignment statements."""
-        value = self._evaluate_expression(node.value)
-
-        for target in node.targets:
-            if isinstance(target, ast.Name):
-                self.current_state.symbolic_vars[target.id] = SymbolicValue(
-                    expr=value,
-                    type_info=self._infer_type(value),
-                    source_loc=(node.lineno, node.col_offset),
-                )
-            elif isinstance(target, ast.Attribute):
-                self._handle_attribute_assignment(target, value)
-            elif isinstance(target, ast.Subscript):
-                self._handle_subscript_assignment(target, value)
-
-    def _handle_call(self, node: ast.Call, depth: int):
-        """Handle function calls."""
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-            if func_name in self.current_state.symbolic_vars:
-                # Call to symbolic function
-                return self._handle_symbolic_call(node, depth)
-            else:
-                # Call to concrete function
-                return self._handle_concrete_call(node)
-        elif isinstance(node.func, ast.Attribute):
-            return self._handle_method_call(node, depth)
-
-    def _handle_try(self, node: ast.Try, depth: int):
-        """Handle try-except blocks."""
-        if not self.config.handle_exceptions:
-            # Just execute try block if exception handling is disabled
-            for stmt in node.body:
-                self._explore_paths(stmt, depth + 1)
-            return
-
-        # Save state before try block
-        pre_try_state = deepcopy(self.current_state)
-
-        try:
-            # Execute try block
-            for stmt in node.body:
-                self._explore_paths(stmt, depth + 1)
-        except Exception as e:
-            # Handle exceptions
-            for handler in node.handlers:
-                if self._matches_exception(e, handler.type):
-                    self.current_state = deepcopy(pre_try_state)
-                    for stmt in handler.body:
-                        self._explore_paths(stmt, depth + 1)
-                    break
-        finally:
-            # Execute finally block
-            if node.finalbody:
-                for stmt in node.finalbody:
-                    self._explore_paths(stmt, depth + 1)
-
-    def _evaluate_expression(self, node: ast.AST) -> Any:
-        """Evaluate an expression symbolically."""
-        if isinstance(node, ast.Name):
-            if node.id in self.current_state.symbolic_vars:
-                return self.current_state.symbolic_vars[node.id].expr
-            return node.id
-        elif isinstance(node, ast.Constant):
-            return node.value
-        elif isinstance(node, ast.BinOp):
-            return self._evaluate_binop(node)
-        elif isinstance(node, ast.Compare):
-            return self._evaluate_compare(node)
-        elif isinstance(node, ast.BoolOp):
-            return self._evaluate_boolop(node)
-        elif isinstance(node, ast.Call):
-            return self._handle_call(node, 0)
-        elif isinstance(node, ast.Attribute):
-            return self._evaluate_attribute(node)
-        elif isinstance(node, ast.Subscript):
-            return self._evaluate_subscript(node)
-        else:
-            raise SymbolicExecutionError(f"Unsupported node type: {type(node)}")
-
-    def _evaluate_binop(self, node: ast.BinOp) -> Any:
-        """Evaluate binary operations."""
-        left = self._evaluate_expression(node.left)
-        right = self._evaluate_expression(node.right)
-
-        if isinstance(node.op, ast.Add):
-            return left + right
-        elif isinstance(node.op, ast.Sub):
-            return left - right
-        elif isinstance(node.op, ast.Mult):
-            return left * right
-        elif isinstance(node.op, ast.Div):
-            return left / right
-        elif isinstance(node.op, ast.Mod):
-            return left % right
-        else:
-            raise SymbolicExecutionError(f"Unsupported operator: {type(node.op)}")
-
-    def _is_state_feasible(self, state: ExecutionState) -> bool:
-        """Check if a state's path conditions are satisfiable."""
-        self.solver.push()
-        for condition in state.path_condition:
-            self.solver.add_constraint(condition)
-
-        result = self.solver.check_sat()
-        self.solver.pop()
+        
+        for i, state in enumerate(terminal_states):
+            path_result = self._process_path(i, state)
+            result.paths.append(path_result)
+            
+            if path_result.status == PathStatus.FEASIBLE:
+                result.feasible_count += 1
+            elif path_result.status == PathStatus.INFEASIBLE:
+                result.infeasible_count += 1
+        
         return result
-
-    def _concretize_state(self, state: ExecutionState) -> Optional[dict[str, Any]]:
-        """Get concrete values for variables in a state."""
-        self.solver.push()
-        for condition in state.path_condition:
-            self.solver.add_constraint(condition)
-
-        model = self.solver.get_model()
-        self.solver.pop()
-
-        if model:
-            return {
-                name: self._extract_concrete_value(sym_val, model)
-                for name, sym_val in state.symbolic_vars.items()
-            }
+    
+    def _process_path(self, path_id: int, state: SymbolicState) -> PathResult:
+        """Process a single execution path through the solver."""
+        # Build list of Z3 constraints
+        constraints = list(state.constraints)
+        
+        # Add any preconditions from manual declarations
+        constraints.extend(self._preconditions)
+        
+        # Get variables from state
+        state_vars = state.variables
+        variables_list = list(state_vars.values())
+        
+        # Check satisfiability
+        solver_result = self._solver.solve(constraints, variables_list)
+        
+        if solver_result.status == SolverStatus.SAT:
+            # Extract variable values (already marshaled to Python natives)
+            variables = {}
+            for name in state_vars.keys():
+                if solver_result.model and name in solver_result.model:
+                    variables[name] = solver_result.model[name]
+                else:
+                    # Variable not in model - might be unconstrained
+                    variables[name] = None
+            
+            return PathResult(
+                path_id=path_id,
+                status=PathStatus.FEASIBLE,
+                constraints=constraints,
+                variables=variables,
+                model=solver_result.model,
+            )
+        elif solver_result.status == SolverStatus.UNSAT:
+            return PathResult(
+                path_id=path_id,
+                status=PathStatus.INFEASIBLE,
+                constraints=constraints,
+                variables={},
+            )
+        else:
+            # UNKNOWN or TIMEOUT
+            return PathResult(
+                path_id=path_id,
+                status=PathStatus.UNKNOWN,
+                constraints=constraints,
+                variables={},
+            )
+    
+    def declare_symbolic(self, name: str, sort: z3.SortRef) -> z3.ExprRef:
+        """
+        Manually declare a symbolic variable.
+        
+        This is for advanced use when you want to constrain inputs
+        before calling analyze().
+        
+        Args:
+            name: Variable name
+            sort: Z3 sort (z3.IntSort(), z3.BoolSort())
+            
+        Returns:
+            Z3 expression reference for the symbolic variable
+            
+        Example:
+            >>> analyzer = SymbolicAnalyzer()
+            >>> x = analyzer.declare_symbolic('x', z3.IntSort())
+            >>> analyzer.add_precondition(x > 0)
+            >>> result = analyzer.analyze('y = x * 2')
+        """
+        if sort == z3.IntSort():
+            var = z3.Int(name)
+        elif sort == z3.BoolSort():
+            var = z3.Bool(name)
+        else:
+            raise NotImplementedError(
+                f"Only IntSort and BoolSort supported in Phase 1, got {sort}"
+            )
+        
+        self._declared_symbols[name] = var
+        return var
+    
+    def add_precondition(self, constraint: z3.BoolRef) -> None:
+        """
+        Add a precondition constraint.
+        
+        All preconditions are added to every path during analysis.
+        
+        Args:
+            constraint: Z3 boolean constraint
+        """
+        self._preconditions.append(constraint)
+    
+    def find_inputs(self, target_condition: z3.BoolRef) -> Optional[Dict[str, Any]]:
+        """
+        Find input values that make a target condition true.
+        
+        This is the "reverse" query: given a target (e.g., error condition),
+        find inputs that trigger it.
+        
+        Args:
+            target_condition: Z3 boolean expression representing target
+            
+        Returns:
+            Dictionary of variable names to concrete values, or None if impossible
+            
+        Example:
+            >>> analyzer = SymbolicAnalyzer()
+            >>> x = analyzer.declare_symbolic('x', z3.IntSort())
+            >>> result = analyzer.find_inputs(x * x == 16)
+            >>> print(result)  # {'x': 4} or {'x': -4}
+        """
+        if self._solver is None:
+            self._solver = ConstraintSolver(timeout_ms=self.solver_timeout)
+        
+        constraints = list(self._preconditions) + [target_condition]
+        solver_result = self._solver.check(constraints)
+        
+        if solver_result.status == SolverStatus.SAT:
+            return solver_result.model
         return None
-
-    def _create_initial_state(self) -> ExecutionState:
-        """Create initial execution state."""
-        return ExecutionState(
-            symbolic_vars={},
-            path_condition=[],
-            call_stack=[],
-            memory={},
-            loop_iterations={},
-        )
-
-    def _setup_logging(self):
-        """Setup logging configuration."""
-        logging.basicConfig(
-            level=getattr(logging, self.config.log_level),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-        self.logger = logging.getLogger("SymbolicExecutionEngine")
-
-    @staticmethod
-    def _get_node_id(node: ast.AST) -> str:
-        """Get a unique identifier for an AST node."""
-        return f"{node.__class__.__name__}_{id(node)}"
-
-    @staticmethod
-    def _get_z3_type(python_type: type) -> str:
-        """Convert Python type to Z3 type."""
-        if python_type == int:
-            return "int"
-        elif python_type == bool:
-            return "bool"
-        elif python_type == float:
-            return "real"
-        elif python_type == str:
-            return "string"
-        return "int"  # Default to int for unknown types
-
-    @staticmethod
-    def _get_type_hint(node: ast.arg) -> type:
-        """Get type hint for a function argument."""
-        return getattr(node, "annotation", None) or Any
+    
+    def get_solver(self) -> ConstraintSolver:
+        """Get the underlying constraint solver for advanced use."""
+        if self._solver is None:
+            self._solver = ConstraintSolver(timeout_ms=self.solver_timeout)
+        return self._solver
+    
+    def reset(self) -> None:
+        """Reset analyzer state for fresh analysis."""
+        self._preconditions.clear()
+        self._declared_symbols.clear()
+        self._type_engine = None
+        self._interpreter = None
+        self._solver = None
 
 
-def create_engine(
-    solver, config: Optional[ExecutionConfig] = None
-) -> SymbolicExecutionEngine:
-    """Create a new symbolic execution engine."""
-    return SymbolicExecutionEngine(solver, config)
+# Legacy alias for backward compatibility
+SymbolicExecutionEngine = SymbolicAnalyzer
+
+
+def create_analyzer(
+    max_loop_iterations: int = 10,
+    solver_timeout: int = 2000,
+) -> SymbolicAnalyzer:
+    """
+    Create a new symbolic analyzer.
+    
+    Factory function for creating analyzers with custom configuration.
+    
+    Args:
+        max_loop_iterations: Maximum loop iterations (default 10)
+        solver_timeout: Solver timeout in ms (default 2000)
+        
+    Returns:
+        Configured SymbolicAnalyzer instance
+    """
+    return SymbolicAnalyzer(
+        max_loop_iterations=max_loop_iterations,
+        solver_timeout=solver_timeout,
+    )
