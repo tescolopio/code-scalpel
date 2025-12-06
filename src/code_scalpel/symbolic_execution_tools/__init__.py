@@ -2,31 +2,40 @@
 """
 Symbolic Execution Tools for Code Scalpel.
 
-⚠️  EXPERIMENTAL / ALPHA STATUS ⚠️
+🆕 BETA STATUS (v0.2.0 "Redemption")
 
-This module is under active development and is NOT production-ready.
-The symbolic execution engine is incomplete and will fail on most inputs.
+This module provides symbolic execution capabilities for Python code analysis.
+The "Redemption" release (v0.2.0) brings working symbolic execution with:
 
-Known Limitations:
-- SymbolicExecutionEngine.execute() crashes due to missing _infer_type method
-- ConstraintSolver lacks a solve()/check() method
-- Path exploration is incomplete
+✅ Working Features:
+- SymbolicAnalyzer: Main entry point for symbolic analysis
+- ConstraintSolver: Z3-powered satisfiability checking
+- SymbolicInterpreter: Path exploration with smart forking
+- TypeInferenceEngine: Int/Bool type tracking
 
-For production use cases, please use the stable modules:
+⚠️ Current Limitations (Phase 1):
+- Int and Bool types only (no floats, strings, lists yet)
+- Loops bounded to 10 iterations
+- Function calls are stubbed (not symbolically executed)
+
+For production use cases with full type support:
 - code_scalpel.ast_tools (AST analysis)
 - code_scalpel.pdg_tools (Program Dependence Graphs)
 - code_scalpel.code_analyzer (High-level analysis)
 
-This module is included for experimental use and to show our roadmap direction.
-Contributions welcome! See ROADMAP.md for planned improvements.
+Example:
+    >>> from code_scalpel.symbolic_execution_tools import SymbolicAnalyzer
+    >>> analyzer = SymbolicAnalyzer()
+    >>> result = analyzer.analyze("x = 5; y = x * 2 if x > 0 else -x")
+    >>> print(f"Paths: {result.total_paths}, Feasible: {result.feasible_count}")
 """
 
 import warnings
 
-# Emit warning on import so users know this is experimental
+# Emit warning on import so users know about limitations
 warnings.warn(
-    "symbolic_execution_tools is EXPERIMENTAL and incomplete. "
-    "The engine will fail on most inputs. Use ast_tools or pdg_tools for production.",
+    "symbolic_execution_tools is BETA (v0.2.0). "
+    "Supports Int/Bool only. See docs for limitations.",
     category=UserWarning,
     stacklevel=2,
 )

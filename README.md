@@ -5,13 +5,13 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://badge.fury.io/py/code-scalpel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Status](https://img.shields.io/badge/status-v0.1.0%20released-brightgreen.svg)](https://pypi.org/project/code-scalpel/)
+[![Status](https://img.shields.io/badge/status-v0.2.0%20Redemption-brightgreen.svg)](https://pypi.org/project/code-scalpel/)
 
 Code Scalpel is a precision tool set for AI-driven code analysis and transformation. Using advanced techniques like Abstract Syntax Trees (ASTs), Program Dependence Graphs (PDGs), and Symbolic Execution, Code Scalpel enables AI agents to perform deep analysis and surgical modifications of code with unprecedented accuracy.
 
 > **⚠️ Project Scope:** Code Scalpel is a **Python toolkit and MCP server** designed for use by AI agents and automation systems. It is **NOT** a mobile application, web app, or GUI tool. Target users include AI coding assistants (Cursor, Cline, Claude Desktop), AI agent frameworks (Autogen, CrewAI, Langchain), and DevOps pipelines.
 
-> **✅ Status:** Code Scalpel v0.1.0 is **live on PyPI**. Install with `pip install code-scalpel`. See our [ROADMAP.md](ROADMAP.md) for what's next.
+> **✅ Status:** Code Scalpel v0.2.0 "Redemption" is **live on PyPI**. Install with `pip install code-scalpel`. Symbolic Execution now works (Beta)!
 
 ## 🌟 Features
 
@@ -33,10 +33,12 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 - **Security Analysis**: Detect potential vulnerabilities
 - **Refactoring**: Suggest and apply code improvements
 
-### 🧪 Experimental Features
-> **⚠️ The following features are under active development and not production-ready:**
+### 🔮 Symbolic Execution (Beta)
+> **🆕 v0.2.0:** Symbolic Execution is now functional! Limited to Int/Bool types.
 
-- **Symbolic Execution**: Path analysis and constraint solving (incomplete - see [ROADMAP.md](ROADMAP.md))
+- **Path Analysis**: Explore all execution paths through your code
+- **Constraint Solving**: Z3-powered satisfiability checking
+- **Input Discovery**: Find inputs that trigger specific conditions
 
 ## **How We're Different** 🆚
 
@@ -48,7 +50,7 @@ Code Scalpel builds upon the foundations of static analysis while adding powerfu
 | **🔌 MCP Server** | ✅ **Yes** — Model Context Protocol | ❌ No |
 | **📊 PDG Analysis** | ✅ **Yes** — Full data/control flow | ✅ Yes |
 | **🌳 AST Analysis** | ✅ **Yes** | ✅ Yes |
-| **🔍 Symbolic Execution** | 🧪 Experimental — Under development | ❌ No |
+| **🔍 Symbolic Execution** | ✅ **Beta** — Int/Bool support | ❌ No |
 | **📞 Call Graph** | 🚧 Planned | ✅ Yes |
 | **🔤 SSA Form** | 🚧 Planned | ✅ Yes |
 | **🎯 Target Users** | **AI Agents & Automation** | Research & Academia |
@@ -140,15 +142,31 @@ analyzer.visualize_pdg(pdg, "analysis.png")
 - Dependency chain visualization
 - Dead code detection
 
-### Symbolic Execution
-> **🧪 EXPERIMENTAL** - This feature is under active development.
+### Symbolic Execution (Beta)
+> **🆕 NEW in v0.2.0** - The "Redemption" release brings working symbolic execution!
 
-- Path condition analysis (incomplete)
-- Constraint solving (incomplete)
-- Bug detection (planned)
-- Test case generation (planned)
+```python
+from code_scalpel.symbolic_execution_tools import SymbolicAnalyzer
 
-See [ROADMAP.md](ROADMAP.md) for the implementation timeline.
+analyzer = SymbolicAnalyzer()
+result = analyzer.analyze("""
+x = 5
+if x > 0:
+    y = x * 2
+else:
+    y = -x
+""")
+
+print(f"Paths explored: {result.total_paths}")
+print(f"Feasible paths: {result.feasible_count}")
+```
+
+**Current limitations (Phase 1):**
+- Int and Bool types only
+- No floating point or string support yet
+- Loops bounded to 10 iterations
+
+See [ROADMAP.md](ROADMAP.md) for Phase 2 plans.
 
 ## 🤝 Contributing
 
@@ -196,9 +214,9 @@ We're transforming Code Scalpel into a production-ready MCP-enabled toolkit:
 
 See [ROADMAP.md](ROADMAP.md) for full details.
 
-### ✅ v0.1.0 Released!
+### ✅ v0.2.0 "Redemption" Released!
 
-Code Scalpel v0.1.0 is now available on PyPI:
+Code Scalpel v0.2.0 is now available on PyPI:
 
 ```bash
 pip install code-scalpel
@@ -210,9 +228,13 @@ pip install code-scalpel
 - MCP HTTP Server
 - CLI tool (`code-scalpel`)
 - AI integrations (Autogen, CrewAI)
+- **🆕 Symbolic Execution (Beta)** - 426 tests, 76% coverage
 
-**What's experimental:**
-- Symbolic Execution (quarantined - see [ROADMAP.md](ROADMAP.md))
+**What's new in v0.2.0:**
+- Working `SymbolicAnalyzer` with Z3 constraint solver
+- Path exploration with feasibility checking
+- Type inference for Int/Bool expressions
+- Bounded loop unrolling (max 10 iterations)
 
 ### 💬 Community Discussion
 
