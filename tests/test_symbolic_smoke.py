@@ -183,3 +183,353 @@ class TestConstraintSolver:
 
         solver = ConstraintSolver()
         assert hasattr(solver, "prove")
+
+    def test_solver_solve_sat(self):
+        """Test solver solve with satisfiable constraints."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+            SolverStatus,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        result = solver.solve([x > 0, x < 10], [x])
+        assert result.status == SolverStatus.SAT
+        assert result.model is not None
+
+    def test_solver_solve_unsat(self):
+        """Test solver solve with unsatisfiable constraints."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+            SolverStatus,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        result = solver.solve([x > 10, x < 5], [x])
+        assert result.status == SolverStatus.UNSAT
+
+    def test_solver_solve_returns_model(self):
+        """Test solver returns correct model."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        result = solver.solve([x == 42], [x])
+        assert result.is_sat()
+        assert result.model is not None
+        assert 'x' in result.model
+        assert result.model['x'] == 42
+
+    def test_solver_prove_valid(self):
+        """Test proving a valid assertion."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+            SolverStatus,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        # If x > 0, then x >= 0 (valid)
+        result = solver.prove([x > 0], x >= 0)
+        assert result.status == SolverStatus.VALID
+
+    def test_solver_prove_invalid(self):
+        """Test proving an invalid assertion."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+            SolverStatus,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        # If x > 0, then x > 10 is NOT valid (counterexample: x=5)
+        result = solver.prove([x > 0], x > 10)
+        assert result.status == SolverStatus.INVALID
+        assert result.counterexample is not None
+
+    def test_solver_result_bool(self):
+        """Test SolverResult __bool__ method."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        result = solver.solve([x == 1], [x])
+        assert bool(result) is True  # SAT is truthy
+
+    def test_solver_result_is_sat(self):
+        """Test SolverResult is_sat method."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.constraint_solver import (
+            ConstraintSolver,
+        )
+
+        solver = ConstraintSolver()
+        x = z3.Int('x')
+        result = solver.solve([x == 1], [x])
+        assert result.is_sat() is True
+
+
+class TestAnalyzerAdvanced:
+    """Test advanced SymbolicAnalyzer features."""
+
+    def test_declare_symbolic_int(self):
+        """Test declaring symbolic integer variable."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        x = analyzer.declare_symbolic('x', z3.IntSort())
+        assert x is not None
+
+    def test_declare_symbolic_bool(self):
+        """Test declaring symbolic boolean variable."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        b = analyzer.declare_symbolic('b', z3.BoolSort())
+        assert b is not None
+
+    def test_declare_symbolic_unsupported_sort(self):
+        """Test that unsupported sorts raise NotImplementedError."""
+        import z3
+        import pytest
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        with pytest.raises(NotImplementedError):
+            analyzer.declare_symbolic('r', z3.RealSort())
+
+    def test_add_precondition(self):
+        """Test adding preconditions."""
+        import z3
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        x = analyzer.declare_symbolic('x', z3.IntSort())
+        analyzer.add_precondition(x > 0)
+        analyzer.add_precondition(x < 100)
+        # Should not raise
+        assert True
+
+    def test_get_solver(self):
+        """Test getting the underlying solver."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+        from code_scalpel.symbolic_execution_tools.constraint_solver import ConstraintSolver
+
+        analyzer = SymbolicAnalyzer()
+        solver = analyzer.get_solver()
+        assert isinstance(solver, ConstraintSolver)
+
+    def test_custom_timeout(self):
+        """Test creating analyzer with custom timeout."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer(solver_timeout=5000)
+        assert analyzer.solver_timeout == 5000
+
+
+class TestEngineEdgeCases:
+    """Test edge cases for the symbolic execution engine."""
+
+    def test_analyze_empty_code(self):
+        """Test analyzing empty code."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        result = analyzer.analyze("")
+        assert result is not None
+
+    def test_analyze_syntax_error(self):
+        """Test analyzing code with syntax error."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+        import pytest
+
+        analyzer = SymbolicAnalyzer()
+        # Syntax error should raise ValueError
+        with pytest.raises(ValueError) as exc_info:
+            analyzer.analyze("def broken(")
+        assert "syntax" in str(exc_info.value).lower()
+
+    def test_analyze_only_comments(self):
+        """Test analyzing code with only comments."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        result = analyzer.analyze("# This is a comment\n# Another comment")
+        assert result is not None
+
+    def test_analyze_multiple_branches(self):
+        """Test analyzing code with multiple conditional branches."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        code = """
+x = 5
+y = 10
+if x > 0:
+    if y > 5:
+        z = 1
+    else:
+        z = 2
+else:
+    z = 3
+"""
+        result = analyzer.analyze(code)
+        assert result is not None
+        assert result.total_paths >= 1
+
+    def test_analyze_with_function_def(self):
+        """Test analyzing code with function definition."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        code = """
+def add(a, b):
+    return a + b
+
+result = add(1, 2)
+"""
+        result = analyzer.analyze(code)
+        assert result is not None
+
+    def test_path_result_properties(self):
+        """Test AnalysisResult object has expected properties."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        result = analyzer.analyze("x = 1")
+        
+        # Check result has expected attributes
+        assert hasattr(result, 'total_paths')
+        assert hasattr(result, 'feasible_count')
+        assert hasattr(result, 'infeasible_count')
+        assert hasattr(result, 'paths')
+
+    def test_get_feasible_paths(self):
+        """Test getting feasible paths from result."""
+        from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+
+        analyzer = SymbolicAnalyzer()
+        result = analyzer.analyze("x = 1")
+        
+        # Should have get_feasible_paths method
+        assert hasattr(result, 'get_feasible_paths')
+        feasible = result.get_feasible_paths()
+        assert isinstance(feasible, list)
+
+
+class TestInterpreterEdgeCases:
+    """Test edge cases for the symbolic interpreter."""
+
+    def test_unary_operations(self):
+        """Test unary operations."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        result = interp.execute("x = -5\ny = not True")
+        assert result is not None
+
+    def test_comparison_operators(self):
+        """Test all comparison operators."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        code = """
+a = 5
+b = 10
+c1 = a < b
+c2 = a <= b
+c3 = a > b
+c4 = a >= b
+c5 = a == b
+c6 = a != b
+"""
+        result = interp.execute(code)
+        assert result is not None
+        # Just verify execution completes - check for feasible states (method)
+        states = result.feasible_states()
+        assert len(states) >= 1
+
+    def test_boolean_operations(self):
+        """Test boolean operations."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        code = """
+a = True
+b = False
+c1 = a and b
+c2 = a or b
+c3 = not a
+"""
+        result = interp.execute(code)
+        assert result is not None
+
+    def test_string_assignment(self):
+        """Test string assignment (should handle gracefully)."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        result = interp.execute('x = "hello"')
+        assert result is not None
+
+    def test_augmented_assignment(self):
+        """Test augmented assignment operators."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        code = """
+x = 5
+x += 3
+x -= 1
+x *= 2
+"""
+        result = interp.execute(code)
+        assert result is not None
+
+    def test_multiple_targets(self):
+        """Test multiple assignment targets."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        result = interp.execute("x = y = 5")
+        assert result is not None
+
+    def test_while_loop(self):
+        """Test while loop handling."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        code = """
+x = 0
+while x < 5:
+    x = x + 1
+"""
+        result = interp.execute(code)
+        assert result is not None
+
+    def test_try_except(self):
+        """Test try-except handling."""
+        from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
+
+        interp = SymbolicInterpreter()
+        code = """
+try:
+    x = 1
+except:
+    x = 0
+"""
+        result = interp.execute(code)
+        assert result is not None

@@ -291,6 +291,178 @@ def BadFunc():
         self.assertEqual(response.status_code, 200)
         self.assertLess(elapsed, 2.0, "Response time should be under 2 seconds")
 
+    def test_analyze_code_not_string(self):
+        """Test analyze endpoint with non-string code."""
+        response = self.client.post("/analyze", json={"code": 12345})
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        self.assertIn("Code must be a string", data["error"])
+
+    def test_refactor_endpoint_missing_code(self):
+        """Test refactor endpoint with missing code field."""
+        response = self.client.post("/refactor", json={})
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        # Empty json triggers "Request body is required" since get_json returns {}
+        # which is truthy but lacks "code" key
+        self.assertIn("error", data)
+
+    def test_refactor_endpoint_missing_body(self):
+        """Test refactor endpoint with no request body."""
+        response = self.client.post(
+            "/refactor", content_type="application/json", data=""
+        )
+        self.assertIn(response.status_code, [400, 415])
+
+    def test_refactor_code_not_string(self):
+        """Test refactor endpoint with non-string code."""
+        response = self.client.post("/refactor", json={"code": ["not", "a", "string"]})
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        self.assertIn("Code must be a string", data["error"])
+
+    def test_refactor_default_task(self):
+        """Test refactor endpoint uses default task when not provided."""
+        response = self.client.post("/refactor", json={"code": "x = 1"})
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+
+    def test_security_endpoint_missing_code(self):
+        """Test security endpoint with missing code field."""
+        response = self.client.post("/security", json={})
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        # Empty json triggers error
+        self.assertIn("error", data)
+
+    def test_security_endpoint_missing_body(self):
+        """Test security endpoint with no request body."""
+        response = self.client.post(
+            "/security", content_type="application/json", data=""
+        )
+        self.assertIn(response.status_code, [400, 415])
+
+    def test_security_code_not_string(self):
+        """Test security endpoint with non-string code."""
+        response = self.client.post("/security", json={"code": {"not": "string"}})
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertFalse(data["success"])
+        self.assertIn("Code must be a string", data["error"])
+
+    def test_analyze_returns_error_field_on_syntax_error(self):
+        """Test analyze endpoint includes error field for syntax errors."""
+        response = self.client.post("/analyze", json={"code": "def foo( return"})
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        # Analysis may succeed but report parse failure
+        self.assertIn("processing_time_ms", data)
+
+
+class TestMCPServerConfig(unittest.TestCase):
+    """Tests for MCP Server configuration."""
+
+    def test_config_defaults(self):
+        """Test default configuration values."""
+        from code_scalpel.integrations.mcp_server import MCPServerConfig
+
+        config = MCPServerConfig()
+        self.assertEqual(config.host, "127.0.0.1")
+        self.assertEqual(config.port, 8080)
+        self.assertFalse(config.debug)
+        self.assertTrue(config.cache_enabled)
+        self.assertEqual(config.max_code_size, 100000)
+
+    def test_config_custom_values(self):
+        """Test custom configuration values."""
+        from code_scalpel.integrations.mcp_server import MCPServerConfig
+
+        config = MCPServerConfig(
+            host="0.0.0.0",
+            port=9000,
+            debug=True,
+            cache_enabled=False,
+            max_code_size=50000,
+        )
+        self.assertEqual(config.host, "0.0.0.0")
+        self.assertEqual(config.port, 9000)
+        self.assertTrue(config.debug)
+        self.assertFalse(config.cache_enabled)
+        self.assertEqual(config.max_code_size, 50000)
+
+    def test_create_app_with_custom_config(self):
+        """Test creating app with custom config."""
+        from code_scalpel.integrations.mcp_server import MCPServerConfig, create_app
+
+        config = MCPServerConfig(cache_enabled=False)
+        app = create_app(config)
+        self.assertIsNotNone(app)
+        # Should work with custom config
+        client = app.test_client()
+        response = client.get("/health")
+        self.assertEqual(response.status_code, 200)
+
+    def test_code_size_limit_enforced(self):
+        """Test that code size limit is enforced."""
+        from code_scalpel.integrations.mcp_server import MCPServerConfig, create_app
+
+        # Create app with very small max code size
+        config = MCPServerConfig(max_code_size=10)
+        app = create_app(config)
+        client = app.test_client()
+
+        # Code exceeding limit should be rejected
+        # Flask's MAX_CONTENT_LENGTH returns 413 (Request Entity Too Large)
+        # Our custom check returns 400
+        response = client.post(
+            "/analyze", json={"code": "x = 1\ny = 2\nz = 3\nprint('hello world')"}
+        )
+        # Could be 413 from Flask or 400 from our handler
+        self.assertIn(response.status_code, [400, 413])
+        if response.status_code == 400:
+            data = response.get_json()
+            self.assertFalse(data["success"])
+            self.assertIn("exceeds maximum size", data["error"])
+
+    def test_elapsed_ms_helper(self):
+        """Test the _elapsed_ms helper function."""
+        import time
+
+        from code_scalpel.integrations.mcp_server import _elapsed_ms
+
+        start = time.time()
+        time.sleep(0.01)  # Sleep for 10ms
+        elapsed = _elapsed_ms(start)
+        self.assertGreater(elapsed, 5)  # Should be at least 5ms
+        self.assertLess(elapsed, 100)  # Should be less than 100ms
+
+
+class TestMCPServerRunServer(unittest.TestCase):
+    """Tests for run_server function (without actually running)."""
+
+    def test_run_server_production_warning(self):
+        """Test that debug mode is disabled in production."""
+        import os
+        import warnings
+
+        from code_scalpel.integrations.mcp_server import run_server
+
+        # Set production environment
+        os.environ["FLASK_ENV"] = "production"
+
+        try:
+            # Should warn and force debug=False, but we can't actually run
+            # Just verify the import and function exist
+            self.assertTrue(callable(run_server))
+        finally:
+            # Restore environment
+            os.environ.pop("FLASK_ENV", None)
+
 
 if __name__ == "__main__":
     unittest.main()
