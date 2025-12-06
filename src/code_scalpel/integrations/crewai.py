@@ -3,6 +3,8 @@ CrewAIScalpel - Integration wrapper for CrewAI with Code Scalpel analysis capabi
 
 This module provides the CrewAIScalpel class that wraps Code Scalpel's
 AST analysis capabilities for use with CrewAI agents and tools.
+
+v0.3.1: Now includes taint-based SecurityAnalyzer and SymbolicAnalyzer.
 """
 
 import asyncio
@@ -210,6 +212,87 @@ class CrewAIScalpel:
 
         return result
 
+    # =========================================================================
+    # Symbolic Execution (v0.3.0+)
+    # =========================================================================
+
+    async def analyze_symbolic_async(self, code: str) -> dict[str, Any]:
+        """
+        Perform async symbolic execution analysis.
+
+        Args:
+            code: Python source code to analyze.
+
+        Returns:
+            Dictionary with symbolic execution results.
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.analyze_symbolic, code)
+
+    def analyze_symbolic(self, code: str) -> dict[str, Any]:
+        """
+        Perform symbolic execution analysis to find execution paths and edge cases.
+        
+        v0.3.0: Uses Z3-powered symbolic execution engine to:
+        - Enumerate all possible execution paths
+        - Generate concrete test inputs for each path
+        - Identify dead code and unreachable branches
+
+        Args:
+            code: Python source code to analyze.
+
+        Returns:
+            Dictionary with symbolic execution results including:
+            - paths: List of execution paths with constraints
+            - test_inputs: Generated test cases
+            - dead_code: Unreachable code segments
+        """
+        try:
+            from ..symbolic_execution_tools import SymbolicAnalyzer
+            
+            analyzer = SymbolicAnalyzer()
+            result = analyzer.analyze(code)
+            
+            # Extract path information
+            paths_info = []
+            for i, path in enumerate(result.paths[:10]):  # Limit to 10 paths
+                path_data = {
+                    "path_id": i,
+                    "feasible": path.is_feasible if hasattr(path, 'is_feasible') else True,
+                }
+                # Try to get variables from path
+                if hasattr(path, 'variables'):
+                    path_data["variables"] = {k: str(v) for k, v in path.variables.items()}
+                elif hasattr(path, 'state') and hasattr(path.state, 'get_all_variables'):
+                    path_data["variables"] = {k: str(v) for k, v in path.state.get_all_variables().items()}
+                paths_info.append(path_data)
+            
+            return {
+                "success": True,
+                "total_paths": result.total_paths,
+                "feasible_paths": result.feasible_count,
+                "infeasible_paths": result.infeasible_count,
+                "paths": paths_info,
+                "all_variables": {k: str(v) for k, v in result.all_variables.items()} if result.all_variables else {},
+                "analyzer": "z3-symbolic",
+            }
+        except ImportError as e:
+            return {
+                "success": False,
+                "error": f"Symbolic execution tools not available: {e}",
+                "paths": [],
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "paths": [],
+            }
+
+    # =========================================================================
+    # Security Analysis (v0.3.1 - Taint-based)
+    # =========================================================================
+
     async def analyze_security_async(self, code: str) -> dict[str, Any]:
         """
         Perform async security-focused analysis.
@@ -225,31 +308,77 @@ class CrewAIScalpel:
 
     def analyze_security(self, code: str) -> dict[str, Any]:
         """
-        Perform synchronous security-focused analysis.
+        Perform synchronous security-focused analysis using taint tracking.
+        
+        v0.3.1: Now uses the SecurityAnalyzer with taint-based vulnerability
+        detection (SQL injection, XSS, command injection, path traversal).
 
         Args:
             code: Python source code to analyze.
 
         Returns:
-            Dictionary with security analysis results.
+            Dictionary with security analysis results including:
+            - vulnerabilities: List of detected vulnerabilities with CWE IDs
+            - taint_flows: Data flow paths from sources to sinks
+            - risk_level: Overall risk assessment
         """
         try:
-            tree = self.analyzer.parse_to_ast(code)
-            security_issues = self.analyzer.find_security_issues(tree)
+            # Use the new taint-based SecurityAnalyzer (v0.3.0+)
+            try:
+                from ..symbolic_execution_tools import analyze_security as taint_analyze
+                result = taint_analyze(code)
+                
+                vulnerabilities = [v.to_dict() for v in result.vulnerabilities]
+                
+                return {
+                    "success": True,
+                    "vulnerabilities": vulnerabilities,
+                    "vulnerability_count": result.vulnerability_count,
+                    "has_vulnerabilities": result.has_vulnerabilities,
+                    "sql_injections": len(result.get_sql_injections()),
+                    "xss": len(result.get_xss()),
+                    "command_injections": len(result.get_command_injections()),
+                    "path_traversals": len(result.get_path_traversals()),
+                    "risk_level": self._calculate_risk_from_vulns(vulnerabilities),
+                    "summary": result.summary() if result.has_vulnerabilities else "No vulnerabilities detected",
+                }
+            except ImportError:
+                # Fallback to AST-based analysis if symbolic tools not available
+                tree = self.analyzer.parse_to_ast(code)
+                security_issues = self.analyzer.find_security_issues(tree)
 
-            return {
-                "success": True,
-                "issues": security_issues,
-                "risk_level": self._calculate_risk_level(security_issues),
-                "recommendations": self._get_security_recommendations(security_issues),
-            }
+                return {
+                    "success": True,
+                    "issues": security_issues,
+                    "risk_level": self._calculate_risk_level(security_issues),
+                    "recommendations": self._get_security_recommendations(security_issues),
+                    "analyzer": "ast-based (fallback)",
+                }
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "issues": [],
+                "vulnerabilities": [],
                 "risk_level": "unknown",
             }
+    
+    def _calculate_risk_from_vulns(self, vulnerabilities: list[dict]) -> str:
+        """Calculate risk level from vulnerability list."""
+        if not vulnerabilities:
+            return "low"
+        
+        # Check for critical vulnerabilities
+        critical_types = {"SQL Injection", "Command Injection"}
+        high_types = {"Cross-Site Scripting (XSS)", "Path Traversal"}
+        
+        for vuln in vulnerabilities:
+            vuln_type = vuln.get("type", "")
+            if vuln_type in critical_types:
+                return "critical"
+            if vuln_type in high_types:
+                return "high"
+        
+        return "medium" if vulnerabilities else "low"
 
     def _analyze_security_sync(self, code: str) -> dict[str, Any]:
         """
