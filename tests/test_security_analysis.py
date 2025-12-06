@@ -8,7 +8,6 @@ Tests:
 - Vulnerability detection (SQL injection, XSS, etc.)
 """
 
-import pytest
 import warnings
 
 # Suppress the BETA warning for cleaner test output
@@ -26,16 +25,15 @@ from code_scalpel.symbolic_execution_tools.taint_tracker import (
     TaintInfo,
     TaintedValue,
     Vulnerability,
-    SINK_SANITIZERS,
+    # v0.3.1: Sanitizer support
+    SANITIZER_REGISTRY,
+    register_sanitizer,
 )
 from code_scalpel.symbolic_execution_tools.security_analyzer import (
-    SecurityAnalyzer,
-    SecurityAnalysisResult,
     analyze_security,
     find_sql_injections,
     find_xss,
     find_command_injections,
-    find_path_traversals,
 )
 
 import z3
@@ -316,7 +314,7 @@ cursor.execute(query, (safe_id,))
 '''
         # The current analyzer doesn't recognize int() as sanitizer
         # but this test documents expected behavior
-        result = analyze_security(code)
+        _ = analyze_security(code)
         # For now, this may still flag it - that's expected
     
     def test_analyze_empty_code(self):
@@ -522,7 +520,6 @@ class TestSymbolicStringSupport:
     def test_interpreter_handles_string_literal(self):
         """SymbolicInterpreter should handle string assignments."""
         from code_scalpel.symbolic_execution_tools.interpreter import SymbolicInterpreter
-        from code_scalpel.symbolic_execution_tools.state_manager import SymbolicState
         
         interp = SymbolicInterpreter()
         result = interp.execute('x = "hello"')
@@ -544,3 +541,351 @@ class TestSymbolicStringSupport:
         state = result.states[0]
         c_val = state.get_variable("c")
         assert c_val is not None
+
+
+# =============================================================================
+# v0.3.1 Sanitizer Recognition Tests
+# =============================================================================
+
+class TestSanitizerRegistry:
+    """Test the sanitizer registry infrastructure."""
+    
+    def test_builtin_sanitizers_registered(self):
+        """Built-in sanitizers should be pre-registered."""
+        # Type coercions
+        assert "int" in SANITIZER_REGISTRY
+        assert "float" in SANITIZER_REGISTRY
+        assert "bool" in SANITIZER_REGISTRY
+        
+        # HTML escape
+        assert "html.escape" in SANITIZER_REGISTRY
+        
+        # Shell sanitizers
+        assert "shlex.quote" in SANITIZER_REGISTRY
+        
+        # Path sanitizers
+        assert "os.path.basename" in SANITIZER_REGISTRY
+    
+    def test_type_coercion_fully_clears_taint(self):
+        """Type coercion (int, float, bool) should fully clear taint."""
+        int_sanitizer = SANITIZER_REGISTRY["int"]
+        assert int_sanitizer.full_clear is True
+        
+        float_sanitizer = SANITIZER_REGISTRY["float"]
+        assert float_sanitizer.full_clear is True
+        
+        bool_sanitizer = SANITIZER_REGISTRY["bool"]
+        assert bool_sanitizer.full_clear is True
+    
+    def test_html_escape_clears_xss_only(self):
+        """html.escape should only clear XSS sink."""
+        sanitizer = SANITIZER_REGISTRY["html.escape"]
+        assert SecuritySink.HTML_OUTPUT in sanitizer.clears_sinks
+        assert SecuritySink.SQL_QUERY not in sanitizer.clears_sinks
+        assert SecuritySink.SHELL_COMMAND not in sanitizer.clears_sinks
+        assert sanitizer.full_clear is False
+    
+    def test_shlex_quote_clears_command_only(self):
+        """shlex.quote should only clear command injection sink."""
+        sanitizer = SANITIZER_REGISTRY["shlex.quote"]
+        assert SecuritySink.SHELL_COMMAND in sanitizer.clears_sinks
+        assert SecuritySink.SQL_QUERY not in sanitizer.clears_sinks
+        assert sanitizer.full_clear is False
+    
+    def test_register_custom_sanitizer(self):
+        """Custom sanitizers should be registrable."""
+        # Clean up after test
+        test_name = "_test_custom_sanitizer_123"
+        try:
+            register_sanitizer(
+                test_name,
+                clears_sinks={SecuritySink.SQL_QUERY},
+                full_clear=False
+            )
+            
+            assert test_name in SANITIZER_REGISTRY
+            sanitizer = SANITIZER_REGISTRY[test_name]
+            assert SecuritySink.SQL_QUERY in sanitizer.clears_sinks
+        finally:
+            # Cleanup
+            if test_name in SANITIZER_REGISTRY:
+                del SANITIZER_REGISTRY[test_name]
+
+
+class TestConfigLoader:
+    """Test loading sanitizers from pyproject.toml."""
+    
+    def test_load_from_nonexistent_file(self, tmp_path):
+        """Should return 0 for nonexistent file."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            load_sanitizers_from_config,
+        )
+        
+        result = load_sanitizers_from_config(str(tmp_path / "nonexistent.toml"))
+        assert result == 0
+    
+    def test_load_sql_sanitizer_from_config(self, tmp_path):
+        """Should load SQL sanitizer from config."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            load_sanitizers_from_config,
+        )
+        
+        config_file = tmp_path / "pyproject.toml"
+        config_file.write_text('''
+[tool.code-scalpel.sanitizers]
+"my_utils.clean_sql" = ["SQL_QUERY"]
+''')
+        
+        try:
+            count = load_sanitizers_from_config(str(config_file))
+            assert count == 1
+            assert "my_utils.clean_sql" in SANITIZER_REGISTRY
+            sanitizer = SANITIZER_REGISTRY["my_utils.clean_sql"]
+            assert SecuritySink.SQL_QUERY in sanitizer.clears_sinks
+            assert not sanitizer.full_clear
+        finally:
+            if "my_utils.clean_sql" in SANITIZER_REGISTRY:
+                del SANITIZER_REGISTRY["my_utils.clean_sql"]
+    
+    def test_load_full_clear_sanitizer(self, tmp_path):
+        """Should load full clear sanitizer with ALL."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            load_sanitizers_from_config,
+        )
+        
+        config_file = tmp_path / "pyproject.toml"
+        config_file.write_text('''
+[tool.code-scalpel.sanitizers]
+"my_utils.super_clean" = ["ALL"]
+''')
+        
+        try:
+            count = load_sanitizers_from_config(str(config_file))
+            assert count == 1
+            assert "my_utils.super_clean" in SANITIZER_REGISTRY
+            sanitizer = SANITIZER_REGISTRY["my_utils.super_clean"]
+            assert sanitizer.full_clear is True
+        finally:
+            if "my_utils.super_clean" in SANITIZER_REGISTRY:
+                del SANITIZER_REGISTRY["my_utils.super_clean"]
+    
+    def test_load_multiple_sanitizers(self, tmp_path):
+        """Should load multiple sanitizers."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            load_sanitizers_from_config,
+        )
+        
+        config_file = tmp_path / "pyproject.toml"
+        config_file.write_text('''
+[tool.code-scalpel.sanitizers]
+"utils.clean_sql" = ["SQL_QUERY"]
+"utils.clean_html" = ["HTML_OUTPUT"]
+"utils.clean_all" = ["ALL"]
+''')
+        
+        try:
+            count = load_sanitizers_from_config(str(config_file))
+            assert count == 3
+            assert "utils.clean_sql" in SANITIZER_REGISTRY
+            assert "utils.clean_html" in SANITIZER_REGISTRY
+            assert "utils.clean_all" in SANITIZER_REGISTRY
+        finally:
+            for name in ["utils.clean_sql", "utils.clean_html", "utils.clean_all"]:
+                if name in SANITIZER_REGISTRY:
+                    del SANITIZER_REGISTRY[name]
+    
+    def test_load_multi_sink_sanitizer(self, tmp_path):
+        """Should load sanitizer that clears multiple sinks."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            load_sanitizers_from_config,
+        )
+        
+        config_file = tmp_path / "pyproject.toml"
+        config_file.write_text('''
+[tool.code-scalpel.sanitizers]
+"utils.paranoid_clean" = ["SQL_QUERY", "HTML_OUTPUT"]
+''')
+        
+        try:
+            count = load_sanitizers_from_config(str(config_file))
+            assert count == 1
+            sanitizer = SANITIZER_REGISTRY["utils.paranoid_clean"]
+            assert SecuritySink.SQL_QUERY in sanitizer.clears_sinks
+            assert SecuritySink.HTML_OUTPUT in sanitizer.clears_sinks
+        finally:
+            if "utils.paranoid_clean" in SANITIZER_REGISTRY:
+                del SANITIZER_REGISTRY["utils.paranoid_clean"]
+    
+    def test_invalid_sink_name_skipped(self, tmp_path):
+        """Should skip invalid sink names gracefully."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            load_sanitizers_from_config,
+        )
+        
+        config_file = tmp_path / "pyproject.toml"
+        config_file.write_text('''
+[tool.code-scalpel.sanitizers]
+"utils.mixed" = ["SQL_QUERY", "INVALID_SINK"]
+''')
+        
+        try:
+            count = load_sanitizers_from_config(str(config_file))
+            assert count == 1
+            sanitizer = SANITIZER_REGISTRY["utils.mixed"]
+            # Should have SQL_QUERY but not crash on INVALID_SINK
+            assert SecuritySink.SQL_QUERY in sanitizer.clears_sinks
+        finally:
+            if "utils.mixed" in SANITIZER_REGISTRY:
+                del SANITIZER_REGISTRY["utils.mixed"]
+
+
+class TestTaintInfoClearedSinks:
+    """Test the cleared_sinks field in TaintInfo."""
+    
+    def test_cleared_sinks_initially_empty(self):
+        """New TaintInfo should have empty cleared_sinks."""
+        taint = TaintInfo(source=TaintSource.USER_INPUT)
+        assert len(taint.cleared_sinks) == 0
+    
+    def test_apply_sanitizer_adds_to_cleared_sinks(self):
+        """Applying sink-specific sanitizer adds to cleared_sinks."""
+        taint = TaintInfo(
+            source=TaintSource.USER_INPUT,
+            level=TaintLevel.HIGH
+        )
+        
+        sanitized = taint.apply_sanitizer("html.escape")
+        
+        assert SecuritySink.HTML_OUTPUT in sanitized.cleared_sinks
+    
+    def test_is_dangerous_checks_cleared_sinks(self):
+        """is_dangerous_for should check cleared_sinks first."""
+        taint = TaintInfo(
+            source=TaintSource.USER_INPUT,
+            level=TaintLevel.HIGH,  # Still high level
+            cleared_sinks={SecuritySink.HTML_OUTPUT}
+        )
+        
+        # HTML_OUTPUT cleared, so not dangerous
+        assert not taint.is_dangerous_for(SecuritySink.HTML_OUTPUT)
+        # SQL_QUERY not cleared, still dangerous
+        assert taint.is_dangerous_for(SecuritySink.SQL_QUERY)
+    
+    def test_full_clear_sanitizer_clears_all_sinks(self):
+        """Full clear sanitizer should clear all sinks."""
+        taint = TaintInfo(
+            source=TaintSource.USER_INPUT,
+            level=TaintLevel.HIGH
+        )
+        
+        sanitized = taint.apply_sanitizer("int")
+        
+        # All sinks should be cleared with int()
+        assert not sanitized.is_dangerous_for(SecuritySink.SQL_QUERY)
+        assert not sanitized.is_dangerous_for(SecuritySink.HTML_OUTPUT)
+        assert not sanitized.is_dangerous_for(SecuritySink.SHELL_COMMAND)
+        assert not sanitized.is_dangerous_for(SecuritySink.FILE_PATH)
+    
+    def test_propagate_preserves_cleared_sinks(self):
+        """Propagation should preserve cleared_sinks."""
+        taint = TaintInfo(
+            source=TaintSource.USER_INPUT,
+            level=TaintLevel.HIGH,
+            cleared_sinks={SecuritySink.HTML_OUTPUT}
+        )
+        
+        propagated = taint.propagate("new_var")
+        
+        assert SecuritySink.HTML_OUTPUT in propagated.cleared_sinks
+
+
+class TestSecurityAnalyzerSanitizers:
+    """Test SecurityAnalyzer recognizes sanitizers in code."""
+    
+    def test_html_escape_prevents_xss_detection(self):
+        """html.escape should prevent XSS detection."""
+        code = '''
+user_input = request.args.get("name")
+safe_name = html.escape(user_input)
+response.write(safe_name)
+'''
+        result = analyze_security(code)
+        
+        xss_vulns = result.get_xss()
+        # Should not flag safe_name as XSS
+        # Check that no XSS for safe_name
+        safe_name_xss = [v for v in xss_vulns if "safe_name" in v.taint_path]
+        assert len(safe_name_xss) == 0
+    
+    def test_int_cast_prevents_sqli_detection(self):
+        """int() cast should prevent SQL injection detection."""
+        code = '''
+user_id = request.args.get("id")
+safe_id = int(user_id)
+query = "SELECT * FROM users WHERE id=" + str(safe_id)
+cursor.execute(query)
+'''
+        result = analyze_security(code)
+        
+        sqli_vulns = result.get_sql_injections()
+        # safe_id should not trigger SQLi
+        safe_id_sqli = [v for v in sqli_vulns if "safe_id" in v.taint_path]
+        assert len(safe_id_sqli) == 0
+    
+    def test_unsanitized_still_flagged(self):
+        """Unsanitized data should still be flagged."""
+        code = '''
+user_id = request.args.get("id")
+query = "SELECT * FROM users WHERE id=" + user_id
+cursor.execute(query)
+'''
+        result = analyze_security(code)
+        
+        assert result.has_vulnerabilities
+        sqli = result.get_sql_injections()
+        assert len(sqli) >= 1
+    
+    def test_html_escape_does_not_prevent_sqli(self):
+        """html.escape should NOT prevent SQL injection."""
+        code = '''
+user_input = request.args.get("name")
+escaped = html.escape(user_input)
+query = "SELECT * FROM users WHERE name='" + escaped + "'"
+cursor.execute(query)
+'''
+        result = analyze_security(code)
+        
+        # html.escape doesn't protect against SQLi
+        # Should still flag this
+        assert result.has_vulnerabilities
+        assert len(result.get_sql_injections()) > 0
+    
+    def test_shlex_quote_prevents_command_injection(self):
+        """shlex.quote should prevent command injection."""
+        code = '''
+filename = request.args.get("file")
+safe_filename = shlex.quote(filename)
+cmd = "cat " + safe_filename
+os.system(cmd)
+'''
+        result = analyze_security(code)
+        
+        cmd_vulns = result.get_command_injections()
+        # safe_filename should not trigger command injection
+        safe_vulns = [v for v in cmd_vulns if "safe_filename" in v.taint_path]
+        assert len(safe_vulns) == 0
+    
+    def test_os_path_basename_prevents_path_traversal(self):
+        """os.path.basename should prevent path traversal."""
+        code = '''
+filename = request.args.get("file")
+safe_file = os.path.basename(filename)
+with open("/uploads/" + safe_file) as f:
+    content = f.read()
+'''
+        result = analyze_security(code)
+        
+        path_vulns = result.get_path_traversals()
+        # safe_file should not trigger path traversal
+        safe_vulns = [v for v in path_vulns if "safe_file" in v.taint_path]
+        assert len(safe_vulns) == 0

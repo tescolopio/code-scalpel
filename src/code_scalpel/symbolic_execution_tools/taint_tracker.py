@@ -37,8 +37,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import z3
-from z3 import ExprRef, BoolRef, StringSort, String, StringVal
+from z3 import ExprRef, String
 
 
 class TaintSource(Enum):
@@ -108,12 +107,14 @@ class TaintInfo:
         source_location: (line, column) in source code
         propagation_path: List of variable names taint flowed through
         sanitizers_applied: Set of sanitization functions applied
+        cleared_sinks: Sinks that are safe due to sanitization
     """
     source: TaintSource
     level: TaintLevel = TaintLevel.HIGH
     source_location: Optional[Tuple[int, int]] = None
     propagation_path: List[str] = field(default_factory=list)
     sanitizers_applied: Set[str] = field(default_factory=set)
+    cleared_sinks: Set[SecuritySink] = field(default_factory=set)
     
     def propagate(self, through_var: str) -> TaintInfo:
         """
@@ -131,22 +132,40 @@ class TaintInfo:
             source_location=self.source_location,
             propagation_path=self.propagation_path + [through_var],
             sanitizers_applied=self.sanitizers_applied.copy(),
+            cleared_sinks=self.cleared_sinks.copy(),
         )
     
     def apply_sanitizer(self, sanitizer: str) -> TaintInfo:
         """
-        Record that a sanitizer was applied.
+        Record that a sanitizer was applied and clear relevant sinks.
         
         Args:
             sanitizer: Name of sanitization function
             
         Returns:
-            New TaintInfo with sanitizer recorded and level lowered
+            New TaintInfo with sanitizer recorded, level lowered, and sinks cleared
         """
         new_sanitizers = self.sanitizers_applied | {sanitizer}
         
+        # Get which sinks this sanitizer clears
+        sanitizer_info = SANITIZER_REGISTRY.get(sanitizer)
+        new_cleared = self.cleared_sinks.copy()
+        
+        if sanitizer_info is not None:
+            if sanitizer_info.full_clear:
+                # Type coercion (int, float, bool) clears ALL sinks
+                new_cleared = set(SecuritySink)
+            else:
+                # Partial clear - only specific sinks
+                new_cleared |= sanitizer_info.clears_sinks
+        
         # Lower taint level based on sanitizer
         new_level = TaintLevel.LOW if len(new_sanitizers) > 0 else self.level
+        
+        # If all dangerous sinks are cleared, mark as NONE
+        if new_cleared >= {SecuritySink.SQL_QUERY, SecuritySink.HTML_OUTPUT, 
+                          SecuritySink.FILE_PATH, SecuritySink.SHELL_COMMAND}:
+            new_level = TaintLevel.NONE
         
         return TaintInfo(
             source=self.source,
@@ -154,6 +173,7 @@ class TaintInfo:
             source_location=self.source_location,
             propagation_path=self.propagation_path.copy(),
             sanitizers_applied=new_sanitizers,
+            cleared_sinks=new_cleared,
         )
     
     def is_dangerous_for(self, sink: SecuritySink) -> bool:
@@ -162,7 +182,7 @@ class TaintInfo:
         
         Some sanitizers are sink-specific:
         - html.escape() → safe for HTML_OUTPUT, NOT for SQL_QUERY
-        - parameterized queries → safe for SQL_QUERY
+        - int() → safe for ALL sinks (type coercion)
         
         Args:
             sink: The security sink to check
@@ -173,7 +193,11 @@ class TaintInfo:
         if self.level == TaintLevel.NONE:
             return False
         
-        # Check if appropriate sanitizer was applied
+        # Check if this specific sink was cleared by a sanitizer
+        if sink in self.cleared_sinks:
+            return False
+        
+        # Backward compatibility: check SINK_SANITIZERS
         safe_sanitizers = SINK_SANITIZERS.get(sink, set())
         if self.sanitizers_applied & safe_sanitizers:
             return False
@@ -206,6 +230,226 @@ SINK_SANITIZERS: Dict[SecuritySink, Set[str]] = {
     SecuritySink.EVAL: set(),  # Almost never safe
     SecuritySink.DESERIALIZATION: set(),  # Almost never safe
 }
+
+
+# =============================================================================
+# Sanitizer Registry (RFC-002: The Silencer)
+# =============================================================================
+
+@dataclass
+class SanitizerInfo:
+    """
+    Information about a sanitizer function.
+    
+    Attributes:
+        name: Full function name (e.g., "html.escape")
+        clears_sinks: Which sink types this sanitizer protects against
+        full_clear: If True, clears ALL taint (e.g., int(), float())
+    """
+    name: str
+    clears_sinks: Set[SecuritySink] = field(default_factory=set)
+    full_clear: bool = False
+
+
+# Built-in sanitizer registry
+# Users can extend via pyproject.toml [tool.code-scalpel.sanitizers]
+SANITIZER_REGISTRY: Dict[str, SanitizerInfo] = {
+    # XSS sanitizers
+    "html.escape": SanitizerInfo(
+        "html.escape", 
+        {SecuritySink.HTML_OUTPUT}
+    ),
+    "markupsafe.escape": SanitizerInfo(
+        "markupsafe.escape", 
+        {SecuritySink.HTML_OUTPUT}
+    ),
+    "markupsafe.Markup": SanitizerInfo(
+        "markupsafe.Markup", 
+        {SecuritySink.HTML_OUTPUT}
+    ),
+    "bleach.clean": SanitizerInfo(
+        "bleach.clean", 
+        {SecuritySink.HTML_OUTPUT}
+    ),
+    "cgi.escape": SanitizerInfo(
+        "cgi.escape", 
+        {SecuritySink.HTML_OUTPUT}
+    ),
+    
+    # SQL sanitizers
+    "escape_string": SanitizerInfo(
+        "escape_string", 
+        {SecuritySink.SQL_QUERY}
+    ),
+    "mysql.connector.escape_string": SanitizerInfo(
+        "mysql.connector.escape_string", 
+        {SecuritySink.SQL_QUERY}
+    ),
+    
+    # Path sanitizers
+    "os.path.basename": SanitizerInfo(
+        "os.path.basename", 
+        {SecuritySink.FILE_PATH}
+    ),
+    "werkzeug.utils.secure_filename": SanitizerInfo(
+        "werkzeug.utils.secure_filename", 
+        {SecuritySink.FILE_PATH}
+    ),
+    "secure_filename": SanitizerInfo(
+        "secure_filename", 
+        {SecuritySink.FILE_PATH}
+    ),
+    
+    # Shell sanitizers
+    "shlex.quote": SanitizerInfo(
+        "shlex.quote", 
+        {SecuritySink.SHELL_COMMAND}
+    ),
+    "pipes.quote": SanitizerInfo(
+        "pipes.quote", 
+        {SecuritySink.SHELL_COMMAND}
+    ),
+    
+    # Type coercion - FULL CLEAR (converts to safe type)
+    "int": SanitizerInfo("int", set(), full_clear=True),
+    "float": SanitizerInfo("float", set(), full_clear=True),
+    "bool": SanitizerInfo("bool", set(), full_clear=True),
+    "str": SanitizerInfo("str", set(), full_clear=False),  # str() doesn't sanitize!
+    "abs": SanitizerInfo("abs", set(), full_clear=True),
+    "len": SanitizerInfo("len", set(), full_clear=True),
+    "ord": SanitizerInfo("ord", set(), full_clear=True),
+    "hex": SanitizerInfo("hex", set(), full_clear=True),
+}
+
+
+def register_sanitizer(
+    name: str,
+    clears_sinks: Optional[Set[SecuritySink]] = None,
+    full_clear: bool = False
+) -> None:
+    """
+    Register a custom sanitizer function.
+    
+    Args:
+        name: Full function name (e.g., "my_lib.clean_sql")
+        clears_sinks: Which sink types this sanitizer protects against
+        full_clear: If True, clears ALL taint
+        
+    Example:
+        register_sanitizer("my_lib.clean_sql", {SecuritySink.SQL_QUERY})
+    """
+    SANITIZER_REGISTRY[name] = SanitizerInfo(
+        name=name,
+        clears_sinks=clears_sinks or set(),
+        full_clear=full_clear,
+    )
+
+
+def load_sanitizers_from_config(config_path: Optional[str] = None) -> int:
+    """
+    Load custom sanitizers from pyproject.toml.
+    
+    Expected format:
+        [tool.code-scalpel.sanitizers]
+        "my_lib.clean_sql" = ["SQL_QUERY"]
+        "utils.strip_tags" = ["HTML_OUTPUT"]
+        "utils.super_clean" = ["ALL"]  # Full clear
+    
+    Args:
+        config_path: Path to config file. If None, searches for pyproject.toml
+                     in current directory and parent directories.
+        
+    Returns:
+        Number of sanitizers loaded
+        
+    Example pyproject.toml:
+        [tool.code-scalpel.sanitizers]
+        "my_utils.clean_sql" = ["SQL_QUERY"]
+        "my_utils.safe_print" = ["HTML_OUTPUT"]
+        "my_utils.super_clean" = ["ALL"]
+    """
+    import os
+    
+    # Find config file
+    if config_path is None:
+        config_path = _find_config_file()
+    
+    if config_path is None or not os.path.exists(config_path):
+        return 0
+    
+    try:
+        config = _load_toml(config_path)
+        if config is None:
+            return 0
+        
+        sanitizers = config.get("tool", {}).get("code-scalpel", {}).get("sanitizers", {})
+        
+        count = 0
+        for func_name, sinks in sanitizers.items():
+            if not isinstance(sinks, list):
+                continue  # Invalid format, skip
+                
+            # Check for full clear
+            if "ALL" in sinks or "*" in sinks:
+                register_sanitizer(func_name, full_clear=True)
+            else:
+                sink_set = set()
+                for sink_name in sinks:
+                    try:
+                        sink_set.add(SecuritySink[sink_name])
+                    except KeyError:
+                        pass  # Unknown sink name, skip
+                if sink_set:  # Only register if we matched at least one sink
+                    register_sanitizer(func_name, sink_set)
+            count += 1
+        
+        return count
+        
+    except Exception:
+        # Don't crash on config errors, just skip loading
+        return 0
+
+
+def _find_config_file() -> Optional[str]:
+    """Search for pyproject.toml in current and parent directories."""
+    import os
+    
+    current = os.getcwd()
+    
+    # Search up to 10 levels
+    for _ in range(10):
+        candidate = os.path.join(current, "pyproject.toml")
+        if os.path.exists(candidate):
+            return candidate
+        
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    
+    return None
+
+
+def _load_toml(path: str) -> Optional[Dict[str, Any]]:
+    """Load a TOML file using available parser."""
+    # Python 3.11+ has tomllib built-in
+    try:
+        import tomllib
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except ImportError:
+        pass
+    
+    # Fallback to tomli (pip install tomli)
+    try:
+        import tomli
+        with open(path, "rb") as f:
+            return tomli.load(f)
+    except ImportError:
+        pass
+    
+    # No TOML parser available
+    return None
 
 
 @dataclass

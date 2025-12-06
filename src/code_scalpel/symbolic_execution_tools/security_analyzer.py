@@ -27,14 +27,10 @@ Usage:
 from __future__ import annotations
 import ast
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-import z3
-from z3 import String, StringVal, Concat, StringSort
+from typing import Any, Dict, List, Optional, Tuple
 
 from .taint_tracker import (
     TaintTracker,
-    TaintSource,
     TaintInfo,
     TaintLevel,
     SecuritySink,
@@ -42,8 +38,20 @@ from .taint_tracker import (
     TAINT_SOURCE_PATTERNS,
     SINK_PATTERNS,
     SANITIZER_PATTERNS,
+    SANITIZER_REGISTRY,
+    load_sanitizers_from_config,
 )
-from .engine import SymbolicAnalyzer
+
+# Auto-load custom sanitizers from pyproject.toml on module import
+_config_loaded = False
+
+
+def _ensure_config_loaded() -> None:
+    """Load config once per process."""
+    global _config_loaded
+    if not _config_loaded:
+        load_sanitizers_from_config()
+        _config_loaded = True
 
 
 @dataclass
@@ -239,6 +247,11 @@ class SecurityAnalyzer:
         if not targets:
             return
         
+        # Check if RHS is a call that might be a sink (even if also an assignment)
+        # e.g., html = render_template_string(user) - user reaches the sink
+        if isinstance(node.value, ast.Call):
+            self._analyze_call(node.value, (node.lineno, node.col_offset))
+        
         # Check if RHS introduces taint
         source_info = self._check_taint_source(node.value, (node.lineno, node.col_offset))
         
@@ -248,12 +261,63 @@ class SecurityAnalyzer:
                 self._taint_tracker.mark_tainted(target, source_info)
                 self._current_taint_map[target] = source_info
         else:
-            # Check if RHS propagates taint
-            source_vars = self._extract_variable_names(node.value)
-            for target in targets:
-                propagated = self._taint_tracker.propagate_assignment(target, source_vars)
-                if propagated is not None:
-                    self._current_taint_map[target] = propagated
+            # Check if RHS is a sanitizer call wrapping tainted data
+            sanitizer_result = self._check_sanitizer_call(node.value)
+            
+            if sanitizer_result is not None:
+                sanitizer_name, sanitized_taint = sanitizer_result
+                for target in targets:
+                    # Apply sanitizer to propagated taint
+                    final_taint = sanitized_taint.apply_sanitizer(sanitizer_name)
+                    self._taint_tracker.mark_tainted(target, final_taint)
+                    self._current_taint_map[target] = final_taint
+            else:
+                # Check if RHS propagates taint (no sanitizer)
+                source_vars = self._extract_variable_names(node.value)
+                for target in targets:
+                    propagated = self._taint_tracker.propagate_assignment(target, source_vars)
+                    if propagated is not None:
+                        self._current_taint_map[target] = propagated
+    
+    def _check_sanitizer_call(
+        self, 
+        node: ast.expr
+    ) -> Optional[Tuple[str, TaintInfo]]:
+        """
+        Check if an expression is a sanitizer call wrapping tainted data.
+        
+        Returns:
+            Tuple of (sanitizer_name, source_taint) if sanitizer found, None otherwise
+        """
+        if not isinstance(node, ast.Call):
+            return None
+        
+        func_name = self._get_call_name(node)
+        if func_name is None:
+            return None
+        
+        # Check if this function is a registered sanitizer
+        if func_name not in SANITIZER_REGISTRY and func_name not in SANITIZER_PATTERNS:
+            return None
+        
+        # Get the sanitizer name (prefer registry, fallback to patterns)
+        sanitizer_name = func_name
+        
+        # Find tainted arguments
+        for arg in node.args:
+            if isinstance(arg, ast.Name):
+                taint = self._taint_tracker.get_taint(arg.id)
+                if taint is not None:
+                    return (sanitizer_name, taint)
+            elif isinstance(arg, ast.BinOp):
+                # Tainted expression in argument
+                arg_vars = self._extract_variable_names(arg)
+                for var in arg_vars:
+                    taint = self._taint_tracker.get_taint(var)
+                    if taint is not None:
+                        return (sanitizer_name, taint)
+        
+        return None
     
     def _analyze_call(self, node: ast.Call, location: Tuple[int, int]) -> None:
         """Analyze a function call for sink detection."""
@@ -391,6 +455,8 @@ def analyze_security(code: str) -> SecurityAnalysisResult:
     """
     Convenience function to analyze code for security vulnerabilities.
     
+    Automatically loads custom sanitizers from pyproject.toml if present.
+    
     Args:
         code: Python source code
         
@@ -406,6 +472,7 @@ def analyze_security(code: str) -> SecurityAnalysisResult:
         if result.has_vulnerabilities:
             print(result.summary())
     """
+    _ensure_config_loaded()
     analyzer = SecurityAnalyzer()
     return analyzer.analyze(code)
 

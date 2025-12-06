@@ -1,6 +1,6 @@
 [project]
 name = "code-scalpel"
-version = "0.3.0"
+version = "0.3.1"
 description = "AI Agent toolkit for code analysis using ASTs, PDGs, and Symbolic Execution"
 readme = "README.md"
 license = {text = "MIT"}
@@ -37,6 +37,7 @@ dependencies = [
     "z3-solver>=4.8.12",
     "graphviz>=0.16",
     "flask>=2.0.0",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
