@@ -1,12 +1,13 @@
 """
-Type Inference Engine - Milestone M1
-=====================================
+Type Inference Engine - Milestone M1 (Extended in v0.3.0)
+==========================================================
 
 Infers Z3-compatible types from Python AST.
 
-Scope (per RFC-001, Gall's Law):
+Scope:
 - Integer literals and operations → INT
 - Boolean literals and comparisons → BOOL
+- String literals and operations → STRING (v0.3.0)
 - Everything else → UNKNOWN
 
 This is a flow-insensitive analysis: we track the LAST assignment to each variable.
@@ -17,18 +18,20 @@ from enum import Enum, auto
 from typing import Dict, Optional, Union
 from dataclasses import dataclass
 
-from z3 import IntSort, BoolSort, Sort
+from z3 import IntSort, BoolSort, StringSort, Sort
 
 
 class InferredType(Enum):
     """
     Types that can be inferred from Python code.
     
-    Phase 1 only supports INT and BOOL.
+    Phase 1: INT and BOOL
+    Phase 2 (v0.3.0): STRING added
     UNKNOWN means we cannot determine the type (unsupported construct).
     """
     INT = auto()
     BOOL = auto()
+    STRING = auto()  # v0.3.0
     UNKNOWN = auto()
     
     def to_z3_sort(self) -> Sort:
@@ -37,6 +40,8 @@ class InferredType(Enum):
             return IntSort()
         elif self == InferredType.BOOL:
             return BoolSort()
+        elif self == InferredType.STRING:
+            return StringSort()
         else:
             raise ValueError(f"Cannot convert {self.name} to Z3 sort")
     
@@ -171,8 +176,11 @@ class TypeInferenceEngine:
             return InferredType.BOOL
         elif isinstance(value, int):
             return InferredType.INT
+        elif isinstance(value, str):
+            # v0.3.0: String support
+            return InferredType.STRING
         else:
-            # float, str, bytes, None, etc. → UNKNOWN
+            # float, bytes, None, etc. → UNKNOWN
             return InferredType.UNKNOWN
     
     def _infer_unary_type(self, node: ast.UnaryOp) -> InferredType:
@@ -216,8 +224,27 @@ class TypeInferenceEngine:
         if left == InferredType.UNKNOWN or right == InferredType.UNKNOWN:
             return InferredType.UNKNOWN
         
+        # String concatenation: str + str → str
+        if isinstance(op, ast.Add):
+            if left == InferredType.STRING and right == InferredType.STRING:
+                return InferredType.STRING
+            if left == InferredType.INT and right == InferredType.INT:
+                return InferredType.INT
+            # Mixed types → UNKNOWN (Python would convert, but we're strict)
+            return InferredType.UNKNOWN
+        
+        # String repetition: str * int → str
+        if isinstance(op, ast.Mult):
+            if left == InferredType.STRING and right == InferredType.INT:
+                return InferredType.STRING
+            if left == InferredType.INT and right == InferredType.STRING:
+                return InferredType.STRING
+            if left == InferredType.INT and right == InferredType.INT:
+                return InferredType.INT
+            return InferredType.UNKNOWN
+        
         # Arithmetic operators on Int → Int
-        if isinstance(op, (ast.Add, ast.Sub, ast.Mult, ast.FloorDiv, ast.Mod, ast.Pow)):
+        if isinstance(op, (ast.Sub, ast.FloorDiv, ast.Mod, ast.Pow)):
             if left == InferredType.INT and right == InferredType.INT:
                 return InferredType.INT
             return InferredType.UNKNOWN

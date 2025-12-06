@@ -47,13 +47,25 @@ from z3 import (
     ExprRef,
     BoolRef,
     ArithRef,
+    SeqRef,
     Sort,
     IntSort,
     BoolSort,
+    StringSort,
     Int,
     Bool,
+    String,
     IntVal,
     BoolVal,
+    StringVal,
+    Concat,
+    Length,
+    Contains,
+    PrefixOf,
+    SuffixOf,
+    SubString,
+    IndexOf,
+    Replace,
     Solver,
     And,
     Or,
@@ -422,8 +434,11 @@ class SymbolicInterpreter(ast.NodeVisitor):
             return BoolVal(value)
         elif isinstance(value, int):
             return IntVal(value)
+        elif isinstance(value, str):
+            # v0.3.0: String literal support
+            return StringVal(value)
         else:
-            # Floats, strings, etc. not supported
+            # Floats, bytes, etc. not supported
             return None
     
     def _eval_binop(
@@ -440,9 +455,15 @@ class SymbolicInterpreter(ast.NodeVisitor):
         
         op = expr.op
         
-        # Arithmetic operations
+        # String concatenation: str + str → str
         if isinstance(op, ast.Add):
+            # Check if both are strings (SeqRef with StringSort)
+            if self._is_string_expr(left) and self._is_string_expr(right):
+                return Concat(left, right)
+            # Integer addition
             return left + right
+        
+        # Other arithmetic operations
         elif isinstance(op, ast.Sub):
             return left - right
         elif isinstance(op, ast.Mult):
@@ -453,6 +474,13 @@ class SymbolicInterpreter(ast.NodeVisitor):
             return left % right
         else:
             return None
+    
+    def _is_string_expr(self, expr: ExprRef) -> bool:
+        """Check if an expression is a Z3 String."""
+        try:
+            return expr.sort() == StringSort()
+        except:
+            return False
     
     def _eval_unaryop(
         self, 

@@ -224,7 +224,7 @@ class SymbolicAnalyzer:
         
         Args:
             name: Variable name
-            sort: Z3 sort (z3.IntSort(), z3.BoolSort())
+            sort: Z3 sort (z3.IntSort(), z3.BoolSort(), z3.StringSort())
             
         Returns:
             Z3 expression reference for the symbolic variable
@@ -239,9 +239,11 @@ class SymbolicAnalyzer:
             var = z3.Int(name)
         elif sort == z3.BoolSort():
             var = z3.Bool(name)
+        elif sort == z3.StringSort():
+            var = z3.String(name)
         else:
             raise NotImplementedError(
-                f"Only IntSort and BoolSort supported in Phase 1, got {sort}"
+                f"Only IntSort, BoolSort, and StringSort supported, got {sort}"
             )
         
         self._declared_symbols[name] = var

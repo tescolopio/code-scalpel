@@ -154,13 +154,14 @@ class TestBooleanInference:
 class TestUnsupportedTypes:
     """Test that unsupported types return None/UNKNOWN."""
 
-    def test_string_literal_unsupported(self):
-        """x = 'hello' → x is UNKNOWN (not supported in Phase 1)"""
+    def test_string_literal_supported(self):
+        """x = 'hello' → x is STRING (supported in v0.3.0)"""
         engine = TypeInferenceEngine()
         code = "x = 'hello'"
         result = engine.infer(code)
         
-        assert result["x"] == InferredType.UNKNOWN
+        # v0.3.0: Strings are now supported
+        assert result["x"] == InferredType.STRING
 
     def test_float_literal_unsupported(self):
         """x = 3.14 → x is UNKNOWN"""

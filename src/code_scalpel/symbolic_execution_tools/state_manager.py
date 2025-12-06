@@ -35,8 +35,10 @@ from z3 import (
     Sort,
     IntSort,
     BoolSort,
+    StringSort,
     Int,
     Bool,
+    String,
     Solver,
     And,
     sat,
@@ -53,7 +55,7 @@ class SymbolicVariable:
     
     Attributes:
         name: The variable name (e.g., "x", "counter")
-        sort: The Z3 sort (IntSort(), BoolSort())
+        sort: The Z3 sort (IntSort(), BoolSort(), StringSort())
         expr: The underlying Z3 expression
     """
     name: str
@@ -66,6 +68,8 @@ class SymbolicVariable:
             self.expr = Int(self.name)
         elif self.sort == BoolSort():
             self.expr = Bool(self.name)
+        elif self.sort == StringSort():
+            self.expr = String(self.name)
         else:
             raise ValueError(f"Unsupported sort: {self.sort}")
 
@@ -119,7 +123,7 @@ class SymbolicState:
         
         Args:
             name: Variable name
-            sort: Z3 sort (IntSort() or BoolSort())
+            sort: Z3 sort (IntSort(), BoolSort(), or StringSort())
             
         Returns:
             The Z3 expression for the variable
@@ -141,8 +145,10 @@ class SymbolicState:
             expr = Int(name)
         elif sort == BoolSort():
             expr = Bool(name)
+        elif sort == StringSort():
+            expr = String(name)
         else:
-            raise ValueError(f"Unsupported sort: {sort}. Only IntSort and BoolSort are supported.")
+            raise ValueError(f"Unsupported sort: {sort}. Only IntSort, BoolSort, and StringSort are supported.")
         
         self._variables[name] = expr
         return expr

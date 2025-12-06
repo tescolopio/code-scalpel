@@ -2,58 +2,112 @@
 """
 Symbolic Execution Tools for Code Scalpel.
 
-🆕 BETA STATUS (v0.2.0 "Redemption")
+🆕 v0.3.0 "The Mathematician" - Security Analysis Edition
 
 This module provides symbolic execution capabilities for Python code analysis.
-The "Redemption" release (v0.2.0) brings working symbolic execution with:
+Building on v0.2.0 "Redemption", this release adds STRING SUPPORT and
+SECURITY ANALYSIS for detecting vulnerabilities.
 
-✅ Working Features:
+✅ Working Features (v0.3.0):
 - SymbolicAnalyzer: Main entry point for symbolic analysis
+- SecurityAnalyzer: Taint-based vulnerability detection (NEW!)
 - ConstraintSolver: Z3-powered satisfiability checking
 - SymbolicInterpreter: Path exploration with smart forking
-- TypeInferenceEngine: Int/Bool type tracking
+- TypeInferenceEngine: Int/Bool/String type tracking (String NEW!)
+- TaintTracker: Data flow tracking for security analysis (NEW!)
 
-⚠️ Current Limitations (Phase 1):
-- Int and Bool types only (no floats, strings, lists yet)
+🔒 Security Detectors (NEW in v0.3.0):
+- SQL Injection (CWE-89)
+- Cross-Site Scripting (CWE-79)
+- Path Traversal (CWE-22)
+- Command Injection (CWE-78)
+
+⚠️ Current Limitations:
+- Float type not yet supported
 - Loops bounded to 10 iterations
 - Function calls are stubbed (not symbolically executed)
 
 For production use cases with full type support:
 - code_scalpel.ast_tools (AST analysis)
 - code_scalpel.pdg_tools (Program Dependence Graphs)
-- code_scalpel.code_analyzer (High-level analysis)
 
-Example:
+Example (Symbolic Analysis):
     >>> from code_scalpel.symbolic_execution_tools import SymbolicAnalyzer
     >>> analyzer = SymbolicAnalyzer()
     >>> result = analyzer.analyze("x = 5; y = x * 2 if x > 0 else -x")
     >>> print(f"Paths: {result.total_paths}, Feasible: {result.feasible_count}")
+
+Example (Security Analysis):
+    >>> from code_scalpel.symbolic_execution_tools import analyze_security
+    >>> result = analyze_security('''
+    ...     user_id = request.args.get("id")
+    ...     cursor.execute("SELECT * FROM users WHERE id=" + user_id)
+    ... ''')
+    >>> if result.has_vulnerabilities:
+    ...     print(result.summary())
 """
 
 import warnings
 
 # Emit warning on import so users know about limitations
 warnings.warn(
-    "symbolic_execution_tools is BETA (v0.2.0). "
-    "Supports Int/Bool only. See docs for limitations.",
+    "symbolic_execution_tools is BETA (v0.3.0). "
+    "Supports Int/Bool/String. See docs for limitations.",
     category=UserWarning,
     stacklevel=2,
 )
 
 from .constraint_solver import ConstraintSolver
-from .engine import SymbolicExecutionEngine
+from .engine import SymbolicExecutionEngine, SymbolicAnalyzer
 from .model_checker import ModelChecker
 from .path_explorer import PathExplorer
 from .result_analyzer import ResultAnalyzer
 from .symbolic_executor import SymbolicExecutor
 from .test_generator import TestGenerator
 
+# v0.3.0: Security Analysis
+from .taint_tracker import (
+    TaintTracker,
+    TaintSource,
+    TaintLevel,
+    SecuritySink,
+    TaintInfo,
+    TaintedValue,
+    Vulnerability,
+)
+from .security_analyzer import (
+    SecurityAnalyzer,
+    SecurityAnalysisResult,
+    analyze_security,
+    find_sql_injections,
+    find_xss,
+    find_command_injections,
+    find_path_traversals,
+)
+
 __all__ = [
+    # Core symbolic execution
     "ConstraintSolver",
     "SymbolicExecutionEngine",
+    "SymbolicAnalyzer",
     "PathExplorer",
     "ResultAnalyzer",
     "ModelChecker",
     "SymbolicExecutor",
     "TestGenerator",
+    # v0.3.0: Security Analysis
+    "TaintTracker",
+    "TaintSource",
+    "TaintLevel",
+    "SecuritySink",
+    "TaintInfo",
+    "TaintedValue",
+    "Vulnerability",
+    "SecurityAnalyzer",
+    "SecurityAnalysisResult",
+    "analyze_security",
+    "find_sql_injections",
+    "find_xss",
+    "find_command_injections",
+    "find_path_traversals",
 ]

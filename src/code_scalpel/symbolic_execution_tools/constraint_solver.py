@@ -285,7 +285,7 @@ class ConstraintSolver:
             z3_value: Z3 expression or value
             
         Returns:
-            Python int, bool, or string representation
+            Python int, bool, str, or string representation
         """
         # Integer
         if z3.is_int_value(z3_value):
@@ -301,6 +301,10 @@ class ConstraintSolver:
             else:
                 # Symbolic boolean - shouldn't happen in model
                 return bool(z3.is_true(simplify(z3_value)))
+        
+        # String (v0.3.0)
+        if z3.is_string_value(z3_value):
+            return z3_value.as_string()
         
         # Real (convert to float)
         if z3.is_real(z3_value):
