@@ -5,13 +5,13 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://badge.fury.io/py/code-scalpel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Status](https://img.shields.io/badge/status-v0.3.0%20Mathematician-brightgreen.svg)](https://pypi.org/project/code-scalpel/)
+[![Status](https://img.shields.io/badge/status-v0.4.0%20Polyglot-brightgreen.svg)](https://pypi.org/project/code-scalpel/)
 
 Code Scalpel is a precision tool set for AI-driven code analysis and transformation. Using advanced techniques like Abstract Syntax Trees (ASTs), Program Dependence Graphs (PDGs), and Symbolic Execution, Code Scalpel enables AI agents to perform deep analysis and surgical modifications of code with unprecedented accuracy.
 
 > **NOTE: Project Scope** - Code Scalpel is a **Python toolkit and MCP server** designed for use by AI agents and automation systems. Target users include AI coding assistants (Cursor, Cline, Claude Desktop), AI agent frameworks (Autogen, CrewAI, Langchain), and DevOps pipelines.
 >
-> **STATUS:** Code Scalpel v0.3.0 "The Mathematician" is **live on PyPI**. Install with `pip install code-scalpel`. Now with **Security Analysis** for detecting SQL Injection, XSS, and more!
+> **STATUS:** Code Scalpel v0.4.0 "The Polyglot" is **live on PyPI**. Install with `pip install code-scalpel`. Now with **JavaScript Support** and **Polyglot Symbolic Execution**!
 
 ## Features
 
@@ -21,6 +21,7 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 - **Dependency Tracking**: Build and analyze Program Dependence Graphs
 - **Dead Code Detection**: Identify and remove unused code segments
 - **Security Scanning**: Detect dangerous patterns (eval, exec, SQL injection)
+- **Polyglot Support**: Analyze Python and JavaScript code with the same toolset
 
 ### AI Agent Integration
 
@@ -39,12 +40,13 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 
 ### Symbolic Execution (Beta)
 
-**NEW in v0.3.0:** Now with STRING support and Security Analysis!
+**NEW in v0.4.0:** Now with JavaScript support!
 
 - **Path Analysis**: Explore all execution paths through your code
 - **Constraint Solving**: Z3-powered satisfiability checking
 - **Input Discovery**: Find inputs that trigger specific conditions
 - **Security Analysis**: Detect SQL Injection, XSS, Command Injection
+- **Multi-Language**: Support for Python and JavaScript IR generation
 
 ## How We're Different
 
@@ -60,7 +62,7 @@ Code Scalpel builds upon the foundations of static analysis while adding powerfu
 | **Call Graph** | Planned | Yes |
 | **SSA Form** | Planned | Yes |
 | **Target Users** | **AI Agents & Automation** | Research & Academia |
-| **Multi-Language** | Planned (JS, Java, Go) | Python only |
+| **Multi-Language** | **Yes (Python, JS)** | Python only |
 | **Claude Optimized** | Yes - Structured for AI workflows | No |
 | **Package** | `code-scalpel` | `python-scalpel` |
 
@@ -93,6 +95,21 @@ def example(x):
 
 results = analyzer.analyze(code)
 print(results.suggestions)
+```
+
+### CLI Usage
+
+Code Scalpel includes a powerful CLI for quick analysis:
+
+```bash
+# Analyze a Python file
+code-scalpel analyze app.py
+
+# Analyze a JavaScript file (auto-detected)
+code-scalpel analyze app.js
+
+# Force specific language
+code-scalpel analyze script.ts --language javascript
 ```
 
 ### AI Agent Integration
@@ -291,14 +308,14 @@ We're transforming Code Scalpel into a production-ready MCP-enabled toolkit:
 **Phase 1:** [COMPLETE] Package infrastructure + MCP server + PyPI release (v0.1.0)  
 **Phase 2:** [COMPLETE] Testing + documentation + Symbolic Execution (v0.2.0)  
 **Phase 3:** [COMPLETE] Security Analysis + String support (v0.3.0)  
-**Phase 4:** Multi-language support + performance optimization  
+**Phase 4:** [COMPLETE] Multi-language support (v0.4.0)  
 **Phase 5:** Community building and ecosystem growth (v1.0.0)  
 
 See [ROADMAP.md](ROADMAP.md) for full details.
 
-### v0.3.0 "The Mathematician" Released
+### v0.4.0 "The Polyglot" Released
 
-Code Scalpel v0.3.0 is now available on PyPI:
+Code Scalpel v0.4.0 is now available on PyPI:
 
 ```bash
 pip install code-scalpel
@@ -312,15 +329,16 @@ pip install code-scalpel
 - REST API Server (for non-MCP clients)
 - CLI tool (`code-scalpel`)
 - AI integrations (Autogen, CrewAI)
-- Symbolic Execution (Beta) - 548 tests, 76% coverage
+- Symbolic Execution (Beta) - 575 tests, 76% coverage
 - Security Analysis - SQL Injection, XSS, Command Injection detection
+- **Polyglot Support** - JavaScript analysis engine
 
-**What's new in v0.3.0:**
+**What's new in v0.4.0:**
 
-- String support in symbolic execution (Z3 String theory)
-- SecurityAnalyzer for taint-based vulnerability detection
-- TaintTracker for data flow analysis
-- Convenience functions: find_sql_injections(), find_xss(), etc.
+- **JavaScript Support**: Analyze JS code with the same symbolic engine
+- **Polyglot IR**: Unified Intermediate Representation for multiple languages
+- **CLI Updates**: Auto-detection for `.js` files
+- **Bug Fixes**: Improved loop handling in symbolic execution
 
 ## License
 
