@@ -18,7 +18,9 @@ import z3
 
 from .type_inference import InferredType, TypeInferenceEngine
 from .state_manager import SymbolicState
-from .interpreter import SymbolicInterpreter
+from ..ir.normalizers.python_normalizer import PythonNormalizer
+from ..ir.normalizers.javascript_normalizer import JavaScriptNormalizer
+from .ir_interpreter import IRSymbolicInterpreter
 from .constraint_solver import ConstraintSolver, SolverStatus
 
 
@@ -115,19 +117,20 @@ class SymbolicAnalyzer:
         
         # Core components - initialized fresh for each analysis
         self._type_engine: Optional[TypeInferenceEngine] = None
-        self._interpreter: Optional[SymbolicInterpreter] = None
+        self._interpreter: Optional[IRSymbolicInterpreter] = None
         self._solver: Optional[ConstraintSolver] = None
         
         # Manual symbolic declarations for advanced use
         self._preconditions: List[z3.BoolRef] = []
         self._declared_symbols: Dict[str, z3.ExprRef] = {}
     
-    def analyze(self, code: str) -> AnalysisResult:
+    def analyze(self, code: str, language: str = "python") -> AnalysisResult:
         """
-        Perform symbolic analysis on Python source code.
+        Perform symbolic analysis on source code.
         
         Args:
-            code: Python source code string
+            code: Source code string
+            language: Source language ("python" or "javascript")
             
         Returns:
             AnalysisResult with all explored paths and their models
@@ -135,19 +138,32 @@ class SymbolicAnalyzer:
         Raises:
             SyntaxError: If code cannot be parsed
             NotImplementedError: If code uses unsupported constructs
+            ValueError: If language is not supported
         """
         # Fresh components for this analysis
         self._type_engine = TypeInferenceEngine()
         self._solver = ConstraintSolver(timeout_ms=self.solver_timeout)
-        self._interpreter = SymbolicInterpreter(
+        self._interpreter = IRSymbolicInterpreter(
             max_loop_iterations=self.max_loop_iterations
         )
         
-        # Step 1: Type inference
-        inferred_types = self._type_engine.infer(code)
+        # Step 1: Type inference (Python only for now)
+        inferred_types = {}
+        if language == "python":
+            inferred_types = self._type_engine.infer(code)
         
-        # Step 2: Execute symbolically to collect paths
-        execution_result = self._interpreter.execute(code)
+        # Step 2: Normalize to IR and execute symbolically
+        try:
+            if language == "python":
+                ir_module = PythonNormalizer().normalize(code)
+            elif language == "javascript":
+                ir_module = JavaScriptNormalizer().normalize(code)
+            else:
+                raise ValueError(f"Unsupported language: {language}")
+        except SyntaxError as e:
+            raise ValueError(f"Invalid {language} syntax: {e}")
+
+        execution_result = self._interpreter.execute(ir_module)
         terminal_states = execution_result.states
         
         # Step 3: Process each path through solver

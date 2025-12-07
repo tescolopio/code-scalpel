@@ -16,10 +16,26 @@ If the Safety Check tests hang, the engine is BROKEN.
 import pytest
 from z3 import Int, Bool, IntSort, BoolSort, And, Or, Not
 
-from code_scalpel.symbolic_execution_tools.interpreter import (
-    SymbolicInterpreter,
-    ExecutionResult,
+from code_scalpel.symbolic_execution_tools.ir_interpreter import (
+    IRSymbolicInterpreter,
+    IRExecutionResult as ExecutionResult,
 )
+from code_scalpel.ir.normalizers.python_normalizer import PythonNormalizer
+
+class SymbolicInterpreter:
+    def __init__(self, max_loop_iterations=10):
+        self.interp = IRSymbolicInterpreter(max_loop_iterations=max_loop_iterations)
+        self.max_loop_iterations = max_loop_iterations
+        
+    def execute(self, code: str):
+        ir = PythonNormalizer().normalize(code)
+        return self.interp.execute(ir)
+
+    def declare_symbolic(self, name, sort):
+        return self.interp.declare_symbolic(name, sort)
+
+    def add_precondition(self, constraint):
+        self.interp.add_precondition(constraint)
 from code_scalpel.symbolic_execution_tools.state_manager import SymbolicState
 
 

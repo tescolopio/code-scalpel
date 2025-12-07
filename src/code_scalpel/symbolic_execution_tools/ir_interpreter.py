@@ -683,7 +683,7 @@ class IRSymbolicInterpreter(IRNodeVisitor):
         # Execute
         result = IRExecutionResult()
         terminal_states = self._execute_block(ir.body, self._initial_state, result)
-        result.states = terminal_states
+        result.states.extend(terminal_states)
 
         return result
 
@@ -941,9 +941,10 @@ class IRSymbolicInterpreter(IRNodeVisitor):
             result: IRExecutionResult to track path count
 
         Returns:
-            List of terminal states
+            List of states that exited the loop
         """
         current_states = [state]
+        exit_states = []
 
         for _ in range(self.max_loop_iterations):
             next_states = []
@@ -980,10 +981,9 @@ class IRSymbolicInterpreter(IRNodeVisitor):
                         else_states = self._execute_block(
                             stmt.orelse, exit_state, result
                         )
-                        # These are terminal - don't add to next_states
-                        result.states.extend(else_states)
+                        exit_states.extend(else_states)
                     else:
-                        result.states.append(exit_state)
+                        exit_states.append(exit_state)
 
             current_states = next_states
             if not current_states:
@@ -991,7 +991,7 @@ class IRSymbolicInterpreter(IRNodeVisitor):
 
         # Remaining states hit max iterations - treat as terminal
         result.states.extend(current_states)
-        return result.states
+        return exit_states
 
     def _execute_for(
         self,

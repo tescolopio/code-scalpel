@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 
 from mcp.server.fastmcp import FastMCP
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 # Maximum code size to prevent resource exhaustion
 MAX_CODE_SIZE = 100_000
@@ -625,7 +625,12 @@ Provide a risk assessment and remediation steps for each finding."""
 # ============================================================================
 
 
-def run_server(transport: str = "stdio", host: str = "127.0.0.1", port: int = 8080):
+def run_server(
+    transport: str = "stdio",
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    allow_lan: bool = False,
+):
     """
     Run the Code Scalpel MCP server.
 
@@ -633,10 +638,31 @@ def run_server(transport: str = "stdio", host: str = "127.0.0.1", port: int = 80
         transport: Transport type - "stdio" or "streamable-http"
         host: Host to bind to (HTTP only)
         port: Port to bind to (HTTP only)
+        allow_lan: Allow connections from LAN (disables host validation)
+
+    Security Note:
+        By default, the HTTP transport only allows connections from localhost.
+        Use --allow-lan to enable LAN access. This disables DNS rebinding
+        protection and allows connections from any host. Only use on trusted
+        networks.
     """
     if transport == "streamable-http":
+        from mcp.server.transport_security import TransportSecuritySettings
+
         mcp.settings.host = host
         mcp.settings.port = port
+
+        if allow_lan or host == "0.0.0.0":
+            # Disable host validation for LAN access
+            # WARNING: Only use on trusted networks!
+            mcp.settings.transport_security = TransportSecuritySettings(
+                enable_dns_rebinding_protection=False,
+                allowed_hosts=["*"],
+                allowed_origins=["*"],
+            )
+            print(f"WARNING: LAN access enabled. Host validation disabled.")
+            print(f"Only use on trusted networks!")
+
         mcp.run(transport="streamable-http")
     else:
         mcp.run()
@@ -663,6 +689,16 @@ if __name__ == "__main__":
         default=8080,
         help="Port to bind to (HTTP only, default: 8080)",
     )
+    parser.add_argument(
+        "--allow-lan",
+        action="store_true",
+        help="Allow LAN connections (disables host validation, use on trusted networks only)",
+    )
 
     args = parser.parse_args()
-    run_server(transport=args.transport, host=args.host, port=args.port)
+    run_server(
+        transport=args.transport,
+        host=args.host,
+        port=args.port,
+        allow_lan=args.allow_lan,
+    )

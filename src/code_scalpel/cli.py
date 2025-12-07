@@ -16,16 +16,27 @@ import sys
 from pathlib import Path
 
 
-def analyze_file(filepath: str, output_format: str = "text") -> int:
-    """Analyze a Python file and print results."""
+def analyze_file(
+    filepath: str, output_format: str = "text", language: str = None
+) -> int:
+    """Analyze a file and print results."""
 
     path = Path(filepath)
     if not path.exists():
         print(f"Error: File not found: {filepath}", file=sys.stderr)
         return 1
 
-    if path.suffix != ".py":
-        print(f"Warning: File does not have .py extension: {filepath}", file=sys.stderr)
+    if language is None:
+        if path.suffix == ".py":
+            language = "python"
+        elif path.suffix == ".js":
+            language = "javascript"
+        else:
+            print(
+                f"Warning: Unknown extension {path.suffix}, defaulting to Python",
+                file=sys.stderr,
+            )
+            language = "python"
 
     try:
         code = path.read_text(encoding="utf-8")
@@ -33,13 +44,61 @@ def analyze_file(filepath: str, output_format: str = "text") -> int:
         print(f"Error reading file: {e}", file=sys.stderr)
         return 1
 
-    return analyze_code(code, output_format, filepath)
+    return analyze_code(code, output_format, filepath, language)
+
+
+def _analyze_javascript(code: str, output_format: str, source: str) -> int:
+    """Analyze JavaScript code using SymbolicAnalyzer."""
+    from .symbolic_execution_tools import SymbolicAnalyzer
+
+    analyzer = SymbolicAnalyzer()
+    try:
+        result = analyzer.analyze(code, language="javascript")
+    except Exception as e:
+        print(f"Error analyzing JavaScript code: {e}", file=sys.stderr)
+        return 1
+
+    if output_format == "json":
+        output = {
+            "source": source,
+            "language": "javascript",
+            "success": True,
+            "paths": [
+                {
+                    "id": p.path_id,
+                    "status": p.status.value,
+                    "model": p.model,
+                }
+                for p in result.paths
+            ],
+            "feasible_count": result.feasible_count,
+            "infeasible_count": result.infeasible_count,
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"\nCode Scalpel Analysis (JavaScript): {source}")
+        print("=" * 60)
+        print(f"Feasible paths: {result.feasible_count}")
+        print(f"Infeasible paths: {result.infeasible_count}")
+        print("-" * 60)
+        for p in result.get_feasible_paths():
+            print(f"Path {p.path_id}: {p.status.value}")
+            if p.model:
+                print(f"  Model: {p.model}")
+
+    return 0
 
 
 def analyze_code(
-    code: str, output_format: str = "text", source: str = "<string>"
+    code: str,
+    output_format: str = "text",
+    source: str = "<string>",
+    language: str = "python",
 ) -> int:
     """Analyze code string and print results."""
+    if language == "javascript":
+        return _analyze_javascript(code, output_format, source)
+
     from .code_analyzer import AnalysisLevel, CodeAnalyzer
 
     analyzer = CodeAnalyzer(level=AnalysisLevel.STANDARD)
@@ -256,7 +315,12 @@ def start_server(host: str = "0.0.0.0", port: int = 5000) -> int:
     return 0
 
 
-def start_mcp_server(transport: str = "stdio", host: str = "127.0.0.1", port: int = 8080) -> int:
+def start_mcp_server(
+    transport: str = "stdio",
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    allow_lan: bool = False,
+) -> int:
     """Start the MCP-compliant server (for AI clients like Claude Desktop, Cursor)."""
     from .mcp.server import run_server
 
@@ -268,10 +332,13 @@ def start_mcp_server(transport: str = "stdio", host: str = "127.0.0.1", port: in
     else:
         print(f"Starting Code Scalpel MCP Server (HTTP transport) on {host}:{port}")
         print(f"   MCP endpoint: http://{host}:{port}/mcp")
+        if allow_lan:
+            print("   LAN access: ENABLED (host validation disabled)")
+            print("   WARNING: Only use on trusted networks!")
         print("\nPress Ctrl+C to stop.\n")
 
     try:
-        run_server(transport=transport, host=host, port=port)
+        run_server(transport=transport, host=host, port=port, allow_lan=allow_lan)
     except KeyboardInterrupt:
         print("\nMCP Server stopped.")
 
@@ -295,6 +362,7 @@ Examples:
   code-scalpel scan myfile.py --json          Security scan with JSON output
   code-scalpel mcp                            Start MCP server (stdio, for Claude Desktop)
   code-scalpel mcp --http --port 8080         Start MCP server (HTTP transport)
+  code-scalpel mcp --http --allow-lan         Start MCP server with LAN access
   code-scalpel server --port 5000             Start REST API server (legacy)
   code-scalpel version                        Show version info
 
@@ -305,11 +373,17 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Analyze command
-    analyze_parser = subparsers.add_parser("analyze", help="Analyze Python code")
-    analyze_parser.add_argument("file", nargs="?", help="Python file to analyze")
+    analyze_parser = subparsers.add_parser("analyze", help="Analyze code")
+    analyze_parser.add_argument("file", nargs="?", help="File to analyze")
     analyze_parser.add_argument("--code", "-c", help="Code string to analyze")
     analyze_parser.add_argument(
         "--json", "-j", action="store_true", help="Output as JSON"
+    )
+    analyze_parser.add_argument(
+        "--language",
+        "-l",
+        choices=["python", "javascript"],
+        help="Source language (default: auto-detect or python)",
     )
 
     # Scan command (Security Analysis)
@@ -342,6 +416,11 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
     mcp_parser.add_argument(
         "--port", "-p", type=int, default=8080, help="Port for HTTP transport (default: 8080)"
     )
+    mcp_parser.add_argument(
+        "--allow-lan",
+        action="store_true",
+        help="Allow LAN connections (disables host validation, use on trusted networks only)",
+    )
 
     # Version command
     subparsers.add_parser("version", help="Show version information")
@@ -351,9 +430,11 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
     if args.command == "analyze":
         output_format = "json" if args.json else "text"
         if args.code:
-            return analyze_code(args.code, output_format)
+            return analyze_code(
+                args.code, output_format, language=args.language or "python"
+            )
         elif args.file:
-            return analyze_file(args.file, output_format)
+            return analyze_file(args.file, output_format, language=args.language)
         else:
             analyze_parser.print_help()
             return 1
@@ -373,7 +454,8 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
 
     elif args.command == "mcp":
         transport = "streamable-http" if args.http else "stdio"
-        return start_mcp_server(transport, args.host, args.port)
+        allow_lan = getattr(args, "allow_lan", False)
+        return start_mcp_server(transport, args.host, args.port, allow_lan)
 
     elif args.command == "version":
         print(f"Code Scalpel v{__version__}")
