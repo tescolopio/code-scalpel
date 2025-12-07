@@ -40,7 +40,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type
 
 from z3 import (
     ArithRef,
@@ -48,21 +48,16 @@ from z3 import (
     BoolSort,
     BoolVal,
     ExprRef,
-    Int,
     IntSort,
     IntVal,
     Not,
     Or,
     Solver,
     Sort,
-    String,
-    StringSort,
-    StringVal,
     sat,
 )
 
 from ..ir.nodes import (
-    AnyIRNode,
     IRAugAssign,
     IRAssign,
     IRBinaryOp,
@@ -78,7 +73,6 @@ from ..ir.nodes import (
     IRFor,
     IRFunctionDef,
     IRIf,
-    IRList,
     IRModule,
     IRName,
     IRNode,
@@ -281,16 +275,12 @@ class LanguageSemantics(ABC):
     # -------------------------------------------------------------------------
 
     @abstractmethod
-    def unary_neg(
-        self, operand: ExprRef, state: SymbolicState
-    ) -> Optional[ExprRef]:
+    def unary_neg(self, operand: ExprRef, state: SymbolicState) -> Optional[ExprRef]:
         """Handle negation: -operand"""
         ...
 
     @abstractmethod
-    def unary_not(
-        self, operand: ExprRef, state: SymbolicState
-    ) -> Optional[BoolRef]:
+    def unary_not(self, operand: ExprRef, state: SymbolicState) -> Optional[BoolRef]:
         """Handle logical not: not operand"""
         ...
 
@@ -404,16 +394,12 @@ class PythonSemantics(LanguageSemantics):
             return left >= right
         return None
 
-    def unary_neg(
-        self, operand: ExprRef, state: SymbolicState
-    ) -> Optional[ExprRef]:
+    def unary_neg(self, operand: ExprRef, state: SymbolicState) -> Optional[ExprRef]:
         if isinstance(operand, ArithRef):
             return -operand
         return None
 
-    def unary_not(
-        self, operand: ExprRef, state: SymbolicState
-    ) -> Optional[BoolRef]:
+    def unary_not(self, operand: ExprRef, state: SymbolicState) -> Optional[BoolRef]:
         bool_val = self.to_bool(operand, state)
         if bool_val is not None:
             return Not(bool_val)
@@ -521,16 +507,12 @@ class JavaScriptSemantics(LanguageSemantics):
             return left >= right
         return None
 
-    def unary_neg(
-        self, operand: ExprRef, state: SymbolicState
-    ) -> Optional[ExprRef]:
+    def unary_neg(self, operand: ExprRef, state: SymbolicState) -> Optional[ExprRef]:
         if isinstance(operand, ArithRef):
             return -operand
         return None
 
-    def unary_not(
-        self, operand: ExprRef, state: SymbolicState
-    ) -> Optional[BoolRef]:
+    def unary_not(self, operand: ExprRef, state: SymbolicState) -> Optional[BoolRef]:
         bool_val = self.to_bool(operand, state)
         if bool_val is not None:
             return Not(bool_val)
@@ -597,7 +579,7 @@ class IRSymbolicInterpreter(IRNodeVisitor):
 
     Example:
         from code_scalpel.ir.normalizers import PythonNormalizer
-        
+
         code = '''
         x = symbolic('x', int)
         if x > 10:
@@ -1196,7 +1178,7 @@ class IRSymbolicInterpreter(IRNodeVisitor):
                 return None
             results.append(bool_val)
 
-        from z3 import And, Or
+        from z3 import And
 
         if expr.op == BoolOperator.AND:
             return And(*results)
@@ -1236,9 +1218,7 @@ class IRSymbolicInterpreter(IRNodeVisitor):
 
         # Get name from first argument
         name_arg = expr.args[0]
-        if not isinstance(name_arg, IRConstant) or not isinstance(
-            name_arg.value, str
-        ):
+        if not isinstance(name_arg, IRConstant) or not isinstance(name_arg.value, str):
             return None
         name = name_arg.value
 
@@ -1269,6 +1249,9 @@ class IRSymbolicInterpreter(IRNodeVisitor):
             True if condition can be satisfied
         """
         solver = Solver()
+        solver.set("timeout", 5000)  # 5 second timeout to prevent hangs
         solver.add(*state.constraints)
         solver.add(condition)
-        return solver.check() == sat
+        result = solver.check()
+        # Treat unknown (timeout) as infeasible to fail safely
+        return result == sat
