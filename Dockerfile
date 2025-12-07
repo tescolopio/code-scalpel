@@ -47,4 +47,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 
 # Run the real MCP server with streamable-http transport
 # Host 0.0.0.0 is required for Docker networking
-CMD ["python", "-m", "code_scalpel.mcp.server", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8080"]
+# --allow-lan disables host validation for external access
+CMD ["python", "-m", "code_scalpel.mcp.server", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8080", "--allow-lan"]
