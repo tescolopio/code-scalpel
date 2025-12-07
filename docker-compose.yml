@@ -1,0 +1,47 @@
+# Code Scalpel Server - Docker Compose
+# Supports both MCP-compliant server and REST API server
+
+services:
+  # Real MCP-compliant server (streamable-http transport)
+  # Use this with MCP clients that support HTTP transport
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: code-scalpel-mcp
+    restart: unless-stopped
+    ports:
+      - "8593:8080"
+    networks:
+      - nginx-proxy-manager_default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-X", "POST", "-H", "Content-Type: application/json", "-d", "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}", "http://localhost:8080/mcp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # REST API server (legacy, for non-MCP clients)
+  # Provides simple HTTP endpoints for code analysis
+  rest-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.rest
+    container_name: code-scalpel-rest
+    restart: unless-stopped
+    ports:
+      - "8594:5000"
+    networks:
+      - nginx-proxy-manager_default
+    environment:
+      - FLASK_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  nginx-proxy-manager_default:
+    external: true

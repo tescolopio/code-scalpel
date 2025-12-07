@@ -1,0 +1,48 @@
+# Code Scalpel REST API Server Dockerfile
+# For backwards compatibility with non-MCP clients
+#
+# This container runs the Flask-based REST API server.
+# For MCP clients, use the main Dockerfile instead.
+
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Install the package
+COPY . .
+RUN pip install --no-cache-dir --user -e .
+
+# Production stage
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /app /app
+
+# Make sure scripts in .local are usable
+ENV PATH=/root/.local/bin:$PATH
+
+# Expose the REST API port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+# Run the REST API server
+CMD ["python", "-c", "from code_scalpel.integrations.rest_api_server import app; app.run(host='0.0.0.0', port=5000)"]

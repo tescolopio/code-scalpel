@@ -1,5 +1,5 @@
 """
-Tests for Code Scalpel integrations (AutogenScalpel, CrewAIScalpel, MCP Server).
+Tests for Code Scalpel integrations (AutogenScalpel, CrewAIScalpel, REST API Server).
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from code_scalpel.integrations import (
     CrewAIScalpel,
     RefactorResult,
 )
-from code_scalpel.integrations.mcp_server import create_app
+from code_scalpel.integrations.rest_api_server import create_app
 
 
 class TestAutogenScalpel(unittest.TestCase):
@@ -386,11 +386,11 @@ def BadFunc():
 
 
 class TestMCPServerConfig(unittest.TestCase):
-    """Tests for MCP Server configuration."""
+    """Tests for REST API Server configuration (legacy name: MCP Server)."""
 
     def test_config_defaults(self):
         """Test default configuration values."""
-        from code_scalpel.integrations.mcp_server import MCPServerConfig
+        from code_scalpel.integrations.rest_api_server import MCPServerConfig
 
         config = MCPServerConfig()
         self.assertEqual(config.host, "127.0.0.1")
@@ -401,7 +401,7 @@ class TestMCPServerConfig(unittest.TestCase):
 
     def test_config_custom_values(self):
         """Test custom configuration values."""
-        from code_scalpel.integrations.mcp_server import MCPServerConfig
+        from code_scalpel.integrations.rest_api_server import MCPServerConfig
 
         config = MCPServerConfig(
             host="0.0.0.0",
@@ -418,7 +418,7 @@ class TestMCPServerConfig(unittest.TestCase):
 
     def test_create_app_with_custom_config(self):
         """Test creating app with custom config."""
-        from code_scalpel.integrations.mcp_server import MCPServerConfig, create_app
+        from code_scalpel.integrations.rest_api_server import MCPServerConfig, create_app
 
         config = MCPServerConfig(cache_enabled=False)
         app = create_app(config)
@@ -430,7 +430,7 @@ class TestMCPServerConfig(unittest.TestCase):
 
     def test_code_size_limit_enforced(self):
         """Test that code size limit is enforced."""
-        from code_scalpel.integrations.mcp_server import MCPServerConfig, create_app
+        from code_scalpel.integrations.rest_api_server import MCPServerConfig, create_app
 
         # Create app with very small max code size
         config = MCPServerConfig(max_code_size=10)
@@ -454,7 +454,7 @@ class TestMCPServerConfig(unittest.TestCase):
         """Test the _elapsed_ms helper function."""
         import time
 
-        from code_scalpel.integrations.mcp_server import _elapsed_ms
+        from code_scalpel.integrations.rest_api_server import _elapsed_ms
 
         start = time.time()
         time.sleep(0.01)  # Sleep for 10ms
@@ -471,7 +471,7 @@ class TestMCPServerRunServer(unittest.TestCase):
         import os
         import warnings
 
-        from code_scalpel.integrations.mcp_server import run_server
+        from code_scalpel.integrations.rest_api_server import run_server
 
         # Set production environment
         os.environ["FLASK_ENV"] = "production"

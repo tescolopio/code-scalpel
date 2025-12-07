@@ -1,10 +1,19 @@
 """
-MCP Server - Model Context Protocol server for Code Scalpel.
+REST API Server - Legacy HTTP API for Code Scalpel.
 
-This module provides a Flask-based MCP server that exposes Code Scalpel's
+NOTE: This is NOT an MCP-compliant server. It uses a custom REST API.
+For true MCP protocol support, use: code_scalpel.mcp.server
+
+This module provides a Flask-based REST API that exposes Code Scalpel's
 analysis capabilities via HTTP endpoints for agent queries.
 
-v0.3.1: Added taint-based security scanning and symbolic execution endpoints.
+Endpoints:
+- GET  /health   - Health check
+- GET  /tools    - List available tools
+- POST /analyze  - Analyze code structure
+- POST /security - Security vulnerability scan
+- POST /symbolic - Symbolic execution
+- POST /refactor - Code refactoring suggestions
 """
 
 import time
@@ -19,7 +28,7 @@ __version__ = "0.3.1"
 
 @dataclass
 class MCPServerConfig:
-    """Configuration for the MCP server."""
+    """Configuration for the REST API server."""
 
     # SECURITY: Default to localhost only. Use --host 0.0.0.0 explicitly for network access.
     host: str = "127.0.0.1"
@@ -489,10 +498,19 @@ def run_server(host: str = "127.0.0.1", port: int = 8080, debug: bool = False) -
     app.run(host=host, port=port, debug=debug)
 
 
-# Allow running directly as a script (development only)
+# Allow running directly as a script or module
 if __name__ == "__main__":
+    import argparse
     import os
 
+    parser = argparse.ArgumentParser(description="Code Scalpel MCP Server")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8080, help="Port to bind to (default: 8080)")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode (development only)")
+    
+    args = parser.parse_args()
+    
     # Only enable debug mode in development
     is_development = os.environ.get("FLASK_ENV", "development") == "development"
-    run_server(debug=is_development)
+    run_server(host=args.host, port=args.port, debug=args.debug and is_development)
+

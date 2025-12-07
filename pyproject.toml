@@ -38,6 +38,7 @@ dependencies = [
     "graphviz>=0.16",
     "flask>=2.0.0",
     "tomli>=2.0.0; python_version < '3.11'",
+    "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]

@@ -27,6 +27,7 @@ Code Scalpel is a precision tool set for AI-driven code analysis and transformat
 - **Autogen Ready**: Seamless integration with Microsoft's Autogen framework
 - **CrewAI Compatible**: Create specialized code analysis crews
 - **MCP Server**: Model Context Protocol server for Claude Desktop, Cursor, Cline
+- **REST API**: HTTP server for non-MCP clients and testing
 - **Extensible**: Easy to integrate with other AI agent frameworks
 
 ### Code Surgery Tools
@@ -113,6 +114,50 @@ from code_scalpel.integrations import ScalpelCrew
 crew = ScalpelCrew()
 crew.add_analysis_task(code)
 results = crew.execute()
+```
+
+### MCP Server (Model Context Protocol)
+
+Code Scalpel provides a **real MCP-compliant server** using the official Python SDK. This enables integration with Claude Desktop, Cursor, Cline, and any MCP-compatible client.
+
+#### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `analyze_code` | Parse Python code, extract functions, classes, imports, complexity |
+| `security_scan` | Detect vulnerabilities (SQL injection, XSS, command injection) |
+| `symbolic_execute` | Explore execution paths using Z3 constraint solving |
+
+#### Local Usage (stdio transport)
+
+Add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "code-scalpel": {
+      "command": "python",
+      "args": ["-m", "code_scalpel.mcp.server"]
+    }
+  }
+}
+```
+
+#### Docker Deployment (HTTP transport)
+
+For network deployment, use streamable-http transport:
+
+```bash
+# Build and run the MCP server
+docker-compose up mcp-server
+
+# Server available at http://localhost:8593/mcp
+```
+
+#### Testing with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector python -m code_scalpel.mcp.server
 ```
 
 ## Example: Code Analysis Visualization
@@ -263,10 +308,11 @@ pip install code-scalpel
 
 - AST Analysis (94% coverage)
 - PDG Analysis (86% coverage)
-- MCP HTTP Server
+- MCP Server (real MCP-compliant with FastMCP)
+- REST API Server (for non-MCP clients)
 - CLI tool (`code-scalpel`)
 - AI integrations (Autogen, CrewAI)
-- Symbolic Execution (Beta) - 469 tests, 76% coverage
+- Symbolic Execution (Beta) - 548 tests, 76% coverage
 - Security Analysis - SQL Injection, XSS, Command Injection detection
 
 **What's new in v0.3.0:**

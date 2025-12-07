@@ -4,7 +4,9 @@ Code Scalpel CLI - Command-line interface for code analysis.
 Usage:
     code-scalpel analyze <file>           Analyze a Python file
     code-scalpel analyze --code "..."     Analyze code string
-    code-scalpel server [--port PORT]     Start MCP server
+    code-scalpel scan <file>              Security vulnerability scan
+    code-scalpel mcp                      Start MCP server (for AI clients)
+    code-scalpel server [--port PORT]     Start REST API server (legacy)
     code-scalpel version                  Show version
 """
 
@@ -234,21 +236,44 @@ def scan_code_security(code: str, output_format: str = "text") -> int:
     return 0 if not result.has_vulnerabilities else 2
 
 
-def start_server(host: str = "0.0.0.0", port: int = 8080) -> int:
-    """Start the MCP server."""
-    from .integrations.mcp_server import run_server
+def start_server(host: str = "0.0.0.0", port: int = 5000) -> int:
+    """Start the REST API server (legacy, for non-MCP clients)."""
+    from .integrations.rest_api_server import run_server
 
-    print(f"Starting Code Scalpel MCP Server on {host}:{port}")
+    print(f"Starting Code Scalpel REST API Server on {host}:{port}")
     print(f"   Health check: http://{host}:{port}/health")
     print(f"   Analyze endpoint: POST http://{host}:{port}/analyze")
     print(f"   Refactor endpoint: POST http://{host}:{port}/refactor")
     print(f"   Security endpoint: POST http://{host}:{port}/security")
-    print("\nPress Ctrl+C to stop the server.\n")
+    print("\nNote: For MCP-compliant clients (Claude Desktop, Cursor), use 'code-scalpel mcp' instead.")
+    print("Press Ctrl+C to stop the server.\n")
 
     try:
         run_server(host=host, port=port, debug=False)
     except KeyboardInterrupt:
         print("\nServer stopped.")
+
+    return 0
+
+
+def start_mcp_server(transport: str = "stdio", host: str = "127.0.0.1", port: int = 8080) -> int:
+    """Start the MCP-compliant server (for AI clients like Claude Desktop, Cursor)."""
+    from .mcp.server import run_server
+
+    if transport == "stdio":
+        print("Starting Code Scalpel MCP Server (stdio transport)")
+        print("   This server communicates via stdin/stdout.")
+        print("   Add to your Claude Desktop config or use with MCP Inspector.")
+        print("\nPress Ctrl+C to stop.\n")
+    else:
+        print(f"Starting Code Scalpel MCP Server (HTTP transport) on {host}:{port}")
+        print(f"   MCP endpoint: http://{host}:{port}/mcp")
+        print("\nPress Ctrl+C to stop.\n")
+
+    try:
+        run_server(transport=transport, host=host, port=port)
+    except KeyboardInterrupt:
+        print("\nMCP Server stopped.")
 
     return 0
 
@@ -268,7 +293,9 @@ Examples:
   code-scalpel analyze myfile.py --json       Output as JSON
   code-scalpel scan myfile.py                 Security vulnerability scan
   code-scalpel scan myfile.py --json          Security scan with JSON output
-  code-scalpel server --port 8080             Start MCP server
+  code-scalpel mcp                            Start MCP server (stdio, for Claude Desktop)
+  code-scalpel mcp --http --port 8080         Start MCP server (HTTP transport)
+  code-scalpel server --port 5000             Start REST API server (legacy)
   code-scalpel version                        Show version info
 
 For more information, visit: https://github.com/tescolopio/code-scalpel
@@ -295,13 +322,25 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
         "--json", "-j", action="store_true", help="Output as JSON"
     )
 
-    # Server command
-    server_parser = subparsers.add_parser("server", help="Start MCP server")
+    # Server command (REST API - legacy)
+    server_parser = subparsers.add_parser("server", help="Start REST API server (legacy)")
     server_parser.add_argument(
         "--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)"
     )
     server_parser.add_argument(
-        "--port", "-p", type=int, default=8080, help="Port to bind to (default: 8080)"
+        "--port", "-p", type=int, default=5000, help="Port to bind to (default: 5000)"
+    )
+
+    # MCP command (Model Context Protocol - recommended)
+    mcp_parser = subparsers.add_parser("mcp", help="Start MCP server (for Claude Desktop, Cursor)")
+    mcp_parser.add_argument(
+        "--http", action="store_true", help="Use HTTP transport instead of stdio"
+    )
+    mcp_parser.add_argument(
+        "--host", default="127.0.0.1", help="Host to bind to for HTTP (default: 127.0.0.1)"
+    )
+    mcp_parser.add_argument(
+        "--port", "-p", type=int, default=8080, help="Port for HTTP transport (default: 8080)"
     )
 
     # Version command
@@ -331,6 +370,10 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
 
     elif args.command == "server":
         return start_server(args.host, args.port)
+
+    elif args.command == "mcp":
+        transport = "streamable-http" if args.http else "stdio"
+        return start_mcp_server(transport, args.host, args.port)
 
     elif args.command == "version":
         print(f"Code Scalpel v{__version__}")

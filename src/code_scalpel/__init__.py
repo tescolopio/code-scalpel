@@ -43,8 +43,8 @@ from .code_analyzer import (
     analyze_code,
 )
 
-# MCP Server
-from .integrations.mcp_server import (
+# REST API Server (legacy, renamed from mcp_server)
+from .integrations.rest_api_server import (
     MCPServerConfig,
     create_app,
     run_server,
