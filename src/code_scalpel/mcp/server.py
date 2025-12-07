@@ -163,7 +163,50 @@ def _count_complexity(tree: ast.AST) -> int:
     return complexity
 
 
-def _analyze_code_sync(code: str) -> AnalysisResult:
+def _analyze_java_code(code: str) -> AnalysisResult:
+    """Analyze Java code using tree-sitter."""
+    try:
+        from code_scalpel.code_parser.java_parsers.java_parser_treesitter import JavaParser
+        parser = JavaParser()
+        result = parser.parse(code)
+        return AnalysisResult(
+            success=True,
+            functions=result["functions"],
+            classes=result["classes"],
+            imports=result["imports"],
+            function_count=len(result["functions"]),
+            class_count=len(result["classes"]),
+            complexity=result["complexity"],
+            lines_of_code=result["lines_of_code"],
+            issues=result["issues"],
+        )
+    except ImportError:
+        return AnalysisResult(
+            success=False,
+            functions=[],
+            classes=[],
+            imports=[],
+            function_count=0,
+            class_count=0,
+            complexity=0,
+            lines_of_code=0,
+            error="Java support not available. Please install tree-sitter and tree-sitter-java.",
+        )
+    except Exception as e:
+        return AnalysisResult(
+            success=False,
+            functions=[],
+            classes=[],
+            imports=[],
+            function_count=0,
+            class_count=0,
+            complexity=0,
+            lines_of_code=0,
+            error=f"Java analysis failed: {str(e)}",
+        )
+
+
+def _analyze_code_sync(code: str, language: str = "python") -> AnalysisResult:
     """Synchronous implementation of analyze_code."""
     valid, error = _validate_code(code)
     if not valid:
@@ -178,6 +221,9 @@ def _analyze_code_sync(code: str) -> AnalysisResult:
             lines_of_code=0,
             error=error,
         )
+
+    if language.lower() == "java":
+        return _analyze_java_code(code)
 
     try:
         tree = ast.parse(code)
@@ -244,21 +290,22 @@ def _analyze_code_sync(code: str) -> AnalysisResult:
 
 
 @mcp.tool()
-async def analyze_code(code: str) -> AnalysisResult:
+async def analyze_code(code: str, language: str = "python") -> AnalysisResult:
     """
-    Analyze Python source code structure.
+    Analyze source code structure.
 
     Use this tool to understand the high-level architecture (classes, functions, imports)
     of a file before attempting to edit it. This helps prevent hallucinating non-existent
     methods or classes.
 
     Args:
-        code: Python source code to analyze
+        code: Source code to analyze
+        language: Language of the code ("python", "java")
 
     Returns:
         Structured analysis result with code metrics and structure
     """
-    return await asyncio.to_thread(_analyze_code_sync, code)
+    return await asyncio.to_thread(_analyze_code_sync, code, language)
 
 
 def _security_scan_sync(code: str) -> SecurityResult:
@@ -553,6 +600,40 @@ def _basic_symbolic_analysis(code: str) -> SymbolicResult:
 # ============================================================================
 # RESOURCES
 # ============================================================================
+
+
+@mcp.resource("scalpel://project/call-graph")
+def get_project_call_graph() -> str:
+    """
+    Get the project-wide call graph.
+    
+    Returns a JSON adjacency list:
+    {
+        "file.py:caller_function": ["target_function", "other_file.py:target_function"]
+    }
+    
+    Use this to trace function calls across files and understand dependencies.
+    """
+    import json
+    from code_scalpel.ast_tools.call_graph import CallGraphBuilder
+    
+    builder = CallGraphBuilder(PROJECT_ROOT)
+    graph = builder.build()
+    return json.dumps(graph, indent=2)
+
+
+@mcp.resource("scalpel://project/dependencies")
+def get_project_dependencies() -> str:
+    """
+    Returns a list of project dependencies detected in configuration files.
+    Use this to verify if libraries used in generated code actually exist in the project.
+    """
+    import json
+    from code_scalpel.ast_tools.dependency_parser import DependencyParser
+    
+    parser = DependencyParser(str(PROJECT_ROOT))
+    deps = parser.get_dependencies()
+    return json.dumps(deps, indent=2)
 
 
 @mcp.resource("scalpel://project/structure")

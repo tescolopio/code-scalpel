@@ -31,6 +31,8 @@ def analyze_file(
             language = "python"
         elif path.suffix == ".js":
             language = "javascript"
+        elif path.suffix == ".java":
+            language = "java"
         else:
             print(
                 f"Warning: Unknown extension {path.suffix}, defaulting to Python",
@@ -89,6 +91,48 @@ def _analyze_javascript(code: str, output_format: str, source: str) -> int:
     return 0
 
 
+def _analyze_java(code: str, output_format: str, source: str) -> int:
+    """Analyze Java code using SymbolicAnalyzer."""
+    from .symbolic_execution_tools import SymbolicAnalyzer
+
+    analyzer = SymbolicAnalyzer()
+    try:
+        result = analyzer.analyze(code, language="java")
+    except Exception as e:
+        print(f"Error analyzing Java code: {e}", file=sys.stderr)
+        return 1
+
+    if output_format == "json":
+        output = {
+            "source": source,
+            "language": "java",
+            "success": True,
+            "paths": [
+                {
+                    "id": p.path_id,
+                    "status": p.status.value,
+                    "model": p.model,
+                }
+                for p in result.paths
+            ],
+            "feasible_count": result.feasible_count,
+            "infeasible_count": result.infeasible_count,
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"\nCode Scalpel Analysis (Java): {source}")
+        print("=" * 60)
+        print(f"Feasible paths: {result.feasible_count}")
+        print(f"Infeasible paths: {result.infeasible_count}")
+        print("-" * 60)
+        for p in result.get_feasible_paths():
+            print(f"Path {p.path_id}: {p.status.value}")
+            if p.model:
+                print(f"  Model: {p.model}")
+
+    return 0
+
+
 def analyze_code(
     code: str,
     output_format: str = "text",
@@ -98,6 +142,8 @@ def analyze_code(
     """Analyze code string and print results."""
     if language == "javascript":
         return _analyze_javascript(code, output_format, source)
+    if language == "java":
+        return _analyze_java(code, output_format, source)
 
     from .code_analyzer import AnalysisLevel, CodeAnalyzer
 
@@ -383,7 +429,7 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
     analyze_parser.add_argument(
         "--language",
         "-l",
-        choices=["python", "javascript"],
+        choices=["python", "javascript", "java"],
         help="Source language (default: auto-detect or python)",
     )
 

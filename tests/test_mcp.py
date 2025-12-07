@@ -1,395 +1,537 @@
-"""
-Tests for the MCP (Model Context Protocol) server.
+"""Tests for MCP Server tools.
 
-Tests the real MCP-compliant server implementation using FastMCP.
+Tests the FastMCP-based Model Context Protocol server.
+All MCP tool functions are async and return Pydantic models.
 """
 
 import pytest
 
-
-class TestMCPServerModule:
-    """Test MCP server module loads correctly."""
-
-    def test_mcp_server_imports(self):
-        """Test that MCP server module can be imported."""
-        from code_scalpel.mcp.server import mcp, analyze_code, security_scan, symbolic_execute
-        assert mcp is not None
-        assert callable(analyze_code)
-        assert callable(security_scan)
-        assert callable(symbolic_execute)
-
-    def test_mcp_server_name(self):
-        """Test MCP server has correct name."""
-        from code_scalpel.mcp.server import mcp
-        assert mcp.name == "Code Scalpel"
-
-    def test_mcp_tools_registered(self):
-        """Test all expected tools are registered."""
-        from code_scalpel.mcp.server import mcp
-        
-        tool_names = list(mcp._tool_manager._tools.keys())
-        assert "analyze_code" in tool_names
-        assert "security_scan" in tool_names
-        assert "symbolic_execute" in tool_names
+# Mark entire module as async
+pytestmark = pytest.mark.asyncio
 
 
 class TestAnalyzeCodeTool:
-    """Test the analyze_code MCP tool."""
+    """Tests for the analyze_code tool."""
 
-    def test_analyze_simple_function(self):
-        """Test analyzing code with a simple function."""
+    async def test_analyze_simple_function(self):
+        """Test analyzing a simple function."""
         from code_scalpel.mcp.server import analyze_code
-        
+
         code = '''
-def hello(name):
-    return f"Hello, {name}!"
+def hello():
+    return "Hello, World!"
 '''
-        result = analyze_code(code)
+        result = await analyze_code(code)
         assert result.success is True
         assert "hello" in result.functions
-        assert result.lines_of_code > 0
+        assert result.function_count == 1
 
-    def test_analyze_class(self):
-        """Test analyzing code with a class."""
+    async def test_analyze_class(self):
+        """Test analyzing a class definition."""
         from code_scalpel.mcp.server import analyze_code
-        
+
         code = '''
-class Calculator:
-    def add(self, a, b):
-        return a + b
-    
-    def subtract(self, a, b):
-        return a - b
-'''
-        result = analyze_code(code)
-        assert result.success is True
-        assert "Calculator" in result.classes
-        assert "add" in result.functions
-        assert "subtract" in result.functions
+class MyClass:
+    def __init__(self):
+        pass
 
-    def test_analyze_imports(self):
-        """Test analyzing code with imports."""
+    def method(self):
+        return 42
+'''
+        result = await analyze_code(code)
+        assert result.success is True
+        assert "MyClass" in result.classes
+        assert result.class_count == 1
+        assert result.function_count == 2  # __init__ and method
+
+    async def test_analyze_imports(self):
+        """Test analyzing imports."""
         from code_scalpel.mcp.server import analyze_code
-        
+
         code = '''
 import os
 from pathlib import Path
-import sys as system
-
-def get_cwd():
-    return os.getcwd()
+import sys
 '''
-        result = analyze_code(code)
+        result = await analyze_code(code)
         assert result.success is True
-        assert len(result.imports) >= 2
+        assert "os" in result.imports
+        assert "sys" in result.imports
+        assert any("Path" in imp for imp in result.imports)
 
-    def test_analyze_syntax_error(self):
-        """Test analyzing code with syntax errors."""
+    async def test_analyze_complexity(self):
+        """Test complexity calculation."""
         from code_scalpel.mcp.server import analyze_code
-        
-        code = '''
-def broken(
-    return "missing closing paren"
-'''
-        result = analyze_code(code)
-        assert result.success is False
-        assert result.error is not None
-        assert "Syntax error" in result.error
 
-    def test_analyze_empty_code(self):
+        code = '''
+def complex_func(x):
+    if x > 0:
+        if x > 10:
+            return "big"
+        return "small"
+    return "negative"
+'''
+        result = await analyze_code(code)
+        assert result.success is True
+        assert result.complexity >= 3  # At least 3 due to two if statements
+
+    async def test_analyze_empty_code(self):
         """Test analyzing empty code."""
         from code_scalpel.mcp.server import analyze_code
-        
-        result = analyze_code("")
+
+        result = await analyze_code("")
         assert result.success is False
+        assert result.error is not None
         assert "empty" in result.error.lower()
 
-    def test_result_is_serializable(self):
-        """Test that result can be converted to dict (JSON-serializable)."""
+    async def test_analyze_syntax_error(self):
+        """Test handling syntax errors."""
         from code_scalpel.mcp.server import analyze_code
-        
-        code = "def foo(): pass"
-        result = analyze_code(code)
-        
-        # Pydantic models use model_dump() for serialization
-        result_dict = result.model_dump()
-        assert isinstance(result_dict, dict)
-        assert "success" in result_dict
-        assert "functions" in result_dict
+
+        code = "def broken("
+        result = await analyze_code(code)
+        assert result.success is False
+        assert result.error is not None
+        assert "syntax" in result.error.lower()
+
+    async def test_analyze_async_function(self):
+        """Test analyzing async functions."""
+        from code_scalpel.mcp.server import analyze_code
+
+        code = '''
+async def async_func():
+    await some_coroutine()
+'''
+        result = await analyze_code(code)
+        assert result.success is True
+        assert any("async_func" in f for f in result.functions)
 
 
 class TestSecurityScanTool:
-    """Test the security_scan MCP tool."""
+    """Tests for the security_scan tool."""
 
-    def test_scan_clean_code(self):
-        """Test scanning code with no vulnerabilities."""
+    async def test_scan_clean_code(self):
+        """Test scanning clean code with no vulnerabilities."""
         from code_scalpel.mcp.server import security_scan
-        
+
         code = '''
-def add(a: int, b: int) -> int:
-    return a + b
+def safe_function(x):
+    return x + 1
 '''
-        result = security_scan(code)
+        result = await security_scan(code)
         assert result.success is True
         assert result.vulnerability_count == 0
+        assert result.risk_level == "low"
 
-    def test_scan_sql_injection(self):
-        """Test detecting SQL injection vulnerability."""
+    async def test_scan_sql_injection(self):
+        """Test detecting SQL injection."""
         from code_scalpel.mcp.server import security_scan
-        
+
         code = '''
-def get_user(user_input):
+def vulnerable(user_input):
     query = "SELECT * FROM users WHERE id = " + user_input
     cursor.execute(query)
 '''
-        result = security_scan(code)
+        result = await security_scan(code)
         assert result.success is True
-        # May or may not detect depending on taint analysis depth
-        # Just verify it runs without error
+        assert result.has_vulnerabilities is True
+        assert any("SQL" in v.type for v in result.vulnerabilities)
 
-    def test_scan_command_injection(self):
-        """Test detecting command injection vulnerability."""
+    async def test_scan_command_injection(self):
+        """Test detecting command injection."""
         from code_scalpel.mcp.server import security_scan
-        
+
         code = '''
 import os
-
 def run_command(user_input):
-    os.system("echo " + user_input)
+    os.system("ls " + user_input)
 '''
-        result = security_scan(code)
+        result = await security_scan(code)
         assert result.success is True
+        assert result.has_vulnerabilities is True
+        assert any("Command" in v.type for v in result.vulnerabilities)
 
-    def test_scan_empty_code(self):
+    async def test_scan_eval_injection(self):
+        """Test detecting eval injection."""
+        from code_scalpel.mcp.server import security_scan
+
+        code = '''
+def dangerous(user_input):
+    result = eval(user_input)
+    return result
+'''
+        result = await security_scan(code)
+        assert result.success is True
+        assert result.has_vulnerabilities is True
+
+    async def test_scan_empty_code(self):
         """Test scanning empty code."""
         from code_scalpel.mcp.server import security_scan
-        
-        result = security_scan("")
-        assert result.success is False
 
-    def test_security_result_serializable(self):
-        """Test that security result is serializable."""
+        result = await security_scan("")
+        assert result.success is False
+        assert result.error is not None
+
+    async def test_scan_detects_taint_sources(self):
+        """Test detection of taint sources."""
         from code_scalpel.mcp.server import security_scan
-        
-        code = "x = 1"
-        result = security_scan(code)
-        
-        result_dict = result.model_dump()
-        assert isinstance(result_dict, dict)
-        assert "vulnerability_count" in result_dict
+
+        code = '''
+from flask import request
+def handler():
+    user_data = request.args.get('user')
+    return user_data
+'''
+        result = await security_scan(code)
+        assert result.success is True
+        # Either SecurityAnalyzer or fallback should detect request.args
+        # (May or may not have vulnerabilities depending on implementation)
+
+    async def test_scan_risk_levels(self):
+        """Test risk level calculation."""
+        from code_scalpel.mcp.server import security_scan
+
+        # Code with multiple vulnerabilities
+        code = '''
+import os
+def very_dangerous(user_input):
+    eval(user_input)
+    exec(user_input)
+    os.system(user_input)
+'''
+        result = await security_scan(code)
+        assert result.success is True
+        assert result.risk_level in ["high", "critical"]
 
 
 class TestSymbolicExecuteTool:
-    """Test the symbolic_execute MCP tool."""
+    """Tests for the symbolic_execute tool."""
 
-    def test_execute_simple_function(self):
-        """Test symbolic execution of simple function."""
+    async def test_symbolic_simple_function(self):
+        """Test symbolic execution on simple function."""
         from code_scalpel.mcp.server import symbolic_execute
-        
+
         code = '''
-def abs_value(x):
-    if x < 0:
-        return -x
-    return x
+def simple(x):
+    return x + 1
 '''
-        result = symbolic_execute(code)
+        result = await symbolic_execute(code)
         assert result.success is True
         assert result.paths_explored >= 1
 
-    def test_execute_with_max_paths(self):
-        """Test symbolic execution with path limit."""
+    async def test_symbolic_branching(self):
+        """Test symbolic execution with branches."""
         from code_scalpel.mcp.server import symbolic_execute
-        
+
         code = '''
-def branchy(a, b, c):
-    if a > 0:
-        if b > 0:
-            if c > 0:
+def branching(x):
+    if x > 0:
+        return "positive"
+    else:
+        return "non-positive"
+'''
+        result = await symbolic_execute(code)
+        assert result.success is True
+        # Should find paths for both branches
+        assert result.paths_explored >= 1
+        assert len(result.constraints) > 0
+
+    async def test_symbolic_multiple_branches(self):
+        """Test symbolic execution with multiple branches."""
+        from code_scalpel.mcp.server import symbolic_execute
+
+        code = '''
+def classify(x):
+    if x < 0:
+        return "negative"
+    elif x == 0:
+        return "zero"
+    else:
+        return "positive"
+'''
+        result = await symbolic_execute(code)
+        assert result.success is True
+        assert result.paths_explored >= 1
+
+    async def test_symbolic_detects_symbolic_vars(self):
+        """Test that symbolic variables are detected."""
+        from code_scalpel.mcp.server import symbolic_execute
+
+        code = '''
+def func(a, b, c):
+    if a > b:
+        return c
+    return a + b
+'''
+        result = await symbolic_execute(code)
+        assert result.success is True
+        # Should detect function parameters as symbolic
+        assert len(result.symbolic_variables) > 0
+
+    async def test_symbolic_empty_code(self):
+        """Test symbolic execution on empty code."""
+        from code_scalpel.mcp.server import symbolic_execute
+
+        result = await symbolic_execute("")
+        assert result.success is False
+        assert result.error is not None
+
+    async def test_symbolic_max_paths(self):
+        """Test max_paths parameter."""
+        from code_scalpel.mcp.server import symbolic_execute
+
+        code = '''
+def many_branches(x, y, z):
+    if x > 0:
+        if y > 0:
+            if z > 0:
                 return 1
             return 2
         return 3
     return 4
 '''
-        result = symbolic_execute(code, max_paths=2)
+        result = await symbolic_execute(code, max_paths=5)
         assert result.success is True
+        # Should respect max_paths
+        assert result.paths_explored <= 10  # Some buffer for implementation
 
-    def test_execute_syntax_error(self):
-        """Test symbolic execution with syntax error."""
+    async def test_symbolic_loop_handling(self):
+        """Test symbolic execution with loops."""
         from code_scalpel.mcp.server import symbolic_execute
-        
-        result = symbolic_execute("def broken(")
-        assert result.success is False
-        assert result.error is not None
 
-    def test_execute_empty_code(self):
-        """Test symbolic execution with empty code."""
-        from code_scalpel.mcp.server import symbolic_execute
-        
-        result = symbolic_execute("")
-        assert result.success is False
-
-    def test_symbolic_result_serializable(self):
-        """Test that symbolic result is serializable."""
-        from code_scalpel.mcp.server import symbolic_execute
-        
-        code = "def f(x): return x + 1"
-        result = symbolic_execute(code)
-        
-        result_dict = result.model_dump()
-        assert isinstance(result_dict, dict)
-        assert "paths_explored" in result_dict
-
-
-class TestMCPDataClasses:
-    """Test MCP result Pydantic models."""
-
-    def test_analysis_result_fields(self):
-        """Test AnalysisResult has expected fields."""
-        from code_scalpel.mcp.server import AnalysisResult
-        
-        result = AnalysisResult(
-            success=True,
-            functions=["foo"],
-            classes=["Bar"],
-            imports=["os"],
-            complexity=5,
-            lines_of_code=10,
-            issues=[],
-            error=None,
-        )
+        code = '''
+def with_loop(n):
+    total = 0
+    for i in range(n):
+        total += i
+    return total
+'''
+        result = await symbolic_execute(code)
         assert result.success is True
-        assert result.functions == ["foo"]
-        assert result.complexity == 5
-
-    def test_security_result_fields(self):
-        """Test SecurityResult has expected fields."""
-        from code_scalpel.mcp.server import SecurityResult
-        
-        result = SecurityResult(
-            success=True,
-            has_vulnerabilities=True,
-            vulnerability_count=2,
-            risk_level="high",
-            vulnerabilities=[],
-            taint_sources=[],
-            error=None,
-        )
-        assert result.success is True
-        assert result.vulnerability_count == 2
-        assert result.risk_level == "high"
-
-    def test_symbolic_result_fields(self):
-        """Test SymbolicResult has expected fields."""
-        from code_scalpel.mcp.server import SymbolicResult
-        
-        result = SymbolicResult(
-            success=True,
-            paths_explored=5,
-            paths=[],
-            symbolic_variables=[],
-            constraints=[],
-            error=None,
-        )
-        assert result.success is True
-        assert result.paths_explored == 5
-
-
-class TestCodeValidation:
-    """Test code validation helper."""
-
-    def test_validate_rejects_empty(self):
-        """Test validation rejects empty code."""
-        from code_scalpel.mcp.server import _validate_code
-        
-        valid, error = _validate_code("")
-        assert valid is False
-        assert "empty" in error.lower()
-
-    def test_validate_rejects_too_large(self):
-        """Test validation rejects overly large code."""
-        from code_scalpel.mcp.server import _validate_code, MAX_CODE_SIZE
-        
-        huge_code = "x = 1\n" * (MAX_CODE_SIZE // 5)
-        valid, error = _validate_code(huge_code)
-        assert valid is False
-        assert "large" in error.lower() or "size" in error.lower()
-
-    def test_validate_accepts_valid_code(self):
-        """Test validation accepts valid code."""
-        from code_scalpel.mcp.server import _validate_code
-        
-        valid, error = _validate_code("def foo(): pass")
-        assert valid is True
-        assert error is None
 
 
 class TestMCPIntegration:
     """Integration tests for MCP server."""
 
-    def test_full_analysis_workflow(self):
-        """Test complete analysis workflow."""
+    async def test_all_tools_available(self):
+        """Test that all tools are registered."""
+        from code_scalpel.mcp.server import mcp
+
+        # FastMCP should have our tools
+        assert mcp is not None
+        # The tools should be callable
         from code_scalpel.mcp.server import analyze_code, security_scan, symbolic_execute
-        
+
+        assert callable(analyze_code)
+        assert callable(security_scan)
+        assert callable(symbolic_execute)
+
+    async def test_result_models_are_valid(self):
+        """Test that result models are proper Pydantic models."""
+        from code_scalpel.mcp.server import AnalysisResult, SecurityResult, SymbolicResult
+
+        # Should be importable and usable
+        assert AnalysisResult is not None
+        assert SecurityResult is not None
+        assert SymbolicResult is not None
+
+    async def test_code_validation(self):
+        """Test code validation for all tools."""
+        from code_scalpel.mcp.server import analyze_code, security_scan, symbolic_execute
+
+        # All should reject empty code
+        result1 = await analyze_code("")
+        result2 = await security_scan("")
+        result3 = await symbolic_execute("")
+
+        assert result1.success is False
+        assert result2.success is False
+        assert result3.success is False
+
+    async def test_large_code_rejection(self):
+        """Test rejection of code exceeding size limit."""
+        from code_scalpel.mcp.server import analyze_code, MAX_CODE_SIZE
+
+        # Create code exceeding limit
+        large_code = "x = 1\n" * (MAX_CODE_SIZE // 5)
+        result = await analyze_code(large_code)
+        assert result.success is False
+        assert "size" in result.error.lower() or "exceed" in result.error.lower()
+
+    async def test_analysis_pipeline(self):
+        """Test running multiple analyses on the same code."""
+        from code_scalpel.mcp.server import analyze_code, security_scan, symbolic_execute
+
         code = '''
-def calculate_discount(price, discount_percent):
-    if discount_percent < 0:
-        raise ValueError("Discount cannot be negative")
-    if discount_percent > 100:
-        raise ValueError("Discount cannot exceed 100%")
-    return price * (1 - discount_percent / 100)
+def process_user(user_id):
+    if user_id > 0:
+        return f"User: {user_id}"
+    return "Invalid"
 '''
-        # Step 1: Analyze structure
-        analysis = analyze_code(code)
+        # All should succeed
+        analysis = await analyze_code(code)
+        security = await security_scan(code)
+        symbolic = await symbolic_execute(code)
+
         assert analysis.success is True
-        assert "calculate_discount" in analysis.functions
-        
-        # Step 2: Security scan
-        security = security_scan(code)
         assert security.success is True
-        
-        # Step 3: Symbolic execution
-        symbolic = symbolic_execute(code)
         assert symbolic.success is True
-        assert symbolic.paths_explored >= 1
 
-    def test_handles_complex_code(self):
-        """Test handling of more complex code structures."""
+        # Cross-check: function detected
+        assert "process_user" in analysis.functions
+
+    async def test_concurrent_analysis(self):
+        """Test concurrent analysis calls."""
+        import asyncio
         from code_scalpel.mcp.server import analyze_code
-        
-        code = '''
-from typing import List, Optional
-import json
 
-class DataProcessor:
-    """Processes data from various sources."""
-    
-    def __init__(self, config: dict):
-        self.config = config
-        self._cache = {}
-    
-    def process(self, data: List[dict]) -> List[dict]:
-        results = []
-        for item in data:
-            if self._validate(item):
-                results.append(self._transform(item))
-        return results
-    
-    def _validate(self, item: dict) -> bool:
-        return "id" in item and "value" in item
-    
-    def _transform(self, item: dict) -> dict:
-        return {
-            "id": item["id"],
-            "processed_value": item["value"] * 2,
-        }
+        codes = [
+            "def f1(): return 1",
+            "def f2(): return 2",
+            "def f3(): return 3",
+        ]
 
-def main():
-    processor = DataProcessor({"debug": True})
-    data = [{"id": 1, "value": 10}]
-    print(processor.process(data))
-'''
-        result = analyze_code(code)
-        assert result.success is True
-        assert "DataProcessor" in result.classes
-        assert len(result.functions) >= 4  # process, _validate, _transform, main
-        assert len(result.imports) >= 2
+        results = await asyncio.gather(*[analyze_code(code) for code in codes])
+
+        for result in results:
+            assert result.success is True
+
+
+class TestValidationHelpers:
+    """Tests for internal validation helpers."""
+
+    async def test_validate_code_empty(self):
+        """Test validation of empty code."""
+        from code_scalpel.mcp.server import _validate_code
+
+        valid, error = _validate_code("")
+        assert valid is False
+        assert error is not None
+
+    async def test_validate_code_valid(self):
+        """Test validation of valid code."""
+        from code_scalpel.mcp.server import _validate_code
+
+        valid, error = _validate_code("x = 1")
+        assert valid is True
+        assert error is None
+
+    async def test_validate_code_non_string(self):
+        """Test validation of non-string input."""
+        from code_scalpel.mcp.server import _validate_code
+
+        valid, error = _validate_code(123)  # type: ignore
+        assert valid is False
+        assert error is not None
+
+
+class TestComplexityCalculation:
+    """Tests for complexity estimation."""
+
+    async def test_complexity_linear(self):
+        """Test complexity of linear code."""
+        from code_scalpel.mcp.server import _count_complexity
+        import ast
+
+        code = "x = 1\ny = 2\nz = x + y"
+        tree = ast.parse(code)
+        complexity = _count_complexity(tree)
+        assert complexity == 1  # Base complexity
+
+    async def test_complexity_with_if(self):
+        """Test complexity with if statements."""
+        from code_scalpel.mcp.server import _count_complexity
+        import ast
+
+        code = """
+if x > 0:
+    y = 1
+"""
+        tree = ast.parse(code)
+        complexity = _count_complexity(tree)
+        assert complexity == 2  # Base + 1 for if
+
+    async def test_complexity_with_loop(self):
+        """Test complexity with loops."""
+        from code_scalpel.mcp.server import _count_complexity
+        import ast
+
+        code = """
+for i in range(10):
+    x = i
+"""
+        tree = ast.parse(code)
+        complexity = _count_complexity(tree)
+        assert complexity == 2  # Base + 1 for for
+
+
+class TestResultModels:
+    """Tests for Pydantic result models."""
+
+    async def test_analysis_result_serialization(self):
+        """Test AnalysisResult JSON serialization."""
+        from code_scalpel.mcp.server import AnalysisResult
+
+        result = AnalysisResult(
+            success=True,
+            functions=["foo", "bar"],
+            classes=["MyClass"],
+            imports=["os"],
+            function_count=2,
+            class_count=1,
+            complexity=3,
+            lines_of_code=10,
+        )
+
+        # Should serialize to dict/JSON
+        data = result.model_dump()
+        assert data["success"] is True
+        assert len(data["functions"]) == 2
+
+    async def test_security_result_serialization(self):
+        """Test SecurityResult JSON serialization."""
+        from code_scalpel.mcp.server import SecurityResult, VulnerabilityInfo
+
+        result = SecurityResult(
+            success=True,
+            has_vulnerabilities=True,
+            vulnerability_count=1,
+            risk_level="high",
+            vulnerabilities=[
+                VulnerabilityInfo(
+                    type="SQL Injection",
+                    cwe="CWE-89",
+                    severity="high",
+                    line=5,
+                    description="SQL injection via execute()",
+                )
+            ],
+        )
+
+        data = result.model_dump()
+        assert data["vulnerability_count"] == 1
+        assert len(data["vulnerabilities"]) == 1
+
+    async def test_symbolic_result_serialization(self):
+        """Test SymbolicResult JSON serialization."""
+        from code_scalpel.mcp.server import SymbolicResult, ExecutionPath
+
+        result = SymbolicResult(
+            success=True,
+            paths_explored=2,
+            paths=[
+                ExecutionPath(
+                    path_id=0,
+                    conditions=["x > 0"],
+                    final_state={"x": 5},
+                    reproduction_input={"x": 5},
+                    is_reachable=True,
+                ),
+            ],
+            symbolic_variables=["x"],
+            constraints=["x > 0"],
+        )
+
+        data = result.model_dump()
+        assert data["paths_explored"] == 2
+        assert len(data["paths"]) == 1

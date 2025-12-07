@@ -12,7 +12,7 @@ PHASE 1 SCOPE (RFC-001): Integers and Booleans only.
 import warnings
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 import z3
 
@@ -20,6 +20,7 @@ from .type_inference import InferredType, TypeInferenceEngine
 from .state_manager import SymbolicState
 from ..ir.normalizers.python_normalizer import PythonNormalizer
 from ..ir.normalizers.javascript_normalizer import JavaScriptNormalizer
+from ..ir.normalizers.java_normalizer import JavaNormalizer
 from .ir_interpreter import IRSymbolicInterpreter
 from .constraint_solver import ConstraintSolver, SolverStatus
 
@@ -158,6 +159,8 @@ class SymbolicAnalyzer:
                 ir_module = PythonNormalizer().normalize(code)
             elif language == "javascript":
                 ir_module = JavaScriptNormalizer().normalize(code)
+            elif language == "java":
+                ir_module = JavaNormalizer().normalize(code)
             else:
                 raise ValueError(f"Unsupported language: {language}")
         except SyntaxError as e:

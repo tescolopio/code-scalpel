@@ -15,3 +15,5 @@ plotly
 matplotlib
 esprima
 javalang
+tree-sitter
+tree-sitter-java
