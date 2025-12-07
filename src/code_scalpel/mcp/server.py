@@ -33,7 +33,7 @@ from pydantic import BaseModel, Field
 
 from mcp.server.fastmcp import FastMCP
 
-__version__ = "0.5.0"
+__version__ = "0.7.0"
 
 # Maximum code size to prevent resource exhaustion
 MAX_CODE_SIZE = 100_000
@@ -124,6 +124,59 @@ class SymbolicResult(BaseModel):
     error: str | None = Field(default=None, description="Error message if failed")
 
 
+class GeneratedTestCase(BaseModel):
+    """A generated test case."""
+
+    path_id: int = Field(description="Path ID this test covers")
+    function_name: str = Field(description="Function being tested")
+    inputs: dict[str, Any] = Field(description="Input values for this test")
+    description: str = Field(description="Human-readable description")
+    path_conditions: list[str] = Field(
+        default_factory=list, description="Conditions that define this path"
+    )
+
+
+class TestGenerationResult(BaseModel):
+    """Result of test generation."""
+
+    success: bool = Field(description="Whether generation succeeded")
+    function_name: str = Field(description="Function tests were generated for")
+    test_count: int = Field(description="Number of test cases generated")
+    test_cases: list[GeneratedTestCase] = Field(
+        default_factory=list, description="Generated test cases"
+    )
+    pytest_code: str = Field(default="", description="Generated pytest code")
+    unittest_code: str = Field(default="", description="Generated unittest code")
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
+class RefactorSecurityIssue(BaseModel):
+    """A security issue found in refactored code."""
+
+    type: str = Field(description="Vulnerability type")
+    severity: str = Field(description="Severity level")
+    line: int | None = Field(default=None, description="Line number")
+    description: str = Field(description="Issue description")
+    cwe: str | None = Field(default=None, description="CWE identifier")
+
+
+class RefactorSimulationResult(BaseModel):
+    """Result of refactor simulation."""
+
+    success: bool = Field(description="Whether simulation succeeded")
+    is_safe: bool = Field(description="Whether the refactor is safe to apply")
+    status: str = Field(description="Status: safe, unsafe, warning, or error")
+    reason: str | None = Field(default=None, description="Reason if not safe")
+    security_issues: list[RefactorSecurityIssue] = Field(
+        default_factory=list, description="Security issues found"
+    )
+    structural_changes: dict[str, Any] = Field(
+        default_factory=dict, description="Functions/classes added/removed"
+    )
+    warnings: list[str] = Field(default_factory=list, description="Warnings")
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
 # ============================================================================
 # MCP SERVER
 # ============================================================================
@@ -132,11 +185,13 @@ mcp = FastMCP(
     name="Code Scalpel",
     instructions=f"""Code Scalpel v{__version__} - AI-powered code analysis tools:
 
-- analyze_code: Parse Python code, extract structure (functions, classes, imports)
+- analyze_code: Parse Python/Java code, extract structure (functions, classes, imports)
 - security_scan: Detect vulnerabilities using taint analysis (SQL injection, XSS, etc.)
 - symbolic_execute: Explore execution paths using symbolic execution
+- generate_unit_tests: Generate pytest/unittest tests from symbolic execution paths
+- simulate_refactor: Verify a code change is safe before applying it
 
-All tools accept Python source code as a string and return structured analysis results.
+All tools accept source code as a string and return structured analysis results.
 Code is PARSED only, never executed.""",
 )
 
@@ -595,6 +650,179 @@ def _basic_symbolic_analysis(code: str) -> SymbolicResult:
             paths_explored=0,
             error=f"Basic analysis failed: {str(e)}",
         )
+
+
+# ============================================================================
+# TEST GENERATION
+# ============================================================================
+
+
+def _generate_tests_sync(
+    code: str, function_name: str | None = None, framework: str = "pytest"
+) -> TestGenerationResult:
+    """Synchronous implementation of generate_unit_tests."""
+    valid, error = _validate_code(code)
+    if not valid:
+        return TestGenerationResult(
+            success=False,
+            function_name=function_name or "unknown",
+            test_count=0,
+            error=error,
+        )
+
+    try:
+        from code_scalpel.generators import TestGenerator
+
+        generator = TestGenerator(framework=framework)
+        result = generator.generate(code, function_name=function_name)
+
+        test_cases = [
+            GeneratedTestCase(
+                path_id=tc.path_id,
+                function_name=tc.function_name,
+                inputs=tc.inputs,
+                description=tc.description,
+                path_conditions=tc.path_conditions,
+            )
+            for tc in result.test_cases
+        ]
+
+        return TestGenerationResult(
+            success=True,
+            function_name=result.function_name,
+            test_count=len(test_cases),
+            test_cases=test_cases,
+            pytest_code=result.pytest_code,
+            unittest_code=result.unittest_code,
+        )
+
+    except Exception as e:
+        return TestGenerationResult(
+            success=False,
+            function_name=function_name or "unknown",
+            test_count=0,
+            error=f"Test generation failed: {str(e)}",
+        )
+
+
+@mcp.tool()
+async def generate_unit_tests(
+    code: str, function_name: str | None = None, framework: str = "pytest"
+) -> TestGenerationResult:
+    """
+    Generate unit tests from code using symbolic execution.
+
+    Use this tool to automatically create test cases that cover all execution paths
+    in a function. Each test case includes concrete input values that trigger a
+    specific path through the code.
+
+    Args:
+        code: Source code containing the function to test
+        function_name: Name of function to generate tests for (auto-detected if None)
+        framework: Test framework ("pytest" or "unittest")
+
+    Returns:
+        Test generation result with generated test code and test cases
+    """
+    return await asyncio.to_thread(_generate_tests_sync, code, function_name, framework)
+
+
+# ============================================================================
+# REFACTOR SIMULATION
+# ============================================================================
+
+
+def _simulate_refactor_sync(
+    original_code: str,
+    new_code: str | None = None,
+    patch: str | None = None,
+    strict_mode: bool = False,
+) -> RefactorSimulationResult:
+    """Synchronous implementation of simulate_refactor."""
+    valid, error = _validate_code(original_code)
+    if not valid:
+        return RefactorSimulationResult(
+            success=False,
+            is_safe=False,
+            status="error",
+            error=f"Invalid original code: {error}",
+        )
+
+    if new_code is None and patch is None:
+        return RefactorSimulationResult(
+            success=False,
+            is_safe=False,
+            status="error",
+            error="Must provide either 'new_code' or 'patch'",
+        )
+
+    try:
+        from code_scalpel.generators import RefactorSimulator
+
+        simulator = RefactorSimulator(strict_mode=strict_mode)
+        result = simulator.simulate(
+            original_code=original_code,
+            new_code=new_code,
+            patch=patch,
+        )
+
+        security_issues = [
+            RefactorSecurityIssue(
+                type=issue.type,
+                severity=issue.severity,
+                line=issue.line,
+                description=issue.description,
+                cwe=issue.cwe,
+            )
+            for issue in result.security_issues
+        ]
+
+        return RefactorSimulationResult(
+            success=True,
+            is_safe=result.is_safe,
+            status=result.status.value,
+            reason=result.reason,
+            security_issues=security_issues,
+            structural_changes=result.structural_changes,
+            warnings=result.warnings,
+        )
+
+    except Exception as e:
+        return RefactorSimulationResult(
+            success=False,
+            is_safe=False,
+            status="error",
+            error=f"Simulation failed: {str(e)}",
+        )
+
+
+@mcp.tool()
+async def simulate_refactor(
+    original_code: str,
+    new_code: str | None = None,
+    patch: str | None = None,
+    strict_mode: bool = False,
+) -> RefactorSimulationResult:
+    """
+    Simulate applying a code change and check for safety issues.
+
+    Use this tool before applying AI-generated code changes to verify they don't
+    introduce security vulnerabilities or break existing functionality.
+
+    Provide either the new_code directly OR a unified diff patch.
+
+    Args:
+        original_code: The original source code
+        new_code: The modified code to compare against (optional)
+        patch: A unified diff patch to apply (optional)
+        strict_mode: If True, treat warnings as unsafe
+
+    Returns:
+        Simulation result with safety verdict and any issues found
+    """
+    return await asyncio.to_thread(
+        _simulate_refactor_sync, original_code, new_code, patch, strict_mode
+    )
 
 
 # ============================================================================
