@@ -24,8 +24,8 @@ Security:
 
 import ast
 import asyncio
+import logging
 import os
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -33,13 +33,37 @@ from pydantic import BaseModel, Field
 
 from mcp.server.fastmcp import FastMCP
 
-__version__ = "0.7.0"
+__version__ = "1.0.0"
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Maximum code size to prevent resource exhaustion
 MAX_CODE_SIZE = 100_000
 
 # Project root for resources (default to current directory)
 PROJECT_ROOT = Path.cwd()
+
+# Caching enabled by default
+CACHE_ENABLED = os.environ.get("SCALPEL_CACHE_ENABLED", "1") != "0"
+
+
+# ============================================================================
+# CACHING
+# ============================================================================
+
+
+def _get_cache():
+    """Get the analysis cache (lazy initialization)."""
+    if not CACHE_ENABLED:
+        return None
+    try:
+        from code_scalpel.utilities.cache import get_cache
+
+        return get_cache()
+    except ImportError:
+        logger.warning("Cache module not available")
+        return None
 
 
 # ============================================================================
@@ -51,6 +75,7 @@ class AnalysisResult(BaseModel):
     """Result of code analysis."""
 
     success: bool = Field(description="Whether analysis succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
     functions: list[str] = Field(description="List of function names found")
     classes: list[str] = Field(description="List of class names found")
     imports: list[str] = Field(description="List of import statements")
@@ -76,6 +101,7 @@ class SecurityResult(BaseModel):
     """Result of security analysis."""
 
     success: bool = Field(description="Whether analysis succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
     has_vulnerabilities: bool = Field(description="Whether vulnerabilities were found")
     vulnerability_count: int = Field(description="Number of vulnerabilities")
     risk_level: str = Field(description="Overall risk level")
@@ -111,6 +137,7 @@ class SymbolicResult(BaseModel):
     """Result of symbolic execution."""
 
     success: bool = Field(description="Whether analysis succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
     paths_explored: int = Field(description="Number of execution paths explored")
     paths: list[ExecutionPath] = Field(
         default_factory=list, description="Discovered execution paths"
@@ -140,6 +167,7 @@ class TestGenerationResult(BaseModel):
     """Result of test generation."""
 
     success: bool = Field(description="Whether generation succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
     function_name: str = Field(description="Function tests were generated for")
     test_count: int = Field(description="Number of test cases generated")
     test_cases: list[GeneratedTestCase] = Field(
@@ -164,6 +192,7 @@ class RefactorSimulationResult(BaseModel):
     """Result of refactor simulation."""
 
     success: bool = Field(description="Whether simulation succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
     is_safe: bool = Field(description="Whether the refactor is safe to apply")
     status: str = Field(description="Status: safe, unsafe, warning, or error")
     reason: str | None = Field(default=None, description="Reason if not safe")
@@ -221,7 +250,10 @@ def _count_complexity(tree: ast.AST) -> int:
 def _analyze_java_code(code: str) -> AnalysisResult:
     """Analyze Java code using tree-sitter."""
     try:
-        from code_scalpel.code_parser.java_parsers.java_parser_treesitter import JavaParser
+        from code_scalpel.code_parser.java_parsers.java_parser_treesitter import (
+            JavaParser,
+        )
+
         parser = JavaParser()
         result = parser.parse(code)
         return AnalysisResult(
@@ -277,8 +309,23 @@ def _analyze_code_sync(code: str, language: str = "python") -> AnalysisResult:
             error=error,
         )
 
+    # Check cache first
+    cache = _get_cache()
+    cache_config = {"language": language}
+    if cache:
+        cached = cache.get(code, "analysis", cache_config)
+        if cached is not None:
+            logger.debug("Cache hit for analyze_code")
+            # Convert dict back to AnalysisResult if needed
+            if isinstance(cached, dict):
+                return AnalysisResult(**cached)
+            return cached
+
     if language.lower() == "java":
-        return _analyze_java_code(code)
+        result = _analyze_java_code(code)
+        if cache and result.success:
+            cache.set(code, "analysis", result.model_dump(), cache_config)
+        return result
 
     try:
         tree = ast.parse(code)
@@ -306,7 +353,7 @@ def _analyze_code_sync(code: str, language: str = "python") -> AnalysisResult:
                 for alias in node.names:
                     imports.append(f"{module}.{alias.name}")
 
-        return AnalysisResult(
+        result = AnalysisResult(
             success=True,
             functions=functions,
             classes=classes,
@@ -317,6 +364,12 @@ def _analyze_code_sync(code: str, language: str = "python") -> AnalysisResult:
             lines_of_code=len(code.splitlines()),
             issues=issues,
         )
+
+        # Cache successful result
+        if cache:
+            cache.set(code, "analysis", result.model_dump(), cache_config)
+
+        return result
 
     except SyntaxError as e:
         return AnalysisResult(
@@ -375,6 +428,21 @@ def _security_scan_sync(code: str) -> SecurityResult:
             error=error,
         )
 
+    # Check cache first
+    cache = _get_cache()
+    if cache:
+        cached = cache.get(code, "security")
+        if cached is not None:
+            logger.debug("Cache hit for security_scan")
+            if isinstance(cached, dict):
+                # Reconstruct VulnerabilityInfo objects
+                if "vulnerabilities" in cached:
+                    cached["vulnerabilities"] = [
+                        VulnerabilityInfo(**v) for v in cached["vulnerabilities"]
+                    ]
+                return SecurityResult(**cached)
+            return cached
+
     try:
         # Import here to avoid circular imports
         from code_scalpel.security import SecurityAnalyzer
@@ -409,7 +477,7 @@ def _security_scan_sync(code: str) -> SecurityResult:
         else:
             risk_level = "critical"
 
-        return SecurityResult(
+        security_result = SecurityResult(
             success=True,
             has_vulnerabilities=vuln_count > 0,
             vulnerability_count=vuln_count,
@@ -417,6 +485,12 @@ def _security_scan_sync(code: str) -> SecurityResult:
             vulnerabilities=vulnerabilities,
             taint_sources=taint_sources,
         )
+
+        # Cache successful result
+        if cache:
+            cache.set(code, "security", security_result.model_dump())
+
+        return security_result
 
     except ImportError:
         # Fallback to basic pattern matching if SecurityAnalyzer not available
@@ -532,6 +606,20 @@ def _symbolic_execute_sync(code: str, max_paths: int = 10) -> SymbolicResult:
             error=error,
         )
 
+    # Check cache first (symbolic execution is expensive!)
+    cache = _get_cache()
+    cache_config = {"max_paths": max_paths}
+    if cache:
+        cached = cache.get(code, "symbolic", cache_config)
+        if cached is not None:
+            logger.debug("Cache hit for symbolic_execute")
+            if isinstance(cached, dict):
+                # Reconstruct ExecutionPath objects
+                if "paths" in cached:
+                    cached["paths"] = [ExecutionPath(**p) for p in cached["paths"]]
+                return SymbolicResult(**cached)
+            return cached
+
     try:
         # Import here to avoid circular imports
         from code_scalpel.symbolic import SymbolicExecutor
@@ -559,13 +647,19 @@ def _symbolic_execute_sync(code: str, max_paths: int = 10) -> SymbolicResult:
                 )
             )
 
-        return SymbolicResult(
+        symbolic_result = SymbolicResult(
             success=True,
             paths_explored=len(paths),
             paths=paths,
             symbolic_variables=result.get("symbolic_vars", []),
             constraints=result.get("constraints", []),
         )
+
+        # Cache successful result
+        if cache:
+            cache.set(code, "symbolic", symbolic_result.model_dump(), cache_config)
+
+        return symbolic_result
 
     except ImportError:
         # Fallback to basic path analysis
@@ -834,17 +928,17 @@ async def simulate_refactor(
 def get_project_call_graph() -> str:
     """
     Get the project-wide call graph.
-    
+
     Returns a JSON adjacency list:
     {
         "file.py:caller_function": ["target_function", "other_file.py:target_function"]
     }
-    
+
     Use this to trace function calls across files and understand dependencies.
     """
     import json
     from code_scalpel.ast_tools.call_graph import CallGraphBuilder
-    
+
     builder = CallGraphBuilder(PROJECT_ROOT)
     graph = builder.build()
     return json.dumps(graph, indent=2)
@@ -858,7 +952,7 @@ def get_project_dependencies() -> str:
     """
     import json
     from code_scalpel.ast_tools.dependency_parser import DependencyParser
-    
+
     parser = DependencyParser(str(PROJECT_ROOT))
     deps = parser.get_dependencies()
     return json.dumps(deps, indent=2)
@@ -868,10 +962,11 @@ def get_project_dependencies() -> str:
 def get_project_structure() -> str:
     """
     Get the project directory structure as a JSON tree.
-    
+
     Use this resource to understand the file layout of the project.
     It respects .gitignore if possible (simple implementation for now).
     """
+
     def build_tree(path: Path) -> dict[str, Any]:
         tree = {"name": path.name, "type": "directory", "children": []}
         try:
@@ -879,9 +974,15 @@ def get_project_structure() -> str:
             items = sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name))
             for item in items:
                 # Skip hidden files/dirs and common ignore patterns
-                if item.name.startswith(".") or item.name in ["__pycache__", "venv", "node_modules", "dist", "build"]:
+                if item.name.startswith(".") or item.name in [
+                    "__pycache__",
+                    "venv",
+                    "node_modules",
+                    "dist",
+                    "build",
+                ]:
                     continue
-                
+
                 if item.is_dir():
                     tree["children"].append(build_tree(item))
                 else:
@@ -891,6 +992,7 @@ def get_project_structure() -> str:
         return tree
 
     import json
+
     return json.dumps(build_tree(PROJECT_ROOT), indent=2)
 
 
@@ -1034,9 +1136,11 @@ def run_server(
     if root_path:
         PROJECT_ROOT = Path(root_path).resolve()
         if not PROJECT_ROOT.exists():
-            print(f"Warning: Root path {PROJECT_ROOT} does not exist. Using current directory.")
+            print(
+                f"Warning: Root path {PROJECT_ROOT} does not exist. Using current directory."
+            )
             PROJECT_ROOT = Path.cwd()
-    
+
     print(f"Code Scalpel MCP Server v{__version__}")
     print(f"Project Root: {PROJECT_ROOT}")
 
@@ -1054,8 +1158,8 @@ def run_server(
                 allowed_hosts=["*"],
                 allowed_origins=["*"],
             )
-            print(f"WARNING: LAN access enabled. Host validation disabled.")
-            print(f"Only use on trusted networks!")
+            print("WARNING: LAN access enabled. Host validation disabled.")
+            print("Only use on trusted networks!")
 
         mcp.run(transport="streamable-http")
     else:

@@ -1,6 +1,6 @@
 [project]
 name = "code-scalpel"
-version = "0.7.0"
+version = "1.0.0"
 description = "AI Agent toolkit for code analysis using ASTs, PDGs, and Symbolic Execution"
 readme = "README.md"
 license = {text = "MIT"}
@@ -20,7 +20,7 @@ keywords = [
     "static-analysis",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Quality Assurance",
     "License :: OSI Approved :: MIT License",
