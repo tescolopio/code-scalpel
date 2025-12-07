@@ -37,15 +37,18 @@ COPY --from=builder /app /app
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
 
-# Expose the MCP server port
-EXPOSE 8080
+# Expose the MCP server port (8593 = "scal" on phone keypad)
+EXPOSE 8593
 
-# Health check for streamable-http transport
-# Note: MCP uses /mcp endpoint, not /health
+# Health check for HTTP transport
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/mcp -H "Accept: application/json" -X POST -d '{"jsonrpc":"2.0","method":"ping","id":1}' || exit 1
+    CMD curl -f http://localhost:8593/mcp -H "Accept: application/json" -X POST -d '{"jsonrpc":"2.0","method":"ping","id":1}' || exit 1
 
-# Run the real MCP server with streamable-http transport
+# Default project root inside container
+ENV SCALPEL_ROOT=/app/code
+
+# Run the MCP server with HTTP transport
 # Host 0.0.0.0 is required for Docker networking
 # --allow-lan disables host validation for external access
-CMD ["python", "-m", "code_scalpel.mcp.server", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8080", "--allow-lan"]
+# --root points to the mounted code directory
+CMD ["code-scalpel", "mcp", "--http", "--host", "0.0.0.0", "--port", "8593", "--root", "/app/code", "--allow-lan"]
