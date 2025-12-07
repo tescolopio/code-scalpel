@@ -1,6 +1,6 @@
 # Code Scalpel Documentation
 
-**v1.0.1 - The AI Agent Toolkit for Precision Code Analysis**
+**v1.0.2 - The AI Agent Toolkit for Precision Code Analysis**
 
 ---
 
@@ -168,6 +168,7 @@ code-scalpel mcp --transport http --port 8593
 
 | Version | Codename | Highlights |
 |---------|----------|------------|
+| v1.0.2 | - | Documentation & Resource Hardening |
 | v1.0.1 | - | Docker port alignment |
 | v1.0.0 | "The Standard" | Caching, API freeze, Z3 hardening |
 | v0.3.0 | "The Mathematician" | String support, security analysis |

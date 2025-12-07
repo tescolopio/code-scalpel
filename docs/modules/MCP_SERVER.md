@@ -11,10 +11,11 @@ The MCP (Model Context Protocol) server exposes Code Scalpel's analysis tools to
 3. [Starting the Server](#starting-the-server)
 4. [Available Tools](#available-tools)
 5. [Tool Reference](#tool-reference)
-6. [Configuration](#configuration)
-7. [Client Integration](#client-integration)
-8. [Security](#security)
-9. [Troubleshooting](#troubleshooting)
+6. [Available Resources](#available-resources)
+7. [Configuration](#configuration)
+8. [Client Integration](#client-integration)
+9. [Security](#security)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -150,7 +151,7 @@ Parse code and extract structural information.
 ```json
 {
   "success": true,
-  "server_version": "1.0.1",
+  "server_version": "1.0.2",
   "functions": ["hello"],
   "classes": [],
   "imports": [],
@@ -207,7 +208,7 @@ Detect security vulnerabilities using taint analysis.
 ```json
 {
   "success": true,
-  "server_version": "1.0.1",
+  "server_version": "1.0.2",
   "has_vulnerabilities": true,
   "vulnerability_count": 1,
   "risk_level": "HIGH",
@@ -265,7 +266,7 @@ Explore execution paths using symbolic execution.
 ```json
 {
   "success": true,
-  "server_version": "1.0.1",
+  "server_version": "1.0.2",
   "paths_explored": 3,
   "paths": [
     {
@@ -327,7 +328,7 @@ Generate test cases from symbolic execution paths.
 ```json
 {
   "success": true,
-  "server_version": "1.0.1",
+  "server_version": "1.0.2",
   "function_name": "is_adult",
   "test_count": 2,
   "test_cases": [
@@ -381,7 +382,7 @@ Verify a code change is safe before applying.
 ```json
 {
   "success": true,
-  "server_version": "1.0.1",
+  "server_version": "1.0.2",
   "is_safe": true,
   "status": "safe",
   "reason": null,
@@ -405,6 +406,148 @@ Verify a code change is safe before applying.
 | `warning` | Minor concerns, review recommended |
 | `unsafe` | Security or behavioral issues detected |
 | `error` | Analysis failed |
+
+---
+
+## Available Resources
+
+MCP Resources provide read-only access to project-level data. Unlike tools (which analyze code you provide), resources expose information about the project where the server is running.
+
+### Resource URIs
+
+| Resource URI | Description | Data Format |
+|--------------|-------------|-------------|
+| `scalpel://project/call-graph` | Project-wide function call relationships | JSON adjacency list |
+| `scalpel://project/dependencies` | Project dependencies from config files | JSON |
+| `scalpel://project/structure` | Directory tree structure | JSON tree |
+| `scalpel://version` | Server version information | Plain text |
+| `scalpel://capabilities` | Available tools and features | Markdown |
+
+---
+
+### scalpel://project/call-graph
+
+Returns the project-wide function call graph as a JSON adjacency list.
+
+**Use Case:** Understand how functions call each other across files, trace dependencies, identify entry points.
+
+**Response Format:**
+
+```json
+{
+  "src/main.py:process_data": [
+    "src/utils.py:validate",
+    "src/db.py:save_record"
+  ],
+  "src/utils.py:validate": [
+    "re.match"
+  ]
+}
+```
+
+**Reading the Graph:**
+- Keys are `"file_path:function_name"` for local definitions
+- Values are lists of called functions
+- External calls (builtins, libraries) appear without file prefix
+
+---
+
+### scalpel://project/dependencies
+
+Returns project dependencies parsed from configuration files.
+
+**Supported Config Files:**
+- `pyproject.toml` (PEP 621 & Poetry)
+- `requirements.txt`
+- `package.json` (for JavaScript projects)
+
+**Response Format:**
+
+```json
+{
+  "python": [
+    {"name": "requests", "version": ">=2.28.0"},
+    {"name": "flask", "version": "^2.0.0"}
+  ],
+  "javascript": [
+    {"name": "express", "version": "^4.18.0", "type": "dev"}
+  ]
+}
+```
+
+**Use Case:** Verify that libraries used in generated code actually exist in the project.
+
+---
+
+### scalpel://project/structure
+
+Returns the project directory structure as a JSON tree.
+
+**Response Format:**
+
+```json
+{
+  "name": "my-project",
+  "type": "directory",
+  "children": [
+    {"name": "src", "type": "directory", "children": [
+      {"name": "main.py", "type": "file"},
+      {"name": "utils.py", "type": "file"}
+    ]},
+    {"name": "README.md", "type": "file"}
+  ]
+}
+```
+
+**Exclusions:** Hidden files (`.git`, `.env`), `__pycache__`, `venv`, `node_modules`, `dist`, `build`.
+
+**Use Case:** Understand project layout before suggesting file locations for new code.
+
+---
+
+### scalpel://version
+
+Returns server version and feature summary.
+
+**Response:**
+
+```
+Code Scalpel v1.0.2
+
+A precision toolkit for AI-driven code analysis.
+
+Features:
+- AST Analysis: Parse and analyze code structure
+- Security Scanning: Taint-based vulnerability detection
+- Symbolic Execution: Path exploration with Z3 solver
+
+Supported Languages:
+- Python (full support)
+- Java (structural parsing)
+- JavaScript/TypeScript (planned)
+```
+
+---
+
+### scalpel://capabilities
+
+Returns a Markdown document describing all available tools and their parameters.
+
+**Use Case:** AI assistants can read this to understand what tools are available without prior knowledge.
+
+---
+
+### Accessing Resources (MCP Client)
+
+```python
+# Using MCP client
+result = await client.read_resource("scalpel://project/structure")
+project_tree = json.loads(result.content)
+
+# Or read call graph
+graph = await client.read_resource("scalpel://project/call-graph")
+call_relationships = json.loads(graph.content)
+```
 
 ---
 

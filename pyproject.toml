@@ -1,6 +1,6 @@
 [project]
 name = "code-scalpel"
-version = "1.0.1"
+version = "1.0.2"
 description = "AI Agent toolkit for code analysis using ASTs, PDGs, and Symbolic Execution"
 readme = "README.md"
 license = {text = "MIT"}

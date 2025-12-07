@@ -7,14 +7,15 @@ The `ast_tools` module provides foundational code parsing and analysis capabilit
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [ASTBuilder](#astbuilder)
-3. [ASTAnalyzer](#astanalyzer)
-4. [ASTTransformer](#asttransformer)
-5. [ASTVisualizer](#astvisualizer)
-6. [ASTValidator](#astvalidator)
-7. [Utility Functions](#utility-functions)
-8. [Data Classes](#data-classes)
-9. [Examples](#examples)
+2. [Polyglot Support](#polyglot-support)
+3. [ASTBuilder](#astbuilder)
+4. [ASTAnalyzer](#astanalyzer)
+5. [ASTTransformer](#asttransformer)
+6. [ASTVisualizer](#astvisualizer)
+7. [ASTValidator](#astvalidator)
+8. [Utility Functions](#utility-functions)
+9. [Data Classes](#data-classes)
+10. [Examples](#examples)
 
 ---
 
@@ -45,6 +46,153 @@ analyzer = ASTAnalyzer(tree)
 metrics = analyzer.analyze_function("greet")
 print(f"Complexity: {metrics.cyclomatic_complexity}")
 ```
+
+---
+
+## Polyglot Support
+
+Code Scalpel supports multiple programming languages through its **Unified IR (Intermediate Representation)** system. While Python has full native support, other languages use tree-sitter for parsing and normalize to the same IR.
+
+### Supported Languages
+
+| Language | Parser | Support Level | Since |
+|----------|--------|---------------|-------|
+| **Python** | `ast` (native) | Full | v0.1.0 |
+| **Java** | tree-sitter | Structural | v0.3.0 |
+| **JavaScript** | tree-sitter | Structural | v0.3.0 |
+
+### Language Feature Matrix
+
+| Feature | Python | Java | JavaScript |
+|---------|--------|------|------------|
+| Function extraction | ✅ | ✅ | ✅ |
+| Class extraction | ✅ | ✅ | ✅ |
+| Control flow analysis | ✅ | ✅ | ✅ |
+| Type inference | ✅ | ⚠️ | ⚠️ |
+| Symbolic execution | ✅ | ❌ | ❌ |
+| Security scanning | ✅ | ❌ | ❌ |
+
+**Legend:** ✅ Full support | ⚠️ Partial support | ❌ Not yet available
+
+---
+
+### Java Parsing
+
+Java support uses tree-sitter for parsing. The `JavaNormalizer` converts Java CST (Concrete Syntax Tree) to Code Scalpel's Unified IR.
+
+#### Installation
+
+```bash
+pip install tree-sitter tree-sitter-java
+```
+
+#### Usage
+
+```python
+from code_scalpel.ir.normalizers import JavaNormalizer
+
+java_code = '''
+public class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+    
+    public int factorial(int n) {
+        if (n <= 1) {
+            return 1;
+        }
+        return n * factorial(n - 1);
+    }
+}
+'''
+
+normalizer = JavaNormalizer()
+ir_module = normalizer.normalize(java_code)
+
+# Extract functions
+for node in ir_module.body:
+    if hasattr(node, 'name'):
+        print(f"Found: {node.name}")
+# Output:
+# Found: Calculator
+# Found: add
+# Found: factorial
+```
+
+#### Supported Java Constructs
+
+| Construct | IR Node | Notes |
+|-----------|---------|-------|
+| Class declarations | `IRClassDef` | Includes methods |
+| Method declarations | `IRFunctionDef` | Parameters extracted |
+| If statements | `IRIf` | With else branches |
+| While loops | `IRWhile` | Basic loop support |
+| Return statements | `IRReturn` | Value extraction |
+| Binary expressions | `IRBinOp` | Arithmetic, logical |
+| Method invocations | `IRCall` | Function calls |
+| Variable declarations | `IRAssign` | With initializers |
+| Literals | `IRConstant` | int, string, boolean |
+
+#### Limitations
+
+- **No symbolic execution:** Java code cannot be symbolically executed (Python only)
+- **No security scanning:** Taint analysis not available for Java
+- **No type annotations:** Type information not extracted from Java generics
+
+---
+
+### JavaScript Parsing
+
+JavaScript support uses tree-sitter for parsing. ES6+ syntax is supported.
+
+#### Installation
+
+```bash
+pip install tree-sitter tree-sitter-javascript
+```
+
+#### Usage
+
+```python
+from code_scalpel.ir.normalizers import JavaScriptNormalizer
+
+js_code = '''
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+
+class Calculator {
+    add(a, b) {
+        return a + b;
+    }
+}
+'''
+
+normalizer = JavaScriptNormalizer()
+ir_module = normalizer.normalize(js_code)
+
+for node in ir_module.body:
+    if hasattr(node, 'name'):
+        print(f"Found: {node.name}")
+```
+
+---
+
+### MCP Server Multi-Language Support
+
+The MCP server's `analyze_code` tool accepts a `language` parameter:
+
+```json
+{
+  "name": "analyze_code",
+  "arguments": {
+    "code": "public class Foo { }",
+    "language": "java"
+  }
+}
+```
+
+**Supported values:** `"python"` (default), `"java"`, `"javascript"`
 
 ---
 

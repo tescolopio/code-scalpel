@@ -26,6 +26,7 @@ import ast
 import asyncio
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +34,7 @@ from pydantic import BaseModel, Field
 
 from mcp.server.fastmcp import FastMCP
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -52,14 +53,12 @@ CACHE_ENABLED = os.environ.get("SCALPEL_CACHE_ENABLED", "1") != "0"
 # CACHING
 # ============================================================================
 
-
 def _get_cache():
     """Get the analysis cache (lazy initialization)."""
     if not CACHE_ENABLED:
         return None
     try:
         from code_scalpel.utilities.cache import get_cache
-
         return get_cache()
     except ImportError:
         logger.warning("Cache module not available")
@@ -250,10 +249,7 @@ def _count_complexity(tree: ast.AST) -> int:
 def _analyze_java_code(code: str) -> AnalysisResult:
     """Analyze Java code using tree-sitter."""
     try:
-        from code_scalpel.code_parser.java_parsers.java_parser_treesitter import (
-            JavaParser,
-        )
-
+        from code_scalpel.code_parser.java_parsers.java_parser_treesitter import JavaParser
         parser = JavaParser()
         result = parser.parse(code)
         return AnalysisResult(
@@ -616,7 +612,9 @@ def _symbolic_execute_sync(code: str, max_paths: int = 10) -> SymbolicResult:
             if isinstance(cached, dict):
                 # Reconstruct ExecutionPath objects
                 if "paths" in cached:
-                    cached["paths"] = [ExecutionPath(**p) for p in cached["paths"]]
+                    cached["paths"] = [
+                        ExecutionPath(**p) for p in cached["paths"]
+                    ]
                 return SymbolicResult(**cached)
             return cached
 
@@ -928,17 +926,17 @@ async def simulate_refactor(
 def get_project_call_graph() -> str:
     """
     Get the project-wide call graph.
-
+    
     Returns a JSON adjacency list:
     {
         "file.py:caller_function": ["target_function", "other_file.py:target_function"]
     }
-
+    
     Use this to trace function calls across files and understand dependencies.
     """
     import json
     from code_scalpel.ast_tools.call_graph import CallGraphBuilder
-
+    
     builder = CallGraphBuilder(PROJECT_ROOT)
     graph = builder.build()
     return json.dumps(graph, indent=2)
@@ -952,7 +950,7 @@ def get_project_dependencies() -> str:
     """
     import json
     from code_scalpel.ast_tools.dependency_parser import DependencyParser
-
+    
     parser = DependencyParser(str(PROJECT_ROOT))
     deps = parser.get_dependencies()
     return json.dumps(deps, indent=2)
@@ -962,11 +960,10 @@ def get_project_dependencies() -> str:
 def get_project_structure() -> str:
     """
     Get the project directory structure as a JSON tree.
-
+    
     Use this resource to understand the file layout of the project.
     It respects .gitignore if possible (simple implementation for now).
     """
-
     def build_tree(path: Path) -> dict[str, Any]:
         tree = {"name": path.name, "type": "directory", "children": []}
         try:
@@ -974,15 +971,9 @@ def get_project_structure() -> str:
             items = sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name))
             for item in items:
                 # Skip hidden files/dirs and common ignore patterns
-                if item.name.startswith(".") or item.name in [
-                    "__pycache__",
-                    "venv",
-                    "node_modules",
-                    "dist",
-                    "build",
-                ]:
+                if item.name.startswith(".") or item.name in ["__pycache__", "venv", "node_modules", "dist", "build"]:
                     continue
-
+                
                 if item.is_dir():
                     tree["children"].append(build_tree(item))
                 else:
@@ -992,7 +983,6 @@ def get_project_structure() -> str:
         return tree
 
     import json
-
     return json.dumps(build_tree(PROJECT_ROOT), indent=2)
 
 
@@ -1136,11 +1126,9 @@ def run_server(
     if root_path:
         PROJECT_ROOT = Path(root_path).resolve()
         if not PROJECT_ROOT.exists():
-            print(
-                f"Warning: Root path {PROJECT_ROOT} does not exist. Using current directory."
-            )
+            print(f"Warning: Root path {PROJECT_ROOT} does not exist. Using current directory.")
             PROJECT_ROOT = Path.cwd()
-
+    
     print(f"Code Scalpel MCP Server v{__version__}")
     print(f"Project Root: {PROJECT_ROOT}")
 
@@ -1158,8 +1146,8 @@ def run_server(
                 allowed_hosts=["*"],
                 allowed_origins=["*"],
             )
-            print("WARNING: LAN access enabled. Host validation disabled.")
-            print("Only use on trusted networks!")
+            print(f"WARNING: LAN access enabled. Host validation disabled.")
+            print(f"Only use on trusted networks!")
 
         mcp.run(transport="streamable-http")
     else:

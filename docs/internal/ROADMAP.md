@@ -206,10 +206,11 @@ Transform Code Scalpel into the industry-standard code analysis toolkit for AI a
 | v0.1.0 | - | RELEASED | MCP HTTP server, AST/PDG, CLI |
 | v0.2.0 | Redemption | RELEASED | Symbolic Execution (Int/Bool) |
 | v0.3.0 | The Mathematician | RELEASED | String support, Security Analysis |
-| v0.3.1 | - | Target: 2 weeks | OWASP validation, security hardening |
-| v0.4.0 | The Polyglot | Target: 6 weeks | JavaScript/TypeScript support |
-| v0.5.0 | The Speedster | Target: 10 weeks | FastMCP, performance optimization |
-| v1.0.0 | - | Target: 16 weeks | Production-ready, 5+ languages |
+| v1.0.0 | The Standard | RELEASED | API freeze, caching, Z3 hardening, 654 tests |
+| v1.0.1 | - | RELEASED | Docker port alignment, documentation fixes |
+| v1.0.2 | - | RELEASED | Documentation & Resource Hardening, 760 tests |
+| v1.1.0 | The Polyglot | PLANNED | Extended JavaScript/TypeScript support |
+| v1.2.0 | The Speedster | PLANNED | FastMCP, performance optimization |
 
 ---
 
@@ -254,9 +255,9 @@ See [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) for detailed tasks.
 
 ---
 
-**Last Updated:** 2024-12-06  
-**Version:** 4.0 (v0.3.0 "The Mathematician" Released)  
-**Next Milestone:** v0.3.1 Security Validation
+**Last Updated:** 2025-01-21  
+**Version:** 5.0 (v1.0.2 "Documentation & Resource Hardening" Released)  
+**Next Milestone:** v1.1.0 The Polyglot
 
 ---
 
@@ -264,6 +265,9 @@ See [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) for detailed tasks.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.0.2 | 2025-01-21 | Documentation & Resource Hardening - MCP resources documented, 760 tests |
+| v1.0.1 | 2025-01-20 | Docker port alignment, documentation fixes |
+| v1.0.0 | 2025-01-20 | "The Standard" - API freeze, caching, Z3 hardening, 654 tests |
 | v0.3.0 | 2024-12-06 | "The Mathematician" - String support, Security Analysis, 469 tests |
 | v0.2.0 | 2024-12-06 | "Redemption" - Symbolic Execution works, 426 tests |
 | v0.1.0 | 2024-12-04 | First public release on PyPI |
