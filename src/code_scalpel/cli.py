@@ -320,6 +320,7 @@ def start_mcp_server(
     host: str = "127.0.0.1",
     port: int = 8080,
     allow_lan: bool = False,
+    root_path: str | None = None,
 ) -> int:
     """Start the MCP-compliant server (for AI clients like Claude Desktop, Cursor)."""
     from .mcp.server import run_server
@@ -338,7 +339,7 @@ def start_mcp_server(
         print("\nPress Ctrl+C to stop.\n")
 
     try:
-        run_server(transport=transport, host=host, port=port, allow_lan=allow_lan)
+        run_server(transport=transport, host=host, port=port, allow_lan=allow_lan, root_path=root_path)
     except KeyboardInterrupt:
         print("\nMCP Server stopped.")
 
@@ -421,6 +422,11 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
         action="store_true",
         help="Allow LAN connections (disables host validation, use on trusted networks only)",
     )
+    mcp_parser.add_argument(
+        "--root",
+        default=None,
+        help="Project root directory for context resources (default: current directory)",
+    )
 
     # Version command
     subparsers.add_parser("version", help="Show version information")
@@ -455,7 +461,8 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
     elif args.command == "mcp":
         transport = "streamable-http" if args.http else "stdio"
         allow_lan = getattr(args, "allow_lan", False)
-        return start_mcp_server(transport, args.host, args.port, allow_lan)
+        root_path = getattr(args, "root", None)
+        return start_mcp_server(transport, args.host, args.port, allow_lan, root_path)
 
     elif args.command == "version":
         print(f"Code Scalpel v{__version__}")

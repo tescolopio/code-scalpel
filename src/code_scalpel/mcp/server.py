@@ -23,17 +23,23 @@ Security:
 """
 
 import ast
+import asyncio
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from mcp.server.fastmcp import FastMCP
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 # Maximum code size to prevent resource exhaustion
 MAX_CODE_SIZE = 100_000
+
+# Project root for resources (default to current directory)
+PROJECT_ROOT = Path.cwd()
 
 
 # ============================================================================
@@ -48,6 +54,8 @@ class AnalysisResult(BaseModel):
     functions: list[str] = Field(description="List of function names found")
     classes: list[str] = Field(description="List of class names found")
     imports: list[str] = Field(description="List of import statements")
+    function_count: int = Field(description="Total number of functions found")
+    class_count: int = Field(description="Total number of classes found")
     complexity: int = Field(description="Cyclomatic complexity estimate")
     lines_of_code: int = Field(description="Total lines of code")
     issues: list[str] = Field(default_factory=list, description="Issues found")
@@ -93,6 +101,9 @@ class ExecutionPath(BaseModel):
     path_id: int = Field(description="Unique path identifier")
     conditions: list[str] = Field(description="Conditions along the path")
     final_state: dict[str, Any] = Field(description="Variable values at path end")
+    reproduction_input: dict[str, Any] | None = Field(
+        default=None, description="Input values that trigger this path"
+    )
     is_reachable: bool = Field(description="Whether path is reachable")
 
 
@@ -152,24 +163,8 @@ def _count_complexity(tree: ast.AST) -> int:
     return complexity
 
 
-@mcp.tool()
-def analyze_code(code: str) -> AnalysisResult:
-    """
-    Analyze Python source code structure.
-
-    Parses the code and extracts:
-    - Function definitions
-    - Class definitions
-    - Import statements
-    - Cyclomatic complexity estimate
-    - Lines of code
-
-    Args:
-        code: Python source code to analyze
-
-    Returns:
-        Structured analysis result with code metrics and structure
-    """
+def _analyze_code_sync(code: str) -> AnalysisResult:
+    """Synchronous implementation of analyze_code."""
     valid, error = _validate_code(code)
     if not valid:
         return AnalysisResult(
@@ -177,6 +172,8 @@ def analyze_code(code: str) -> AnalysisResult:
             functions=[],
             classes=[],
             imports=[],
+            function_count=0,
+            class_count=0,
             complexity=0,
             lines_of_code=0,
             error=error,
@@ -213,6 +210,8 @@ def analyze_code(code: str) -> AnalysisResult:
             functions=functions,
             classes=classes,
             imports=imports,
+            function_count=len(functions),
+            class_count=len(classes),
             complexity=_count_complexity(tree),
             lines_of_code=len(code.splitlines()),
             issues=issues,
@@ -224,9 +223,11 @@ def analyze_code(code: str) -> AnalysisResult:
             functions=[],
             classes=[],
             imports=[],
+            function_count=0,
+            class_count=0,
             complexity=0,
             lines_of_code=0,
-            error=f"Syntax error at line {e.lineno}: {e.msg}",
+            error=f"Syntax error at line {e.lineno}: {e.msg}. Please check your code syntax.",
         )
     except Exception as e:
         return AnalysisResult(
@@ -234,6 +235,8 @@ def analyze_code(code: str) -> AnalysisResult:
             functions=[],
             classes=[],
             imports=[],
+            function_count=0,
+            class_count=0,
             complexity=0,
             lines_of_code=0,
             error=f"Analysis failed: {str(e)}",
@@ -241,24 +244,25 @@ def analyze_code(code: str) -> AnalysisResult:
 
 
 @mcp.tool()
-def security_scan(code: str) -> SecurityResult:
+async def analyze_code(code: str) -> AnalysisResult:
     """
-    Scan Python code for security vulnerabilities using taint analysis.
+    Analyze Python source code structure.
 
-    Detects:
-    - SQL Injection (CWE-89)
-    - Cross-Site Scripting (CWE-79)
-    - Command Injection (CWE-78)
-    - Path Traversal (CWE-22)
-
-    Uses data flow analysis to track tainted data from sources to sinks.
+    Use this tool to understand the high-level architecture (classes, functions, imports)
+    of a file before attempting to edit it. This helps prevent hallucinating non-existent
+    methods or classes.
 
     Args:
-        code: Python source code to scan
+        code: Python source code to analyze
 
     Returns:
-        Security analysis result with vulnerabilities and risk assessment
+        Structured analysis result with code metrics and structure
     """
+    return await asyncio.to_thread(_analyze_code_sync, code)
+
+
+def _security_scan_sync(code: str) -> SecurityResult:
+    """Synchronous implementation of security_scan."""
     valid, error = _validate_code(code)
     if not valid:
         return SecurityResult(
@@ -323,6 +327,29 @@ def security_scan(code: str) -> SecurityResult:
             risk_level="unknown",
             error=f"Security scan failed: {str(e)}",
         )
+
+
+@mcp.tool()
+async def security_scan(code: str) -> SecurityResult:
+    """
+    Scan Python code for security vulnerabilities using taint analysis.
+
+    Use this tool to audit code for security vulnerabilities (SQL Injection, XSS, etc.)
+    before deploying or committing changes. It tracks data flow from sources to sinks.
+
+    Detects:
+    - SQL Injection (CWE-89)
+    - Cross-Site Scripting (CWE-79)
+    - Command Injection (CWE-78)
+    - Path Traversal (CWE-22)
+
+    Args:
+        code: Python source code to scan
+
+    Returns:
+        Security analysis result with vulnerabilities and risk assessment
+    """
+    return await asyncio.to_thread(_security_scan_sync, code)
 
 
 def _basic_security_scan(code: str) -> SecurityResult:
@@ -393,21 +420,8 @@ def _basic_security_scan(code: str) -> SecurityResult:
     )
 
 
-@mcp.tool()
-def symbolic_execute(code: str, max_paths: int = 10) -> SymbolicResult:
-    """
-    Perform symbolic execution on Python code.
-
-    Explores execution paths by treating variables as symbolic values.
-    Uses Z3 SMT solver to determine path feasibility.
-
-    Args:
-        code: Python source code to analyze
-        max_paths: Maximum number of paths to explore (default: 10)
-
-    Returns:
-        Symbolic execution result with discovered paths and constraints
-    """
+def _symbolic_execute_sync(code: str, max_paths: int = 10) -> SymbolicResult:
+    """Synchronous implementation of symbolic_execute."""
     valid, error = _validate_code(code)
     if not valid:
         return SymbolicResult(
@@ -425,11 +439,20 @@ def symbolic_execute(code: str, max_paths: int = 10) -> SymbolicResult:
 
         paths = []
         for i, path in enumerate(result.get("paths", [])):
+            # Extract reproduction inputs from the final state
+            # Assuming symbolic variables in the state represent inputs
+            final_state = path.get("state", {})
+            symbolic_vars = result.get("symbolic_vars", [])
+            reproduction_input = {
+                k: v for k, v in final_state.items() if k in symbolic_vars
+            }
+
             paths.append(
                 ExecutionPath(
                     path_id=i,
                     conditions=path.get("conditions", []),
-                    final_state=path.get("state", {}),
+                    final_state=final_state,
+                    reproduction_input=reproduction_input,
                     is_reachable=path.get("reachable", True),
                 )
             )
@@ -451,6 +474,25 @@ def symbolic_execute(code: str, max_paths: int = 10) -> SymbolicResult:
             paths_explored=0,
             error=f"Symbolic execution failed: {str(e)}",
         )
+
+
+@mcp.tool()
+async def symbolic_execute(code: str, max_paths: int = 10) -> SymbolicResult:
+    """
+    Perform symbolic execution on Python code.
+
+    Use this tool to explore execution paths and find bugs that static analysis misses.
+    It treats variables as symbolic values and uses a Z3 solver to find inputs that
+    trigger specific paths.
+
+    Args:
+        code: Python source code to analyze
+        max_paths: Maximum number of paths to explore (default: 10)
+
+    Returns:
+        Symbolic execution result with discovered paths, constraints, and reproduction inputs
+    """
+    return await asyncio.to_thread(_symbolic_execute_sync, code, max_paths)
 
 
 def _basic_symbolic_analysis(code: str) -> SymbolicResult:
@@ -486,6 +528,7 @@ def _basic_symbolic_analysis(code: str) -> SymbolicResult:
                 path_id=i,
                 conditions=conditions[: i + 1] if i < len(conditions) else conditions,
                 final_state={},
+                reproduction_input=None,
                 is_reachable=True,
             )
             for i in range(estimated_paths)
@@ -510,6 +553,36 @@ def _basic_symbolic_analysis(code: str) -> SymbolicResult:
 # ============================================================================
 # RESOURCES
 # ============================================================================
+
+
+@mcp.resource("scalpel://project/structure")
+def get_project_structure() -> str:
+    """
+    Get the project directory structure as a JSON tree.
+    
+    Use this resource to understand the file layout of the project.
+    It respects .gitignore if possible (simple implementation for now).
+    """
+    def build_tree(path: Path) -> dict[str, Any]:
+        tree = {"name": path.name, "type": "directory", "children": []}
+        try:
+            # Sort directories first, then files
+            items = sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name))
+            for item in items:
+                # Skip hidden files/dirs and common ignore patterns
+                if item.name.startswith(".") or item.name in ["__pycache__", "venv", "node_modules", "dist", "build"]:
+                    continue
+                
+                if item.is_dir():
+                    tree["children"].append(build_tree(item))
+                else:
+                    tree["children"].append({"name": item.name, "type": "file"})
+        except PermissionError:
+            pass
+        return tree
+
+    import json
+    return json.dumps(build_tree(PROJECT_ROOT), indent=2)
 
 
 @mcp.resource("scalpel://version")
@@ -630,6 +703,7 @@ def run_server(
     host: str = "127.0.0.1",
     port: int = 8080,
     allow_lan: bool = False,
+    root_path: str | None = None,
 ):
     """
     Run the Code Scalpel MCP server.
@@ -639,6 +713,7 @@ def run_server(
         host: Host to bind to (HTTP only)
         port: Port to bind to (HTTP only)
         allow_lan: Allow connections from LAN (disables host validation)
+        root_path: Project root directory (default: current directory)
 
     Security Note:
         By default, the HTTP transport only allows connections from localhost.
@@ -646,6 +721,16 @@ def run_server(
         protection and allows connections from any host. Only use on trusted
         networks.
     """
+    global PROJECT_ROOT
+    if root_path:
+        PROJECT_ROOT = Path(root_path).resolve()
+        if not PROJECT_ROOT.exists():
+            print(f"Warning: Root path {PROJECT_ROOT} does not exist. Using current directory.")
+            PROJECT_ROOT = Path.cwd()
+    
+    print(f"Code Scalpel MCP Server v{__version__}")
+    print(f"Project Root: {PROJECT_ROOT}")
+
     if transport == "streamable-http":
         from mcp.server.transport_security import TransportSecuritySettings
 
@@ -694,6 +779,10 @@ if __name__ == "__main__":
         action="store_true",
         help="Allow LAN connections (disables host validation, use on trusted networks only)",
     )
+    parser.add_argument(
+        "--root",
+        help="Project root directory for resources (default: current directory)",
+    )
 
     args = parser.parse_args()
     run_server(
@@ -701,4 +790,5 @@ if __name__ == "__main__":
         host=args.host,
         port=args.port,
         allow_lan=args.allow_lan,
+        root_path=args.root,
     )

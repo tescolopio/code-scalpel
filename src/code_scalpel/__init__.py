@@ -19,7 +19,7 @@ For AI agent integrations:
     >>> from code_scalpel.integrations import AutogenScalpel, CrewAIScalpel
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __author__ = "Tim Escolopio"
 __email__ = "3dtsus@gmail.com"
 
