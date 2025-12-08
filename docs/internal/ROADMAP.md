@@ -24,7 +24,7 @@ Transform Code Scalpel into the industry-standard code analysis toolkit for AI a
 
 **Production Features:**
 
-- Core AST analysis tools for Python (94% coverage)
+- Core AST analysis tools for Python (100% coverage)
 - PDG (Program Dependence Graph) building and analysis (86% coverage)
 - MCP HTTP server (Flask-based) with `/analyze`, `/refactor`, `/security` endpoints
 - CLI tool (`code-scalpel` command)
@@ -209,7 +209,8 @@ Transform Code Scalpel into the industry-standard code analysis toolkit for AI a
 | v1.0.0 | The Standard | RELEASED | API freeze, caching, Z3 hardening, 654 tests |
 | v1.0.1 | - | RELEASED | Docker port alignment, documentation fixes |
 | v1.0.2 | - | RELEASED | Documentation & Resource Hardening, 760 tests |
-| v1.1.0 | The Polyglot | PLANNED | Extended JavaScript/TypeScript support |
+| v1.1.0 | 100% AST | RELEASED | 100% AST Tools coverage, 808 tests |
+| v1.2.0 | The Polyglot | PLANNED | Extended JavaScript/TypeScript support |
 | v1.2.0 | The Speedster | PLANNED | FastMCP, performance optimization |
 
 ---
@@ -255,9 +256,9 @@ See [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) for detailed tasks.
 
 ---
 
-**Last Updated:** 2025-01-21  
-**Version:** 5.0 (v1.0.2 "Documentation & Resource Hardening" Released)  
-**Next Milestone:** v1.1.0 The Polyglot
+**Last Updated:** 2025-01-22  
+**Version:** 6.0 (v1.1.0 "100% AST" Released)  
+**Next Milestone:** v1.2.0 The Polyglot
 
 ---
 
@@ -265,6 +266,7 @@ See [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) for detailed tasks.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| v1.1.0 | 2025-01-22 | "100% AST" - 100% AST Tools coverage, 808 tests |
 | v1.0.2 | 2025-01-21 | Documentation & Resource Hardening - MCP resources documented, 760 tests |
 | v1.0.1 | 2025-01-20 | Docker port alignment, documentation fixes |
 | v1.0.0 | 2025-01-20 | "The Standard" - API freeze, caching, Z3 hardening, 654 tests |

@@ -1,4 +1,4 @@
-# Code Scalpel v1.0.2 - Comprehensive Documentation
+# Code Scalpel v1.1.0 - Comprehensive Documentation
 
 **The AI Agent Toolkit for Precision Code Analysis**
 
@@ -32,7 +32,7 @@ Code Scalpel is a precision toolkit for AI-driven code analysis. Unlike general-
 
 | Module | Purpose | Maturity |
 |--------|---------|----------|
-| **AST Tools** | Parse code into Abstract Syntax Trees | Stable (94% coverage) |
+| **AST Tools** | Parse code into Abstract Syntax Trees | Stable (100% coverage) |
 | **PDG Tools** | Build Program Dependence Graphs | Stable (86% coverage) |
 | **Symbolic Execution** | Explore execution paths with Z3 | Beta (76% coverage) |
 | **Security Analysis** | Taint-based vulnerability detection | Beta |
@@ -350,8 +350,8 @@ else:
 | `Int` | ✅ Full | Arbitrary precision |
 | `Bool` | ✅ Full | |
 | `String` | ✅ Full | With length constraints |
-| `Float` | ❌ Planned | v0.4.0 |
-| `List` | ❌ Planned | v0.5.0 |
+| `Float` | ❌ Planned | v1.3.0 |
+| `List` | ❌ Planned | v1.4.0 |
 
 #### Limitations
 
@@ -507,7 +507,7 @@ Response:
 ```json
 {
   "success": true,
-  "server_version": "1.0.2",
+  "server_version": "1.1.0",
   "functions": ["hello"],
   "classes": [],
   "imports": [],
@@ -700,7 +700,7 @@ Show version information.
 
 ```bash
 code-scalpel version
-# Code Scalpel v1.0.2
+# Code Scalpel v1.1.0
 ```
 
 ---
@@ -1002,4 +1002,4 @@ from code_scalpel.integrations import (
 
 ---
 
-*Code Scalpel v1.0.2 - Built with surgical precision for AI-driven code analysis.*
+*Code Scalpel v1.1.0 - Built with surgical precision for AI-driven code analysis.*

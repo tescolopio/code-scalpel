@@ -11,11 +11,9 @@ Tests cover:
 """
 
 import ast
-import os
 import tempfile
 from pathlib import Path
 
-import pytest
 
 from code_scalpel.ast_tools.call_graph import CallGraphBuilder
 
@@ -50,10 +48,10 @@ class TestIterPythonFiles:
             Path(tmpdir, "test1.py").write_text("x = 1")
             Path(tmpdir, "test2.py").write_text("y = 2")
             Path(tmpdir, "not_python.txt").write_text("hello")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 2
             assert all(f.suffix == ".py" for f in files)
 
@@ -65,10 +63,10 @@ class TestIterPythonFiles:
             subdir.mkdir()
             Path(tmpdir, "root.py").write_text("x = 1")
             Path(subdir, "nested.py").write_text("y = 2")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 2
 
     def test_skips_git_directory(self):
@@ -78,10 +76,10 @@ class TestIterPythonFiles:
             git_dir.mkdir()
             Path(git_dir, "config.py").write_text("git config")
             Path(tmpdir, "main.py").write_text("x = 1")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 1
             assert files[0].name == "main.py"
 
@@ -95,10 +93,10 @@ class TestIterPythonFiles:
             Path(venv_dir, "site.py").write_text("venv stuff")
             Path(dot_venv_dir, "pip.py").write_text("pip stuff")
             Path(tmpdir, "main.py").write_text("x = 1")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 1
             assert files[0].name == "main.py"
 
@@ -109,10 +107,10 @@ class TestIterPythonFiles:
             cache_dir.mkdir()
             Path(cache_dir, "module.cpython-39.pyc").write_text("bytecode")
             Path(tmpdir, "module.py").write_text("x = 1")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 1
             assert files[0].name == "module.py"
 
@@ -123,10 +121,10 @@ class TestIterPythonFiles:
             node_dir.mkdir()
             Path(node_dir, "setup.py").write_text("weird but possible")
             Path(tmpdir, "main.py").write_text("x = 1")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 1
 
     def test_skips_hidden_directories(self):
@@ -136,10 +134,10 @@ class TestIterPythonFiles:
             hidden_dir.mkdir()
             Path(hidden_dir, "secret.py").write_text("secret code")
             Path(tmpdir, "visible.py").write_text("x = 1")
-            
+
             builder = CallGraphBuilder(Path(tmpdir))
             files = list(builder._iter_python_files())
-            
+
             assert len(files) == 1
             assert files[0].name == "visible.py"
 
@@ -167,7 +165,7 @@ def bar(x, y):
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             assert "foo" in builder.definitions["test.py"]
             assert "bar" in builder.definitions["test.py"]
 
@@ -184,7 +182,7 @@ async def async_bar():
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             assert "async_foo" in builder.definitions["test.py"]
             assert "async_bar" in builder.definitions["test.py"]
 
@@ -201,7 +199,7 @@ class AnotherClass:
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             assert "MyClass" in builder.definitions["test.py"]
             assert "AnotherClass" in builder.definitions["test.py"]
 
@@ -222,7 +220,7 @@ class MyClass:
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             assert "MyClass" in builder.definitions["test.py"]
             assert "MyClass.method_one" in builder.definitions["test.py"]
             assert "MyClass.method_two" in builder.definitions["test.py"]
@@ -240,7 +238,7 @@ from typing import Dict, List
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             imports = builder.imports["test.py"]
             assert imports["os"] == "os"
             assert imports["system"] == "sys"
@@ -259,7 +257,7 @@ from collections import defaultdict as dd
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             imports = builder.imports["test.py"]
             assert imports["np"] == "numpy"
             assert imports["pd"] == "pandas"
@@ -275,7 +273,7 @@ from .utils import do_stuff
         with tempfile.TemporaryDirectory() as tmpdir:
             builder = CallGraphBuilder(Path(tmpdir))
             builder._analyze_definitions(tree, "test.py")
-            
+
             imports = builder.imports["test.py"]
             assert imports["helper"] == "helper"  # module is empty string
             # Note: relative imports lose the leading dot in current impl
@@ -297,9 +295,9 @@ def caller():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:caller" in result
             assert "foo" in result["test.py:caller"]
             assert "bar" in result["test.py:caller"]
@@ -316,9 +314,9 @@ def process():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:process" in result
             assert "obj.method" in result["test.py:process"]
             assert "self.helper" in result["test.py:process"]
@@ -334,9 +332,9 @@ def chain():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:chain" in result
             assert "a.b.c" in result["test.py:chain"]
 
@@ -353,9 +351,9 @@ def process():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {"utils": "utils"}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:process" in result
             assert "utils.hash" in result["test.py:process"]
 
@@ -372,9 +370,9 @@ def compute():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {"np": "numpy"}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:compute" in result
             assert "numpy.array" in result["test.py:compute"]
 
@@ -392,9 +390,9 @@ def main():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = {"helper", "main"}
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:main" in result
             assert "test.py:helper" in result["test.py:main"]
 
@@ -410,9 +408,9 @@ async def async_handler():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:async_handler" in result
             assert "process" in result["test.py:async_handler"]
             assert "sync_call" in result["test.py:async_handler"]
@@ -431,9 +429,9 @@ def func():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = {"func"}
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             # Only func should have tracked calls
             assert "test.py:func" in result
             assert len(result) == 1
@@ -445,35 +443,41 @@ class TestBuild:
     def test_build_simple_project(self):
         """Test building call graph for a simple project."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            Path(tmpdir, "main.py").write_text("""
+            Path(tmpdir, "main.py").write_text(
+                """
 def main():
     helper()
 
 def helper():
     print("helping")
-""")
+"""
+            )
             builder = CallGraphBuilder(Path(tmpdir))
             graph = builder.build()
-            
+
             assert "main.py:main" in graph
             assert "main.py:helper" in graph["main.py:main"]
 
     def test_build_multi_file_project(self):
         """Test building call graph across multiple files."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            Path(tmpdir, "main.py").write_text("""
+            Path(tmpdir, "main.py").write_text(
+                """
 from utils import process
 
 def main():
     process()
-""")
-            Path(tmpdir, "utils.py").write_text("""
+"""
+            )
+            Path(tmpdir, "utils.py").write_text(
+                """
 def process():
     print("processing")
-""")
+"""
+            )
             builder = CallGraphBuilder(Path(tmpdir))
             graph = builder.build()
-            
+
             assert "main.py:main" in graph
             # The call to process() should be resolved via imports
             assert len(graph["main.py:main"]) >= 1
@@ -481,62 +485,72 @@ def process():
     def test_build_handles_syntax_errors(self):
         """Test that syntax errors in files don't crash the build."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            Path(tmpdir, "good.py").write_text("""
+            Path(tmpdir, "good.py").write_text(
+                """
 def good():
     pass
-""")
-            Path(tmpdir, "bad.py").write_text("""
+"""
+            )
+            Path(tmpdir, "bad.py").write_text(
+                """
 def bad(
     # Missing closing paren - syntax error
-""")
+"""
+            )
             builder = CallGraphBuilder(Path(tmpdir))
             # Should not raise - just skip the bad file
             graph = builder.build()
-            
+
             assert "good.py:good" in graph
 
     def test_build_handles_empty_files(self):
         """Test handling of empty Python files."""
         with tempfile.TemporaryDirectory() as tmpdir:
             Path(tmpdir, "empty.py").write_text("")
-            Path(tmpdir, "real.py").write_text("""
+            Path(tmpdir, "real.py").write_text(
+                """
 def real():
     pass
-""")
+"""
+            )
             builder = CallGraphBuilder(Path(tmpdir))
             graph = builder.build()
-            
+
             assert "real.py:real" in graph
 
     def test_build_with_nested_functions(self):
         """Test handling of nested function definitions."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            Path(tmpdir, "nested.py").write_text("""
+            Path(tmpdir, "nested.py").write_text(
+                """
 def outer():
     def inner():
         helper()
     inner()
-""")
+"""
+            )
             builder = CallGraphBuilder(Path(tmpdir))
             graph = builder.build()
-            
+
             # Note: Current impl may handle nested differently
             assert "nested.py:outer" in graph or "nested.py:inner" in graph
 
     def test_build_with_classes(self):
         """Test handling of class methods in call graph."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            Path(tmpdir, "classes.py").write_text("""
+            Path(tmpdir, "classes.py").write_text(
+                """
 class MyClass:
     def method_a(self):
         self.method_b()
     
     def method_b(self):
         pass
-""")
+"""
+            )
             builder = CallGraphBuilder(Path(tmpdir))
             graph = builder.build()
-            
+
             assert "classes.py:method_a" in graph
             assert "self.method_b" in graph["classes.py:method_a"]
 
@@ -556,10 +570,10 @@ def func():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             # Lambda calls should be tracked within the enclosing function
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "test.py:func" in result
 
     def test_builtin_calls(self):
@@ -575,9 +589,9 @@ def func():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = {"func"}
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             assert "print" in result["test.py:func"]
             assert "len" in result["test.py:func"]
             assert "range" in result["test.py:func"]
@@ -593,9 +607,9 @@ def func():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             # At least the inner call should be tracked
             assert "test.py:func" in result
 
@@ -611,9 +625,9 @@ def func():
             builder = CallGraphBuilder(Path(tmpdir))
             builder.definitions["test.py"] = set()
             builder.imports["test.py"] = {}
-            
+
             result = builder._analyze_calls(tree, "test.py")
-            
+
             # Only the body call should be tracked
             assert "test.py:func" in result
             assert "actual_call" in result["test.py:func"]
@@ -630,9 +644,10 @@ class TestIntegration:
             src.mkdir()
             tests = Path(tmpdir, "tests")
             tests.mkdir()
-            
+
             Path(src, "__init__.py").write_text("")
-            Path(src, "core.py").write_text("""
+            Path(src, "core.py").write_text(
+                """
 from .utils import helper
 
 def main():
@@ -641,21 +656,98 @@ def main():
 
 def process():
     print("processing")
-""")
-            Path(src, "utils.py").write_text("""
+"""
+            )
+            Path(src, "utils.py").write_text(
+                """
 def helper():
     return "helping"
-""")
-            Path(tests, "test_core.py").write_text("""
+"""
+            )
+            Path(tests, "test_core.py").write_text(
+                """
 from src.core import main
 
 def test_main():
     main()
-""")
-            
+"""
+            )
+
             builder = CallGraphBuilder(Path(tmpdir))
             graph = builder.build()
-            
+
             # Should have entries for all functions
             assert any("main" in key for key in graph.keys())
             assert any("helper" in key for key in graph.keys())
+
+
+class TestCallGraphCoverageGaps:
+    """Tests to close specific coverage gaps in call_graph.py."""
+
+    def test_get_attribute_value_with_non_name_non_attribute(self):
+        """Test _get_attribute_value returns None for exotic node types (line 136).
+
+        Line 136 handles the case where node is neither ast.Name nor ast.Attribute,
+        such as a Subscript (list[0].method()) or Call (get_obj().method()).
+        """
+        code = """
+def func():
+    # Call on subscript result: handlers[0].process()
+    # The value of the Attribute is a Subscript, not Name or Attribute
+    handlers[0].process()
+    
+    # Call on call result: get_handler().execute()
+    # The value of the Attribute is a Call, not Name or Attribute
+    get_handler().execute()
+"""
+        tree = ast.parse(code)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            builder = CallGraphBuilder(Path(tmpdir))
+            builder.definitions["test.py"] = {"func"}
+            builder.imports["test.py"] = {}
+
+            # This should exercise line 136 where _get_attribute_value
+            # receives a Subscript or Call node and returns None
+            result = builder._analyze_calls(tree, "test.py")
+
+            # Should not crash, function should still be tracked
+            assert "test.py:func" in result
+            # The calls should be handled gracefully
+            # (may not be in result as the attribute value couldn't be resolved)
+
+    def test_subscript_method_call(self):
+        """Test method call on subscript expression."""
+        code = """
+def process_items():
+    items = [handler1, handler2]
+    items[0].run()
+    matrix[i][j].calculate()
+"""
+        tree = ast.parse(code)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            builder = CallGraphBuilder(Path(tmpdir))
+            builder.definitions["test.py"] = {"process_items"}
+            builder.imports["test.py"] = {}
+
+            # Line 136 is hit when processing items[0].run()
+            # because items[0] is Subscript, not Name or Attribute
+            result = builder._analyze_calls(tree, "test.py")
+
+            assert "test.py:process_items" in result
+
+    def test_call_result_method_call(self):
+        """Test method call on function call result."""
+        code = """
+def chained_operations():
+    create_connection().execute("query")
+    factory.build().initialize().start()
+"""
+        tree = ast.parse(code)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            builder = CallGraphBuilder(Path(tmpdir))
+            builder.definitions["test.py"] = {"chained_operations"}
+            builder.imports["test.py"] = {}
+
+            result = builder._analyze_calls(tree, "test.py")
+
+            assert "test.py:chained_operations" in result

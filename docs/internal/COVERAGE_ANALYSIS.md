@@ -1,12 +1,12 @@
 # Coverage Deep Dive Analysis
 
-Generated: 2025-01-21 | Code Scalpel v1.0.2
+Generated: 2025-12-07 | Code Scalpel v1.1.0
 
 ## Executive Summary
 
 **Current Coverage: 71%** (target: 75%)  
-**Tests: 760 passing**  
-**Statements: 6137 total, 1513 missed**  
+**Tests: 808 passing**  
+**AST Tools: 100% coverage achieved**  
 
 ---
 
@@ -16,9 +16,10 @@ Generated: 2025-01-21 | Code Scalpel v1.0.2
 
 | Module | Coverage | Notes |
 |--------|----------|-------|
-| `ast_tools/analyzer.py` | 94% | Core analysis stable |
-| `ast_tools/call_graph.py` | 98% | NEW in v1.0.2 |
-| `ast_tools/dependency_parser.py` | 97% | NEW in v1.0.2 |
+| `ast_tools/__init__.py` | 100% | Full coverage in v1.1.0 |
+| `ast_tools/analyzer.py` | 100% | Full coverage in v1.1.0 |
+| `ast_tools/call_graph.py` | 100% | Full coverage in v1.1.0 |
+| `ast_tools/dependency_parser.py` | 100% | Full coverage in v1.1.0 |
 | `taint_tracker.py` | 89% | Security analysis |
 | `generators/refactor_simulator.py` | 87% | Refactoring tools |
 
@@ -64,18 +65,27 @@ Generated: 2025-01-21 | Code Scalpel v1.0.2
 
 ## Progress Since v0.1.0
 
-| Metric | v0.1.0 | v1.0.0 | v1.0.2 | Change |
-|--------|--------|--------|--------|--------|
-| Coverage | 25% | 68% | 71% | +46% |
-| Tests | ~100 | 654 | 760 | +660 |
-| Statements Tested | 1689 | 4178 | 4624 | +2935 |
+| Metric | v0.1.0 | v1.0.0 | v1.0.2 | v1.1.0 | Change |
+|--------|--------|--------|--------|--------|--------|
+| Coverage | 25% | 68% | 71% | 71% | +46% |
+| Tests | ~100 | 654 | 760 | 808 | +708 |
+| AST Tools | - | - | 96% | 100% | Complete |
 
 ---
+
+## v1.1.0 Test Additions (100% AST Tools Coverage)
+
+| Test File | Tests Added | Coverage Impact |
+|-----------|-------------|------------------|
+| `test_ast_tools_init.py` | 24 tests | __init__.py 58%→100% |
+| `test_ast_analyzer.py` | +18 tests | analyzer.py 94%→100% |
+| `test_call_graph.py` | +3 tests | call_graph.py 98%→100% |
+| `test_dependency_parser.py` | +4 tests | dependency_parser.py 97%→100% |
 
 ## v1.0.2 Test Additions
 
 | Test File | Tests Added | Coverage Impact |
-|-----------|-------------|-----------------|
+|-----------|-------------|------------------|
 | `test_call_graph.py` | 36 tests | call_graph.py 0%→98% |
 | `test_dependency_parser.py` | 41 tests | dependency_parser.py 0%→97% |
 | `test_mcp_resources.py` | 29 tests | MCP resources verified |

@@ -1,6 +1,6 @@
 # Code Scalpel Documentation
 
-**v1.0.2 - The AI Agent Toolkit for Precision Code Analysis**
+**v1.1.0 - The AI Agent Toolkit for Precision Code Analysis**
 
 ---
 
@@ -44,7 +44,7 @@ code-scalpel/
 │   └── internal/           # Team documentation
 ├── demos/                  # Example code
 │   └── real_world/         # Real-world vulnerability demos
-└── tests/                  # Test suite (654 tests)
+└── tests/                  # Test suite (808 tests)
 ```
 
 ---
@@ -168,6 +168,7 @@ code-scalpel mcp --transport http --port 8593
 
 | Version | Codename | Highlights |
 |---------|----------|------------|
+| v1.1.0 | "The Scalpel" | 100% AST Tools coverage, 808 tests |
 | v1.0.2 | - | Documentation & Resource Hardening |
 | v1.0.1 | - | Docker port alignment |
 | v1.0.0 | "The Standard" | Caching, API freeze, Z3 hardening |

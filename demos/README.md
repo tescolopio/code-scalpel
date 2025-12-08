@@ -5,7 +5,7 @@ Evidence-based demonstrations proving Code Scalpel's core capabilities.
 ## Quick Start
 
 ```bash
-pip install code-scalpel==1.0.2
+pip install code-scalpel==1.1.0
 ```
 
 ## Core Demos

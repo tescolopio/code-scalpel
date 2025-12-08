@@ -46,7 +46,7 @@ You are the **Lead Architect and Devil's Advocate** for Code Scalpel.
 - **Bounded Unrolling:** All loops must have a `fuel` limit (default: 10) to prevent hanging.
 - **String Constraints:** String solving is expensive. Ensure constraints are bounded.
 
-**Not Yet Supported:** Float, List, Dict, complex objects (planned for v0.4.0+)
+**Not Yet Supported:** Float, List, Dict, complex objects (planned for v1.3.0+)
 
 ### Security Analysis (v0.3.0)
 
