@@ -429,3 +429,149 @@ class TestSymbolicVariable:
         solver = Solver()
         solver.add(constraint)
         assert solver.check() == sat
+
+    def test_symbolic_variable_bool_sort(self):
+        """SymbolicVariable can create boolean variables."""
+        var = SymbolicVariable("flag", BoolSort())
+        
+        assert var.name == "flag"
+        assert var.sort == BoolSort()
+        assert var.expr is not None
+
+    def test_symbolic_variable_string_sort(self):
+        """SymbolicVariable can create string variables."""
+        from z3 import StringSort
+        var = SymbolicVariable("name", StringSort())
+        
+        assert var.name == "name"
+        assert var.sort == StringSort()
+        assert var.expr is not None
+
+    def test_symbolic_variable_unsupported_sort_raises(self):
+        """SymbolicVariable raises ValueError for unsupported sorts."""
+        from z3 import RealSort
+        with pytest.raises(ValueError, match="Unsupported sort"):
+            SymbolicVariable("x", RealSort())
+
+
+# =============================================================================
+# SECTION 6: Coverage Completeness - Edge Cases for 100%
+# =============================================================================
+
+class TestCoverageCompleteness:
+    """Tests to achieve 100% coverage on state_manager.py."""
+
+    def test_create_string_variable(self):
+        """Can create a string symbolic variable via SymbolicState."""
+        from z3 import StringSort
+        state = SymbolicState()
+        s = state.create_variable("text", StringSort())
+        
+        assert s is not None
+        assert s.sort() == StringSort()
+
+    def test_create_variable_already_exists_same_sort(self):
+        """Creating same variable with same sort returns existing."""
+        state = SymbolicState()
+        x1 = state.create_variable("x", IntSort())
+        x2 = state.create_variable("x", IntSort())
+        
+        assert x1 is x2
+
+    def test_create_variable_already_exists_different_sort_raises(self):
+        """Creating same variable with different sort raises ValueError."""
+        state = SymbolicState()
+        state.create_variable("x", IntSort())
+        
+        with pytest.raises(ValueError, match="already exists with sort"):
+            state.create_variable("x", BoolSort())
+
+    def test_create_variable_unsupported_sort_raises(self):
+        """Creating variable with unsupported sort raises ValueError."""
+        from z3 import RealSort
+        state = SymbolicState()
+        
+        with pytest.raises(ValueError, match="Unsupported sort"):
+            state.create_variable("r", RealSort())
+
+    def test_variables_property_returns_copy(self):
+        """The variables property returns a copy, not the internal dict."""
+        state = SymbolicState()
+        state.create_variable("x", IntSort())
+        
+        vars_copy = state.variables
+        vars_copy["y"] = Int("y")  # Modify the copy
+        
+        # Original should be unaffected
+        assert "y" not in state.variables
+        assert state.has_variable("x")
+        assert not state.has_variable("y")
+
+    def test_path_condition_empty(self):
+        """path_condition() with no constraints returns trivially true."""
+        state = SymbolicState()
+        pc = state.path_condition()
+        
+        # Should be satisfiable (trivially true)
+        solver = Solver()
+        solver.add(pc)
+        assert solver.check() == sat
+
+    def test_path_condition_single_constraint(self):
+        """path_condition() with one constraint returns it directly."""
+        state = SymbolicState()
+        x = state.create_variable("x", IntSort())
+        state.add_constraint(x > 0)
+        
+        pc = state.path_condition()
+        
+        # Should be the constraint itself (or equivalent)
+        solver = Solver()
+        solver.add(pc)
+        solver.add(x == 5)
+        assert solver.check() == sat
+        
+        solver2 = Solver()
+        solver2.add(pc)
+        solver2.add(x == -1)
+        assert solver2.check() == unsat
+
+    def test_path_condition_multiple_constraints(self):
+        """path_condition() with multiple constraints returns And."""
+        state = SymbolicState()
+        x = state.create_variable("x", IntSort())
+        state.add_constraint(x > 0)
+        state.add_constraint(x < 10)
+        
+        pc = state.path_condition()
+        
+        solver = Solver()
+        solver.add(pc)
+        solver.add(x == 5)
+        assert solver.check() == sat
+
+    def test_summary_method(self):
+        """summary() returns a dictionary with state information."""
+        state = SymbolicState()
+        x = state.create_variable("x", IntSort())
+        state.add_constraint(x > 0)
+        
+        summary = state.summary()
+        
+        assert isinstance(summary, dict)
+        assert summary["depth"] == 0
+        assert "x" in summary["variables"]
+        assert summary["constraint_count"] == 1
+        assert summary["is_feasible"] is True
+
+    def test_repr_method(self):
+        """__repr__ returns a useful string representation."""
+        state = SymbolicState()
+        state.create_variable("x", IntSort())
+        state.create_variable("flag", BoolSort())
+        
+        repr_str = repr(state)
+        
+        assert "SymbolicState" in repr_str
+        assert "depth=0" in repr_str
+        assert "x" in repr_str

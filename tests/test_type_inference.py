@@ -337,3 +337,256 @@ class TestZ3Conversion:
         """InferredType.UNKNOWN cannot be converted to Z3."""
         with pytest.raises(ValueError, match="Cannot convert UNKNOWN"):
             InferredType.UNKNOWN.to_z3_sort()
+
+
+# =============================================================================
+# SECTION: Coverage Completeness Tests
+# =============================================================================
+
+class TestCoverageCompleteness:
+    """Tests to achieve 100% coverage on type_inference.py."""
+
+    def test_string_to_z3_sort(self):
+        """InferredType.STRING maps to z3.StringSort()"""
+        from z3 import StringSort
+        assert InferredType.STRING.to_z3_sort() == StringSort()
+
+    def test_inferred_type_repr(self):
+        """InferredType has readable repr."""
+        assert repr(InferredType.INT) == "InferredType.INT"
+        assert repr(InferredType.BOOL) == "InferredType.BOOL"
+        assert repr(InferredType.STRING) == "InferredType.STRING"
+
+    def test_syntax_error_returns_empty(self):
+        """Code with syntax error returns empty dict."""
+        engine = TypeInferenceEngine()
+        code = "x = ("  # Unclosed paren
+        result = engine.infer(code)
+        
+        assert result == {}
+
+    def test_tuple_unpacking(self):
+        """a, b = 1, 2 → both are UNKNOWN (conservative)."""
+        engine = TypeInferenceEngine()
+        code = "a, b = 1, 2"
+        result = engine.infer(code)
+        
+        assert result["a"] == InferredType.UNKNOWN
+        assert result["b"] == InferredType.UNKNOWN
+
+    def test_list_unpacking(self):
+        """[a, b] = [1, 2] → both are UNKNOWN (conservative)."""
+        engine = TypeInferenceEngine()
+        code = "[a, b] = [1, 2]"
+        result = engine.infer(code)
+        
+        assert result["a"] == InferredType.UNKNOWN
+        assert result["b"] == InferredType.UNKNOWN
+
+    def test_string_literal(self):
+        """x = 'hello' → x is STRING."""
+        engine = TypeInferenceEngine()
+        code = "x = 'hello'"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.STRING
+
+    def test_float_literal_is_unknown(self):
+        """x = 3.14 → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "x = 3.14"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_none_literal_is_unknown(self):
+        """x = None → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "x = None"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_ternary_expression_is_unknown(self):
+        """x = 1 if True else 2 → x is UNKNOWN (conservative)."""
+        engine = TypeInferenceEngine()
+        code = "x = 1 if True else 2"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_function_call_is_unknown(self):
+        """x = foo() → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "x = foo()"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_unary_plus(self):
+        """x = 5; y = +x → y is Int."""
+        engine = TypeInferenceEngine()
+        code = "x = 5\ny = +x"
+        result = engine.infer(code)
+        
+        assert result["y"] == InferredType.INT
+
+    def test_unary_plus_unknown(self):
+        """x = foo(); y = +x → y is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "y = +foo()"
+        result = engine.infer(code)
+        
+        assert result["y"] == InferredType.UNKNOWN
+
+    def test_unary_invert(self):
+        """x = 5; y = ~x → y is Int."""
+        engine = TypeInferenceEngine()
+        code = "x = 5\ny = ~x"
+        result = engine.infer(code)
+        
+        assert result["y"] == InferredType.INT
+
+    def test_unary_invert_unknown(self):
+        """x = foo(); y = ~x → y is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "y = ~foo()"
+        result = engine.infer(code)
+        
+        assert result["y"] == InferredType.UNKNOWN
+
+    def test_unary_fallback_unknown(self):
+        """Unary operator on non-int is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "x = 3.14\ny = -x"
+        result = engine.infer(code)
+        
+        assert result["y"] == InferredType.UNKNOWN
+
+    def test_string_concatenation(self):
+        """x = 'a' + 'b' → x is STRING."""
+        engine = TypeInferenceEngine()
+        code = "x = 'a' + 'b'"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.STRING
+
+    def test_string_int_add_unknown(self):
+        """x = 'a' + 1 → x is UNKNOWN (type mismatch)."""
+        engine = TypeInferenceEngine()
+        code = "a = 'hello'\nb = 1\nx = a + b"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_string_repetition(self):
+        """x = 'a' * 3 → x is STRING."""
+        engine = TypeInferenceEngine()
+        code = "x = 'a' * 3"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.STRING
+
+    def test_int_string_multiplication(self):
+        """x = 3 * 'a' → x is STRING."""
+        engine = TypeInferenceEngine()
+        code = "x = 3 * 'a'"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.STRING
+
+    def test_string_mult_unknown(self):
+        """x = 'a' * 'b' → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "a = 'hello'\nb = 'world'\nx = a * b"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_int_power(self):
+        """x = 2 ** 3 → x is INT."""
+        engine = TypeInferenceEngine()
+        code = "x = 2 ** 3"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.INT
+
+    def test_true_division_is_unknown(self):
+        """x = 10 / 3 → x is UNKNOWN (returns float)."""
+        engine = TypeInferenceEngine()
+        code = "x = 10 / 3"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_bitwise_or(self):
+        """x = 5 | 3 → x is INT."""
+        engine = TypeInferenceEngine()
+        code = "x = 5 | 3"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.INT
+
+    def test_bitwise_xor(self):
+        """x = 5 ^ 3 → x is INT."""
+        engine = TypeInferenceEngine()
+        code = "x = 5 ^ 3"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.INT
+
+    def test_bitwise_and(self):
+        """x = 5 & 3 → x is INT."""
+        engine = TypeInferenceEngine()
+        code = "x = 5 & 3"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.INT
+
+    def test_left_shift(self):
+        """x = 5 << 2 → x is INT."""
+        engine = TypeInferenceEngine()
+        code = "x = 5 << 2"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.INT
+
+    def test_right_shift(self):
+        """x = 20 >> 2 → x is INT."""
+        engine = TypeInferenceEngine()
+        code = "x = 20 >> 2"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.INT
+
+    def test_bitwise_on_non_int_unknown(self):
+        """x = 'a' | 'b' → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "a = 'hello'\nb = 'world'\nx = a | b"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_matrix_mult_unknown(self):
+        """x = a @ b → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "x = a @ b"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_boolop_with_unknown_operand(self):
+        """x = foo() and True → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "x = foo() and True"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
+
+    def test_subtraction_non_int_unknown(self):
+        """x = 'a' - 'b' → x is UNKNOWN."""
+        engine = TypeInferenceEngine()
+        code = "a = 'hello'\nb = 'world'\nx = a - b"
+        result = engine.infer(code)
+        
+        assert result["x"] == InferredType.UNKNOWN
