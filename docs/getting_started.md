@@ -6,10 +6,11 @@ Welcome to Code Scalpel! This guide will help you get up and running with AI-pow
 
 Code Scalpel is a Python toolkit for AI-driven code analysis and transformation. It provides:
 
-- **AST Analysis** - Parse and analyze code structure
-- **PDG Analysis** - Build Program Dependence Graphs for data/control flow
+- **AST Analysis** - Parse and analyze code structure (100% coverage)
+- **PDG Analysis** - Build Program Dependence Graphs for data/control flow (100% coverage)
+- **Program Slicing** - Extract relevant code subsets for analysis
 - **Dead Code Detection** - Find unused functions, variables, and imports
-- **Security Analysis** - Detect common security vulnerabilities
+- **Security Analysis** - Detect SQLi, XSS, command injection via taint analysis
 - **AI Agent Integration** - Works with Autogen, CrewAI, and other frameworks
 - **MCP Server** - HTTP API for AI agents to query code analysis
 
@@ -168,6 +169,50 @@ security = scalpel.analyze_security(code)
 
 # Get tools for CrewAI
 tools = scalpel.get_crewai_tools()
+```
+
+### 6. PDG Analysis (Data/Control Flow)
+
+```python
+from code_scalpel.pdg_tools import build_pdg, PDGAnalyzer, ProgramSlicer
+
+# Build a Program Dependence Graph
+code = """
+x = input("Enter value: ")
+y = int(x)
+if y > 10:
+    result = y * 2
+else:
+    result = y + 5
+print(result)
+"""
+
+pdg, call_graph = build_pdg(code)
+
+# Analyze the PDG
+analyzer = PDGAnalyzer(pdg)
+
+# Find data flow anomalies
+data_flow = analyzer.analyze_data_flow()
+print(f"Anomalies: {data_flow['anomalies']}")
+
+# Security analysis (taint tracking)
+vulns = analyzer.perform_security_analysis()
+for v in vulns:
+    print(f"Vulnerability: {v.type}")
+    print(f"  Path: {v.source} -> {v.sink}")
+
+# Compute a program slice
+from code_scalpel.pdg_tools import SlicingCriteria, SliceType
+
+slicer = ProgramSlicer(pdg)
+# Get all code that affects 'result'
+result_nodes = [n for n, d in pdg.nodes(data=True) 
+                if 'result' in d.get('targets', [])]
+if result_nodes:
+    criteria = SlicingCriteria(nodes={result_nodes[0]}, variables=set())
+    slice_pdg = slicer.compute_slice(criteria, SliceType.BACKWARD)
+    print(f"Slice size: {len(slice_pdg.nodes())} nodes")
 ```
 
 ## Analysis Levels

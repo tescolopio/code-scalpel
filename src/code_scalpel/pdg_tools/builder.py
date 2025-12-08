@@ -59,6 +59,18 @@ class PDGBuilder(ast.NodeVisitor):
         self.visit(tree)
         return self.graph, self.call_graph
 
+    def visit_Module(self, node: ast.Module):
+        """Handle module-level code by creating a module scope."""
+        # Create module-level scope for variable tracking
+        self.enter_scope("module", "__module__", "module_0")
+        
+        # Visit all top-level statements
+        for stmt in node.body:
+            self.visit(stmt)
+        
+        # Exit module scope
+        self.exit_scope()
+
     def enter_scope(self, type_: str, name: str, node_id: str):
         """Enter a new scope."""
         parent = self.scopes[-1] if self.scopes else None
@@ -118,6 +130,43 @@ class PDGBuilder(ast.NodeVisitor):
         # Exit function scope
         self.exit_scope()
         self.current_function = prev_function
+
+    def visit_If(self, node: ast.If):
+        """Handle if statements."""
+        node_id = self._get_node_id("if")
+
+        # Add if node
+        self.graph.add_node(
+            node_id,
+            type=NodeType.IF.value,
+            condition=ast.unparse(node.test),
+            lineno=node.lineno,
+        )
+
+        # Add data dependencies for condition
+        for var in self._extract_variables(node.test):
+            if def_node := self._find_definition(var):
+                self.graph.add_edge(def_node, node_id, type="data_dependency")
+
+        # Enter control context
+        self.control_deps.append(node_id)
+
+        # Process if body
+        for stmt in node.body:
+            self.visit(stmt)
+            stmt_id = list(self.graph.nodes)[-1]
+            self.graph.add_edge(node_id, stmt_id, type="control_dependency")
+
+        # Process else/elif body
+        for stmt in node.orelse:
+            self.visit(stmt)
+            stmt_id = list(self.graph.nodes)[-1]
+            self.graph.add_edge(node_id, stmt_id, type="control_dependency")
+
+        # Exit control context
+        self.control_deps.pop()
+
+        return node_id
 
     def visit_ClassDef(self, node: ast.ClassDef):
         """Handle class definitions."""
@@ -257,6 +306,92 @@ class PDGBuilder(ast.NodeVisitor):
         self.control_deps.pop()
         self.exception_deps.pop()
 
+    def visit_Assign(self, node: ast.Assign):
+        """Handle assignment statements."""
+        node_id = self._get_node_id("assign")
+
+        # Extract target variable names
+        target_names = []
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                target_names.append(target.id)
+            elif isinstance(target, (ast.Tuple, ast.List)):
+                for elt in target.elts:
+                    if isinstance(elt, ast.Name):
+                        target_names.append(elt.id)
+
+        # Add assignment node
+        self.graph.add_node(
+            node_id,
+            type=NodeType.ASSIGN.value,
+            targets=target_names,
+            value=ast.unparse(node.value),
+            lineno=node.lineno,
+            defines=target_names,
+        )
+
+        # Add control dependency if inside a control structure
+        if self.control_deps:
+            for ctrl_id in self.control_deps:
+                self.graph.add_edge(ctrl_id, node_id, type="control_dependency")
+
+        # Add data dependencies for variables used in RHS
+        for var in self._extract_variables(node.value):
+            if def_node := self._find_definition(var):
+                self.graph.add_edge(def_node, node_id, type="data_dependency")
+
+        # Visit any calls in the value expression
+        for child in ast.walk(node.value):
+            if isinstance(child, ast.Call):
+                call_id = self.visit_Call(child)
+                if call_id:  # pragma: no branch - visit_Call always returns node_id
+                    self.graph.add_edge(call_id, node_id, type="data_dependency")
+
+        # Register variable definitions
+        for var_name in target_names:
+            self._add_variable_definition(var_name, node_id)
+
+        return node_id
+
+    def visit_AugAssign(self, node: ast.AugAssign):
+        """Handle augmented assignment statements (+=, -=, etc.)."""
+        node_id = self._get_node_id("assign")
+
+        # Get target name
+        target_name = node.target.id if isinstance(node.target, ast.Name) else None
+
+        # Add assignment node
+        self.graph.add_node(
+            node_id,
+            type=NodeType.ASSIGN.value,
+            targets=[target_name] if target_name else [],
+            value=ast.unparse(node.value),
+            op=type(node.op).__name__,
+            lineno=node.lineno,
+            defines=[target_name] if target_name else [],
+        )
+
+        # Add control dependency if inside a control structure
+        if self.control_deps:
+            for ctrl_id in self.control_deps:
+                self.graph.add_edge(ctrl_id, node_id, type="control_dependency")
+
+        # Add data dependencies - includes the target itself (x += 1 uses x)
+        if target_name:
+            if def_node := self._find_definition(target_name):
+                self.graph.add_edge(def_node, node_id, type="data_dependency")
+
+        # Add data dependencies for variables used in RHS
+        for var in self._extract_variables(node.value):
+            if def_node := self._find_definition(var):
+                self.graph.add_edge(def_node, node_id, type="data_dependency")
+
+        # Register variable definition
+        if target_name:
+            self._add_variable_definition(target_name, node_id)
+
+        return node_id
+
     def visit_Call(self, node: ast.Call):
         """Handle function calls."""
         node_id = self._get_node_id("call")
@@ -308,7 +443,9 @@ class PDGBuilder(ast.NodeVisitor):
     def _process_decorator(self, decorator: ast.AST, function_id: str):
         """Process a function decorator."""
         decorator_id = self.visit(decorator)
-        self.graph.add_edge(decorator_id, function_id, type="decorator_dependency")
+        # Only add edge if decorator was processed (some decorators return None)
+        if decorator_id is not None:
+            self.graph.add_edge(decorator_id, function_id, type="decorator_dependency")
 
     def _process_loop_variable(self, target: ast.AST, loop_id: str):
         """Process loop variable assignment."""

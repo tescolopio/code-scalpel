@@ -256,7 +256,7 @@ tree = builder.build_ast(code, preprocess=True, validate=True)
 
 ### PDGBuilder
 
-Build Program Dependence Graphs.
+Build Program Dependence Graphs with full data and control dependency tracking.
 
 ```python
 from code_scalpel.pdg_tools import PDGBuilder, build_pdg
@@ -264,63 +264,198 @@ from code_scalpel.pdg_tools import PDGBuilder, build_pdg
 # Convenience function
 pdg, call_graph = build_pdg("x = 1; y = x + 1")
 
-# Or use the class
+# Or use the class with options
 builder = PDGBuilder(
-    include_data_deps=True,
-    include_control_deps=True,
-    track_calls=True
+    track_constants=True,    # Track constant values
+    interprocedural=True     # Cross-function analysis
 )
 pdg, call_graph = builder.build(code)
 ```
 
 The PDG is a NetworkX DiGraph where:
-- Nodes represent statements/expressions
-- Edges represent dependencies (data or control)
+- **Nodes** represent statements (assign, if, for, while, call, function, class, try, except, return)
+- **Edges** represent dependencies:
+  - `data_dependency` - Variable def-use chains
+  - `control_dependency` - Conditional execution
+  - `loop_dependency` - Loop body membership
+  - `exception_dependency` - Try/except flow
+  - `call_dependency` - Function calls
+  - `parameter_dependency` - Function parameters
+
+#### Supported Constructs
+
+| Construct | Handler | Dependencies |
+|-----------|---------|-------------|
+| `x = expr` | `visit_Assign` | Data deps from RHS variables |
+| `x += expr` | `visit_AugAssign` | Data deps including target |
+| `if cond:` | `visit_If` | Control deps to body/else |
+| `for x in iter:` | `visit_For` | Loop + control deps |
+| `while cond:` | `visit_While` | Loop + control deps |
+| `try/except` | `visit_Try` | Exception deps |
+| `def func():` | `visit_FunctionDef` | Parameter deps |
+| `class Cls:` | `visit_ClassDef` | Control deps to body |
+| `func()` | `visit_Call` | Call graph edges |
 
 ---
 
 ### PDGAnalyzer
 
-Analyze Program Dependence Graphs.
+Advanced analysis of Program Dependence Graphs including data flow, control flow, security analysis, and optimization opportunities.
 
 ```python
 from code_scalpel.pdg_tools import PDGAnalyzer
 
-analyzer = PDGAnalyzer(cache_enabled=True)
+analyzer = PDGAnalyzer(pdg)  # Pass PDG to constructor
 ```
 
 #### Methods
 
-##### `analyze_data_flow(pdg: nx.DiGraph) -> Dict`
+##### `analyze_data_flow() -> Dict`
 
-Analyze data flow in the PDG.
-
-```python
-flow = analyzer.analyze_data_flow(pdg)
-print(flow['definitions'])
-print(flow['uses'])
-```
-
-##### `analyze_control_flow(pdg: nx.DiGraph) -> Dict`
-
-Analyze control flow in the PDG.
+Comprehensive data flow analysis with caching.
 
 ```python
-flow = analyzer.analyze_control_flow(pdg)
-print(flow['branches'])
-print(flow['loops'])
+flow = analyzer.analyze_data_flow()
+print(flow['anomalies'])           # Undefined/unused variables
+print(flow['def_use_chains'])      # Definition-use chains
+print(flow['live_variables'])      # Live variable analysis
+print(flow['reaching_definitions']) # Reaching definitions
+print(flow['value_ranges'])        # Variable value ranges
 ```
 
-##### `compute_program_slice(pdg: nx.DiGraph, criterion: str, direction: str) -> Set`
+##### `analyze_control_flow() -> Dict`
+
+Control flow analysis.
+
+```python
+flow = analyzer.analyze_control_flow()
+print(flow['cyclomatic_complexity']) # McCabe complexity
+print(flow['control_dependencies'])  # Control dep mapping
+print(flow['unreachable_code'])      # Dead code detection
+print(flow['loop_info'])             # Loop analysis
+print(flow['dominators'])            # Dominator tree
+```
+
+##### `perform_security_analysis() -> List[SecurityVulnerability]`
+
+Taint analysis and vulnerability detection.
+
+```python
+vulns = analyzer.perform_security_analysis()
+for v in vulns:
+    print(f"{v.type}: {v.source} -> {v.sink}")
+    print(f"  Path: {v.path}")
+    print(f"  Severity: {v.severity}")
+```
+
+**Detected Sources:** `input()`, `request.get`, `request.form`, `file.read`  
+**Detected Sinks:** `execute()`, `eval()`, `subprocess.run`, `render_template`  
+**Sanitizers:** `escape()`, `html.escape`, `bleach.clean`, `parameterize`
+
+##### `find_optimization_opportunities() -> Dict`
+
+Identify code optimization opportunities.
+
+```python
+opts = analyzer.find_optimization_opportunities()
+print(opts['loop_invariant'])        # Code to hoist from loops
+print(opts['common_subexpressions']) # CSE candidates
+print(opts['dead_code'])             # Unreachable code
+print(opts['redundant_computations']) # Duplicate computations
+```
+
+##### `compute_program_slice(criterion: str, direction: str) -> nx.DiGraph`
 
 Compute a program slice.
 
 ```python
-# Backward slice from variable 'result'
-backward = analyzer.compute_program_slice(pdg, 'result', 'backward')
+# Backward slice - what affects this node?
+backward = analyzer.compute_program_slice('result_node', 'backward')
 
-# Forward slice from variable 'x'
-forward = analyzer.compute_program_slice(pdg, 'x', 'forward')
+# Forward slice - what does this node affect?
+forward = analyzer.compute_program_slice('input_node', 'forward')
+```
+
+---
+
+### ProgramSlicer
+
+Advanced program slicing with multiple strategies and caching.
+
+```python
+from code_scalpel.pdg_tools import ProgramSlicer, SlicingCriteria, SliceType
+
+slicer = ProgramSlicer(pdg)
+```
+
+#### Slice Types
+
+| Type | Description |
+|------|-------------|
+| `BACKWARD` | All nodes that affect the criterion |
+| `FORWARD` | All nodes affected by the criterion |
+| `THIN` | Direct dependencies only (no transitive) |
+| `UNION` | Union of multiple slices |
+| `INTERSECTION` | Intersection of multiple slices |
+| `CONTROL` | Control dependencies only |
+| `DATA` | Data dependencies only |
+
+#### Methods
+
+##### `compute_slice(criteria, slice_type) -> nx.DiGraph`
+
+Compute a program slice.
+
+```python
+# Simple string criterion
+slice_pdg = slicer.compute_slice("node_id", SliceType.BACKWARD)
+
+# Detailed criteria
+criteria = SlicingCriteria(
+    nodes={"node1", "node2"},
+    variables={"x", "y"},
+    include_control=True,
+    include_data=True
+)
+slice_pdg = slicer.compute_slice(criteria, SliceType.BACKWARD)
+```
+
+##### `compute_chop(source, target) -> nx.DiGraph`
+
+Compute a program chop (intersection of forward and backward slices).
+
+```python
+source = SlicingCriteria(nodes={"input_node"}, variables=set())
+target = SlicingCriteria(nodes={"output_node"}, variables=set())
+
+# Get all nodes on paths from source to target
+chop = slicer.compute_chop(source, target)
+```
+
+##### `decompose_slice(criteria) -> Dict[str, nx.DiGraph]`
+
+Decompose a slice into meaningful components.
+
+```python
+components = slicer.decompose_slice(criteria)
+print(components['data_only'])    # Data dependency subgraph
+print(components['control_only']) # Control dependency subgraph
+print(components['core'])         # Essential nodes
+print(components['auxiliary'])    # Supporting nodes
+```
+
+##### `get_slice_info(sliced_pdg) -> SliceInfo`
+
+Get metadata about a slice.
+
+```python
+info = slicer.get_slice_info(slice_pdg)
+print(info.nodes)       # Set of node IDs
+print(info.edges)       # Set of edge tuples
+print(info.variables)   # Variables in slice
+print(info.line_range)  # (start_line, end_line)
+print(info.size)        # Number of nodes
+print(info.complexity)  # Slice complexity score
 ```
 
 ##### `perform_security_analysis(pdg: nx.DiGraph, code: str) -> List[Dict]`

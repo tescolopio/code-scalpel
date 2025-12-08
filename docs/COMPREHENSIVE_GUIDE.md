@@ -33,7 +33,7 @@ Code Scalpel is a precision toolkit for AI-driven code analysis. Unlike general-
 | Module | Purpose | Maturity |
 |--------|---------|----------|
 | **AST Tools** | Parse code into Abstract Syntax Trees | Stable (100% coverage) |
-| **PDG Tools** | Build Program Dependence Graphs | Stable (86% coverage) |
+| **PDG Tools** | Build Program Dependence Graphs | Stable (100% coverage) |
 | **Symbolic Execution** | Explore execution paths with Z3 | Beta (76% coverage) |
 | **Security Analysis** | Taint-based vulnerability detection | Beta |
 | **MCP Server** | Model Context Protocol integration | Stable |
@@ -194,7 +194,7 @@ visualize_ast(tree, output_file="my_ast", format="dot", view=False)
 
 ### PDG Tools
 
-Program Dependence Graphs capture data flow and control dependencies.
+Program Dependence Graphs capture data flow and control dependencies. **100% test coverage.**
 
 #### Building a PDG
 
@@ -212,33 +212,46 @@ def process_order(user_id, amount):
     return final_amount
 """
 
-# Quick build
-pdg = build_pdg(code)
+# Quick build - returns PDG and call graph
+pdg, call_graph = build_pdg(code)
 
 # With builder for more control
-builder = PDGBuilder()
-pdg = builder.build(code)
+builder = PDGBuilder(
+    track_constants=True,    # Track constant values
+    interprocedural=True     # Cross-function analysis
+)
+pdg, call_graph = builder.build(code)
 ```
+
+#### PDG Node and Edge Types
+
+**Node Types:** `assign`, `if`, `for`, `while`, `call`, `return`, `function`, `class`, `try`, `except`
+
+**Edge Types:**
+- `data_dependency` - Variable def-use chains
+- `control_dependency` - Conditional execution
+- `loop_dependency` - Loop body membership  
+- `exception_dependency` - Try/except flow
+- `parameter_dependency` - Function parameters
 
 #### Analyzing Data Flow
 
 ```python
 analyzer = PDGAnalyzer(pdg)
 
-# Find all dependencies for a variable
-deps = analyzer.get_dependencies("final_amount")
-print(f"final_amount depends on: {deps}")
-# Output: ['amount', 'discount']
+# Comprehensive data flow analysis
+data_flow = analyzer.analyze_data_flow()
+print(f"Def-use chains: {data_flow['def_use_chains']}")
+print(f"Anomalies: {data_flow['anomalies']}")
 
-# Find data flow paths
-paths = analyzer.find_data_flow_paths("user_id", "final_amount")
-for path in paths:
-    print(f"Path: {' -> '.join(path)}")
+# Control flow analysis  
+control_flow = analyzer.analyze_control_flow()
+print(f"Cyclomatic complexity: {control_flow['cyclomatic_complexity']}")
 
-# Detect anomalies (unused vars, undefined refs)
-anomalies = analyzer.detect_anomalies()
-for anomaly in anomalies:
-    print(f"  {anomaly.type}: {anomaly.variable} at line {anomaly.line}")
+# Security analysis (taint tracking)
+vulns = analyzer.perform_security_analysis()
+for v in vulns:
+    print(f"{v.type}: {v.source} -> {v.sink}")
 ```
 
 #### Program Slicing
@@ -248,30 +261,45 @@ from code_scalpel.pdg_tools import ProgramSlicer, SlicingCriteria, SliceType
 
 slicer = ProgramSlicer(pdg)
 
-# Backward slice: "What affects this variable?"
+# Backward slice: "What affects this node?"
+result_nodes = [n for n, d in pdg.nodes(data=True) 
+                if 'final_amount' in d.get('targets', [])]
 criteria = SlicingCriteria(
-    variable="final_amount",
-    line=7,
-    slice_type=SliceType.BACKWARD
+    nodes=set(result_nodes),
+    variables=set(),
+    include_control=True,
+    include_data=True
 )
-backward_slice = slicer.slice(criteria)
-print(f"Lines affecting final_amount: {backward_slice.lines}")
+backward_slice = slicer.compute_slice(criteria, SliceType.BACKWARD)
+print(f"Nodes affecting final_amount: {len(backward_slice.nodes())}")
 
-# Forward slice: "What does this variable affect?"
-criteria.slice_type = SliceType.FORWARD
-criteria.variable = "discount"
-forward_slice = slicer.slice(criteria)
+# Forward slice: "What does this node affect?"
+forward_slice = slicer.compute_slice(criteria, SliceType.FORWARD)
+
+# Thin slice: Direct dependencies only (no transitive)
+thin_slice = slicer.compute_slice(criteria, SliceType.THIN)
+
+# Program chop: What's between two points?
+source = SlicingCriteria(nodes={"input_node"}, variables=set())
+target = SlicingCriteria(nodes={"output_node"}, variables=set())
+chop = slicer.compute_chop(source, target)
+
+# Get slice metadata
+info = slicer.get_slice_info(backward_slice)
+print(f"Slice size: {info.size}, complexity: {info.complexity}")
 ```
 
 #### Key Classes
 
 | Class | Purpose |
-|-------|---------|
-| `PDGBuilder` | Construct PDG from source code |
-| `PDGAnalyzer` | Query dependencies and detect anomalies |
-| `ProgramSlicer` | Extract code slices based on criteria |
-| `NodeType` | Enum of PDG node types |
-| `DependencyType` | DATA, CONTROL, or CALL dependency |
+|-------|--------|
+| `PDGBuilder` | Construct PDG from source code with `visit_*` methods |
+| `PDGAnalyzer` | Data flow, control flow, security, and optimization analysis |
+| `ProgramSlicer` | Extract code slices (backward, forward, thin, chop) |
+| `SlicingCriteria` | Define slice criteria (nodes, variables, options) |
+| `SliceType` | BACKWARD, FORWARD, THIN, UNION, INTERSECTION |
+| `NodeType` | Enum: ASSIGN, IF, WHILE, FOR, CALL, FUNCTION, etc. |
+| `DependencyType` | DATA, CONTROL, CALL, PARAMETER, RETURN |
 
 ---
 

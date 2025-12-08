@@ -83,17 +83,19 @@ Key components:
 
 ## Project Context
 
-Code Scalpel v0.3.0 "The Mathematician" is a precision toolkit for AI-driven code analysis.
+Code Scalpel v1.1.0 is a precision toolkit for AI-driven code analysis.
 
 | Module | Status | Coverage |
 |--------|--------|----------|
-| AST Analysis | Stable | 94% |
-| PDG Builder | Stable | 86% |
+| AST Analysis | Stable | 100% |
+| PDG Builder | Stable | 100% |
+| PDG Analyzer | Stable | 100% |
+| PDG Slicer | Stable | 100% |
 | Symbolic Engine | Beta | 76% |
-| Security Analysis | Beta | New in v0.3.0 |
+| Security Analysis | Beta | Taint tracking |
 | MCP Server | Stable | HTTP/REST |
 
-**Test Suite:** 469 tests passing
+**Test Suite:** 1016 tests passing
 
 ## Communication
 

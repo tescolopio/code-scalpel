@@ -371,7 +371,7 @@ class TestImportErrorBranchesWithReload:
 
     def test_transformer_import_failure_branch(self):
         """Test lines 8-9: except ImportError for transformer."""
-        import importlib
+        import builtins
         import sys
         from unittest.mock import patch
 
@@ -379,6 +379,7 @@ class TestImportErrorBranchesWithReload:
         modules_to_remove = [k for k in sys.modules if "ast_tools" in k]
         saved_modules = {k: sys.modules.pop(k) for k in modules_to_remove}
 
+        original_import = builtins.__import__
         try:
             # Mock the transformer import to fail
             def mock_import(name, *args, **kwargs):
@@ -386,8 +387,7 @@ class TestImportErrorBranchesWithReload:
                     raise ImportError("Mocked transformer import failure")
                 return original_import(name, *args, **kwargs)
 
-            original_import = __builtins__.__import__
-            with patch("builtins.__import__", side_effect=mock_import):
+            with patch.object(builtins, "__import__", side_effect=mock_import):
                 # This import will hit the except ImportError branch
                 import code_scalpel.ast_tools as ast_tools_reloaded
                 
@@ -399,21 +399,21 @@ class TestImportErrorBranchesWithReload:
 
     def test_visualizer_import_failure_branch(self):
         """Test lines 13-14: except ImportError for visualizer."""
-        import importlib
+        import builtins
         import sys
         from unittest.mock import patch
 
         modules_to_remove = [k for k in sys.modules if "ast_tools" in k]
         saved_modules = {k: sys.modules.pop(k) for k in modules_to_remove}
 
+        original_import = builtins.__import__
         try:
             def mock_import(name, *args, **kwargs):
                 if "visualizer" in name:
                     raise ImportError("Mocked visualizer import failure")
                 return original_import(name, *args, **kwargs)
 
-            original_import = __builtins__.__import__
-            with patch("builtins.__import__", side_effect=mock_import):
+            with patch.object(builtins, "__import__", side_effect=mock_import):
                 import code_scalpel.ast_tools as ast_tools_reloaded
                 
                 assert ast_tools_reloaded.ASTVisualizer is None
@@ -422,21 +422,21 @@ class TestImportErrorBranchesWithReload:
 
     def test_validator_import_failure_branch(self):
         """Test lines 18-19: except ImportError for validator."""
-        import importlib
+        import builtins
         import sys
         from unittest.mock import patch
 
         modules_to_remove = [k for k in sys.modules if "ast_tools" in k]
         saved_modules = {k: sys.modules.pop(k) for k in modules_to_remove}
 
+        original_import = builtins.__import__
         try:
             def mock_import(name, *args, **kwargs):
                 if "validator" in name:
                     raise ImportError("Mocked validator import failure")
                 return original_import(name, *args, **kwargs)
 
-            original_import = __builtins__.__import__
-            with patch("builtins.__import__", side_effect=mock_import):
+            with patch.object(builtins, "__import__", side_effect=mock_import):
                 import code_scalpel.ast_tools as ast_tools_reloaded
                 
                 assert ast_tools_reloaded.ASTValidator is None
