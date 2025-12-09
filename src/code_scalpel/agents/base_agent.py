@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ..pdg_tools import ASTAnalyzer, PDGAnalyzer, SymbolicExecutor
+from ..pdg_tools import ASTAnalyzer, PDGAnalyzer
+from ..symbolic_execution_tools import SymbolicAnalyzer
 
 
 class BaseCodeAnalysisAgent(ABC):
     def __init__(self):
         self.ast_analyzer = ASTAnalyzer()
         self.pdg_analyzer = PDGAnalyzer()
-        self.symbolic_executor = SymbolicExecutor()
+        self.symbolic_analyzer = SymbolicAnalyzer()
 
     @abstractmethod
     def analyze(self, code: str) -> dict[str, Any]:

@@ -232,9 +232,8 @@ class SymbolicAnalyzer:
             cached = self._cache.get(code, "symbolic", cache_config)
             if cached is not None:
                 logger.debug("Cache hit for symbolic analysis")
-                if isinstance(cached, dict):
-                    return AnalysisResult.from_dict(cached)
-                return cached
+                # Cache always stores dicts via to_dict()
+                return AnalysisResult.from_dict(cached)
 
         # Cache miss - perform expensive symbolic analysis
         result = self._analyze_uncached(code, language)
@@ -412,7 +411,9 @@ class SymbolicAnalyzer:
             self._solver = ConstraintSolver(timeout_ms=self.solver_timeout)
 
         constraints = list(self._preconditions) + [target_condition]
-        solver_result = self._solver.check(constraints)
+        # Extract variables from declared symbols for model extraction
+        variables = list(self._declared_symbols.values())
+        solver_result = self._solver.solve(constraints, variables)
 
         if solver_result.status == SolverStatus.SAT:
             return solver_result.model

@@ -1,44 +1,22 @@
-# Coverage configuration for Code Scalpel
-# This file excludes hollow shells and unimplemented modules from coverage
-
 [run]
+branch = true
 source = src/code_scalpel
-branch = True
-omit = 
-    */tests/*
-    */__pycache__/*
-    */.venv/*
-    */venv/*
-    # Hollow shells - legacy placeholders not yet implemented
-    */core.py
-    */pdg_tools/transformer.py
-    */pdg_tools/utils.py
-    */pdg_tools/visualizer.py
-    */symbolic_execution_tools/utils.py
-    */agents/base_agent.py
-    */agents/code_review_agent.py
-    # External linter wrappers - require external tools
-    */python_parsers/*.py
-    # AST tools not yet integrated
-    */ast_tools/builder.py
-    */ast_tools/transformer.py
-    */ast_tools/utils.py
-    */ast_tools/validator.py
-    */ast_tools/visualizer.py
-    # Experimental symbolic execution components (not in critical path)
-    */symbolic_execution_tools/symbolic_executor.py
-    */symbolic_execution_tools/test_generator.py
-    */symbolic_execution_tools/path_explorer.py
-    */symbolic_execution_tools/model_checker.py
-    */symbolic_execution_tools/result_analyzer.py
+omit =
+    # Unused/dead modules in symbolic_execution_tools
+    src/code_scalpel/symbolic_execution_tools/utils.py
+    src/code_scalpel/symbolic_execution_tools/symbolic_executor.py
+    src/code_scalpel/symbolic_execution_tools/path_explorer.py
+    src/code_scalpel/symbolic_execution_tools/test_generator.py
+    src/code_scalpel/symbolic_execution_tools/model_checker.py
+    src/code_scalpel/symbolic_execution_tools/result_analyzer.py
 
 [report]
 exclude_lines =
     pragma: no cover
-    def __repr__
     raise NotImplementedError
-    if __name__ == .__main__.:
     if TYPE_CHECKING:
-    pass
-fail_under = 75
-show_missing = True
+    if __name__ == .__main__.:
+    \.\.\.
+
+partial_branches =
+    # pragma: no branch

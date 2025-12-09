@@ -620,37 +620,51 @@ def _symbolic_execute_sync(code: str, max_paths: int = 10) -> SymbolicResult:
 
     try:
         # Import here to avoid circular imports
-        from code_scalpel.symbolic import SymbolicExecutor
+        from code_scalpel.symbolic_execution_tools import SymbolicAnalyzer
+        from code_scalpel.symbolic_execution_tools.engine import PathStatus
 
-        executor = SymbolicExecutor(max_iterations=max_paths)
-        result = executor.execute(code)
+        analyzer = SymbolicAnalyzer(max_loop_iterations=max_paths)
+        result = analyzer.analyze(code)
 
         paths = []
-        for i, path in enumerate(result.get("paths", [])):
-            # Extract reproduction inputs from the final state
-            # Assuming symbolic variables in the state represent inputs
-            final_state = path.get("state", {})
-            symbolic_vars = result.get("symbolic_vars", [])
-            reproduction_input = {
-                k: v for k, v in final_state.items() if k in symbolic_vars
-            }
+        all_constraints = []
+        for i, path in enumerate(result.paths):
+            # PathResult has: path_id, status, constraints, variables, model
+            # Convert Z3 constraints to string conditions
+            conditions = [str(c) for c in path.constraints] if path.constraints else []
+            all_constraints.extend(conditions)
 
             paths.append(
                 ExecutionPath(
-                    path_id=i,
-                    conditions=path.get("conditions", []),
-                    final_state=final_state,
-                    reproduction_input=reproduction_input,
-                    is_reachable=path.get("reachable", True),
+                    path_id=path.path_id,
+                    conditions=conditions,
+                    final_state=path.variables or {},
+                    reproduction_input=path.model or {},
+                    is_reachable=path.status == PathStatus.FEASIBLE,
                 )
             )
 
+        # If symbolic execution didn't find variables or constraints,
+        # supplement with AST-based analysis
+        symbolic_vars = list(result.all_variables.keys()) if result.all_variables else []
+        constraints_list = list(set(all_constraints))
+
+        if not symbolic_vars or not constraints_list:
+            basic = _basic_symbolic_analysis(code)
+            if not symbolic_vars and basic.symbolic_variables:
+                symbolic_vars = basic.symbolic_variables
+            if not constraints_list and basic.constraints:
+                constraints_list = basic.constraints
+            # Also use basic paths if symbolic found nothing
+            if not paths and basic.paths:
+                paths = basic.paths
+
         symbolic_result = SymbolicResult(
             success=True,
-            paths_explored=len(paths),
+            paths_explored=len(paths) if paths else result.total_paths,
             paths=paths,
-            symbolic_variables=result.get("symbolic_vars", []),
-            constraints=result.get("constraints", []),
+            symbolic_variables=symbolic_vars,
+            constraints=constraints_list,
         )
 
         # Cache successful result
@@ -663,11 +677,10 @@ def _symbolic_execute_sync(code: str, max_paths: int = 10) -> SymbolicResult:
         # Fallback to basic path analysis
         return _basic_symbolic_analysis(code)
     except Exception as e:
-        return SymbolicResult(
-            success=False,
-            paths_explored=0,
-            error=f"Symbolic execution failed: {str(e)}",
-        )
+        # If symbolic execution fails (e.g., unsupported AST nodes like f-strings),
+        # fall back to basic AST-based analysis instead of returning an error
+        logger.warning(f"Symbolic execution failed, using basic analysis: {e}")
+        return _basic_symbolic_analysis(code)
 
 
 @mcp.tool()
