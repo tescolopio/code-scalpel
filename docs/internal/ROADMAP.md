@@ -136,9 +136,9 @@ Transform Code Scalpel into the industry-standard code analysis toolkit for AI a
 
 ### Week 7: Language Abstraction
 
-- [ ] Design language-agnostic parser interface
-- [ ] Create language registry system
-- [ ] Implement language detection from file extension
+- [x] Design language-agnostic parser interface
+- [x] Create language registry system
+- [x] Implement language detection from file extension
 
 ### Week 8: JavaScript/TypeScript Support
 
