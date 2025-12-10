@@ -331,6 +331,18 @@ class SecurityAnalyzer:
 
     def _analyze_call(self, node: ast.Call, location: Tuple[int, int]) -> None:
         """Analyze a function call for sink detection."""
+        # Recursively analyze chained calls like hashlib.md5(...).hexdigest()
+        # The inner call (hashlib.md5) is in node.func.value when node.func is Attribute
+        if isinstance(node.func, ast.Attribute) and isinstance(
+            node.func.value, ast.Call
+        ):
+            self._analyze_call(node.func.value, location)
+
+        # Also check args that are calls
+        for arg in node.args:
+            if isinstance(arg, ast.Call):
+                self._analyze_call(arg, location)
+
         # Get the function name
         func_name = self._get_call_name(node)
 
@@ -352,6 +364,12 @@ class SecurityAnalyzer:
                         self._taint_tracker.check_sink(var, sink, location)
                 elif isinstance(arg, ast.JoinedStr):
                     # f-string
+                    arg_vars = self._extract_variable_names(arg)
+                    for var in arg_vars:
+                        self._taint_tracker.check_sink(var, sink, location)
+                elif isinstance(arg, ast.Call):
+                    # Method call on tainted variable: var.method()
+                    # e.g., user_data.encode() where user_data is tainted
                     arg_vars = self._extract_variable_names(arg)
                     for var in arg_vars:
                         self._taint_tracker.check_sink(var, sink, location)
@@ -445,8 +463,12 @@ class SecurityAnalyzer:
             names.extend(self._extract_variable_names(node.left))
             names.extend(self._extract_variable_names(node.right))
         elif isinstance(node, ast.Call):
+            # Extract from arguments
             for arg in node.args:
                 names.extend(self._extract_variable_names(arg))
+            # Extract from method receiver: user_data.encode() -> user_data
+            if isinstance(node.func, ast.Attribute):
+                names.extend(self._extract_variable_names(node.func.value))
         elif isinstance(node, ast.JoinedStr):
             # f-string
             for value in node.values:

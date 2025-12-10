@@ -81,6 +81,8 @@ class SecuritySink(Enum):
     DESERIALIZATION = auto()  # pickle.loads(), yaml.load()
     LOG_OUTPUT = auto()  # logging.info() - can leak sensitive data
     HEADER = auto()  # HTTP header injection
+    WEAK_CRYPTO = auto()  # hashlib.md5(), hashlib.sha1(), DES (CWE-327)
+    SSRF = auto()  # requests.get(), urllib.request.urlopen() (CWE-918)
 
 
 class TaintLevel(Enum):
@@ -736,6 +738,8 @@ class Vulnerability:
             SecuritySink.DESERIALIZATION: "Insecure Deserialization",
             SecuritySink.LOG_OUTPUT: "Log Injection",
             SecuritySink.HEADER: "HTTP Header Injection",
+            SecuritySink.WEAK_CRYPTO: "Use of Weak Cryptographic Hash",
+            SecuritySink.SSRF: "Server-Side Request Forgery (SSRF)",
         }
         return mapping.get(self.sink_type, "Unknown Vulnerability")
 
@@ -751,6 +755,8 @@ class Vulnerability:
             SecuritySink.DESERIALIZATION: "CWE-502",
             SecuritySink.LOG_OUTPUT: "CWE-117",
             SecuritySink.HEADER: "CWE-113",
+            SecuritySink.WEAK_CRYPTO: "CWE-327",
+            SecuritySink.SSRF: "CWE-918",
         }
         return mapping.get(self.sink_type, "CWE-Unknown")
 
@@ -842,6 +848,33 @@ SINK_PATTERNS: Dict[str, SecuritySink] = {
     "yaml.load": SecuritySink.DESERIALIZATION,
     "yaml.unsafe_load": SecuritySink.DESERIALIZATION,
     "marshal.loads": SecuritySink.DESERIALIZATION,
+    # Weak Cryptography (CWE-327)
+    "hashlib.md5": SecuritySink.WEAK_CRYPTO,
+    "hashlib.sha1": SecuritySink.WEAK_CRYPTO,
+    "cryptography.hazmat.primitives.ciphers.algorithms.DES": SecuritySink.WEAK_CRYPTO,
+    "Crypto.Cipher.DES": SecuritySink.WEAK_CRYPTO,
+    "Crypto.Hash.MD5": SecuritySink.WEAK_CRYPTO,
+    "Crypto.Hash.SHA": SecuritySink.WEAK_CRYPTO,
+    # SSRF - Server-Side Request Forgery (CWE-918)
+    "requests.get": SecuritySink.SSRF,
+    "requests.post": SecuritySink.SSRF,
+    "requests.put": SecuritySink.SSRF,
+    "requests.delete": SecuritySink.SSRF,
+    "requests.head": SecuritySink.SSRF,
+    "requests.patch": SecuritySink.SSRF,
+    "urllib.request.urlopen": SecuritySink.SSRF,
+    "urllib.request.Request": SecuritySink.SSRF,
+    "httpx.get": SecuritySink.SSRF,
+    "httpx.post": SecuritySink.SSRF,
+    "httpx.AsyncClient.get": SecuritySink.SSRF,
+    "aiohttp.ClientSession.get": SecuritySink.SSRF,
+    # Short-form imports (from X import Y)
+    "urlopen": SecuritySink.SSRF,  # from urllib.request import urlopen
+    "md5": SecuritySink.WEAK_CRYPTO,  # from hashlib import md5
+    "sha1": SecuritySink.WEAK_CRYPTO,  # from hashlib import sha1
+    "DES": SecuritySink.WEAK_CRYPTO,  # from Crypto.Cipher import DES
+    "MD5.new": SecuritySink.WEAK_CRYPTO,  # from Crypto.Hash import MD5; MD5.new()
+    "SHA.new": SecuritySink.WEAK_CRYPTO,  # from Crypto.Hash import SHA; SHA.new()
 }
 
 # Sanitizer function patterns
