@@ -441,10 +441,10 @@ def _security_scan_sync(code: str) -> SecurityResult:
 
     try:
         # Import here to avoid circular imports
-        from code_scalpel.security import SecurityAnalyzer
+        from code_scalpel.symbolic_execution_tools.security_analyzer import SecurityAnalyzer
 
         analyzer = SecurityAnalyzer()
-        result = analyzer.analyze(code)
+        result = analyzer.analyze(code).to_dict()
 
         vulnerabilities = []
         taint_sources = []

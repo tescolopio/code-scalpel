@@ -128,7 +128,8 @@ def safe_function(x):
         from code_scalpel.mcp.server import security_scan
 
         code = '''
-def vulnerable(user_input):
+def vulnerable(request):
+    user_input = request.args.get("id")
     query = "SELECT * FROM users WHERE id = " + user_input
     cursor.execute(query)
 '''
@@ -143,7 +144,8 @@ def vulnerable(user_input):
 
         code = '''
 import os
-def run_command(user_input):
+def run_command(request):
+    user_input = request.form.get("cmd")
     os.system("ls " + user_input)
 '''
         result = await security_scan(code)
@@ -156,13 +158,29 @@ def run_command(user_input):
         from code_scalpel.mcp.server import security_scan
 
         code = '''
-def dangerous(user_input):
+def dangerous(request):
+    user_input = request.args.get("expr")
     result = eval(user_input)
     return result
 '''
         result = await security_scan(code)
         assert result.success is True
         assert result.has_vulnerabilities is True
+
+    async def test_scan_hardcoded_secret(self):
+        """Test detecting hardcoded secrets."""
+        from code_scalpel.mcp.server import security_scan
+
+        code = '''
+def connect():
+    aws_key = "AKIAIOSFODNN7EXAMPLE"
+    return aws_key
+'''
+        result = await security_scan(code)
+        assert result.success is True
+        assert result.has_vulnerabilities is True
+        assert any("Secret" in v.type or "Hardcoded" in v.type for v in result.vulnerabilities)
+
 
     async def test_scan_empty_code(self):
         """Test scanning empty code."""
@@ -194,7 +212,8 @@ def handler():
         # Code with multiple vulnerabilities
         code = '''
 import os
-def very_dangerous(user_input):
+def very_dangerous(request):
+    user_input = request.args.get("data")
     eval(user_input)
     exec(user_input)
     os.system(user_input)
