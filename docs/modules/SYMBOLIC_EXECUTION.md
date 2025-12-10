@@ -592,6 +592,29 @@ class Vulnerability:
 | XSS | CWE-79 | `render`, `HTMLResponse`, `innerHTML` |
 | Path Traversal | CWE-22 | `open`, `read_file`, `send_file` |
 | Code Injection | CWE-94 | `eval`, `exec`, `compile` |
+| Hardcoded Secrets | CWE-798 | AWS Keys, Stripe Keys, Private Keys |
+
+### Secret Scanning
+
+The `SecretScanner` detects hardcoded credentials using high-entropy analysis and pattern matching.
+
+```python
+from code_scalpel.symbolic_execution_tools import SecretScanner
+import ast
+
+scanner = SecretScanner()
+tree = ast.parse("AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'")
+secrets = scanner.scan(tree)
+
+for secret in secrets:
+    print(f"Found {secret.secret_type} at line {secret.line_number}")
+```
+
+**Supported Patterns:**
+- AWS Access Keys
+- Stripe Secret Keys
+- Private Keys (RSA, DSA, EC)
+- Generic High-Entropy Strings
 
 ---
 

@@ -56,6 +56,7 @@ class TaintSource(Enum):
     NETWORK_DATA = auto()    # socket.recv(), requests.get()
     DATABASE = auto()        # cursor.fetchone()
     ENVIRONMENT = auto()     # os.environ
+    HARDCODED = auto()       # Hardcoded secrets
     UNKNOWN = auto()         # Source couldn't be determined
 
 
@@ -83,6 +84,7 @@ class SecuritySink(Enum):
     HEADER = auto()          # HTTP header injection
     WEAK_CRYPTO = auto()     # hashlib.md5(), hashlib.sha1(), DES
     SSRF = auto()            # requests.get(), urllib.request.urlopen()
+    HARDCODED_SECRET = auto() # Hardcoded secrets (AWS keys, etc.)
 
 
 class TaintLevel(Enum):
@@ -774,6 +776,7 @@ class Vulnerability:
             SecuritySink.HEADER: "HTTP Header Injection",
             SecuritySink.WEAK_CRYPTO: "Use of Weak Cryptographic Hash",
             SecuritySink.SSRF: "Server-Side Request Forgery (SSRF)",
+            SecuritySink.HARDCODED_SECRET: "Hardcoded Secret",
         }
         return mapping.get(self.sink_type, "Unknown Vulnerability")
     
@@ -791,6 +794,7 @@ class Vulnerability:
             SecuritySink.HEADER: "CWE-113",
             SecuritySink.WEAK_CRYPTO: "CWE-327",
             SecuritySink.SSRF: "CWE-918",
+            SecuritySink.HARDCODED_SECRET: "CWE-798",
         }
         return mapping.get(self.sink_type, "CWE-Unknown")
     
@@ -823,11 +827,6 @@ class Vulnerability:
 # Function calls that introduce taint
 TAINT_SOURCE_PATTERNS: Dict[str, TaintSource] = {
     # Flask/Django request handling
-    # Django-specific request patterns
-    "request.GET.get": TaintSource.USER_INPUT,
-    "request.GET": TaintSource.USER_INPUT,
-    "request.POST.get": TaintSource.USER_INPUT,
-    "request.POST": TaintSource.USER_INPUT,
     "request.args.get": TaintSource.USER_INPUT,
     "request.form.get": TaintSource.USER_INPUT,
     "request.form": TaintSource.USER_INPUT,
@@ -919,26 +918,6 @@ SINK_PATTERNS: Dict[str, SecuritySink] = {
     "httpx.post": SecuritySink.SSRF,
     "httpx.AsyncClient.get": SecuritySink.SSRF,
     "aiohttp.ClientSession.get": SecuritySink.SSRF,
-    # Short-form imports (from X import Y)
-    "urlopen": SecuritySink.SSRF,  # from urllib.request import urlopen
-    "md5": SecuritySink.WEAK_CRYPTO,  # from hashlib import md5
-    "sha1": SecuritySink.WEAK_CRYPTO,  # from hashlib import sha1
-    "DES": SecuritySink.WEAK_CRYPTO,  # from Crypto.Cipher import DES
-    "MD5.new": SecuritySink.WEAK_CRYPTO,  # from Crypto.Hash import MD5; MD5.new()
-    "SHA.new": SecuritySink.WEAK_CRYPTO,  # from Crypto.Hash import SHA; SHA.new()
-    # Django SQL Injection
-    "django.db.models.expressions.RawSQL": SecuritySink.SQL_QUERY,
-    "RawSQL": SecuritySink.SQL_QUERY,  # from django.db.models import RawSQL
-    "django.db.models.query.QuerySet.extra": SecuritySink.SQL_QUERY,
-    "QuerySet.extra": SecuritySink.SQL_QUERY,
-    "extra": SecuritySink.SQL_QUERY,  # queryset.extra()
-    # SQLAlchemy SQL Injection
-    "sqlalchemy.text": SecuritySink.SQL_QUERY,
-    "sqlalchemy.sql.expression.text": SecuritySink.SQL_QUERY,
-    "text": SecuritySink.SQL_QUERY,  # from sqlalchemy import text
-    # Flask/Jinja2 XSS (bypasses auto-escaping)
-    "flask.Markup": SecuritySink.HTML_OUTPUT,
-    "markupsafe.Markup": SecuritySink.HTML_OUTPUT,
 }
 
 # Sanitizer function patterns

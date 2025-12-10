@@ -14,6 +14,9 @@ This document provides detailed API documentation for Code Scalpel.
 - [PDG Tools](#pdg-tools)
   - [PDGBuilder](#pdgbuilder)
   - [PDGAnalyzer](#pdganalyzer)
+- [Security Tools](#security-tools)
+  - [SecurityAnalyzer](#securityanalyzer)
+  - [SecretScanner](#secretscanner)
 - [Integrations](#integrations)
   - [AutogenScalpel](#autogenscalpel)
   - [CrewAIScalpel](#crewaigrscalpel)
@@ -464,6 +467,53 @@ Perform security analysis using the PDG.
 
 ```python
 vulnerabilities = analyzer.perform_security_analysis(pdg, code)
+```
+
+---
+
+## Security Tools
+
+### SecurityAnalyzer
+
+Advanced security analysis using taint tracking and secret scanning.
+
+```python
+from code_scalpel.symbolic_execution_tools.security_analyzer import SecurityAnalyzer
+
+analyzer = SecurityAnalyzer()
+```
+
+#### Methods
+
+##### `analyze(code: str) -> Dict`
+
+Perform comprehensive security analysis.
+
+```python
+report = analyzer.analyze("""
+import os
+AWS_KEY = "AKIA..."
+os.system(user_input)
+""")
+
+print(report['vulnerabilities'])
+# [
+#   {'type': 'HARDCODED_SECRET', 'severity': 'CRITICAL', ...},
+#   {'type': 'COMMAND_INJECTION', 'severity': 'CRITICAL', ...}
+# ]
+```
+
+### SecretScanner
+
+Specialized scanner for hardcoded secrets.
+
+```python
+from code_scalpel.symbolic_execution_tools.secret_scanner import SecretScanner
+import ast
+
+scanner = SecretScanner()
+tree = ast.parse("API_KEY = '12345'")
+secrets = scanner.scan(tree)
 ```
 
 ---

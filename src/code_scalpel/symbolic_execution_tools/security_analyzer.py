@@ -41,6 +41,7 @@ from .taint_tracker import (
     SANITIZER_REGISTRY,
     load_sanitizers_from_config,
 )
+from .secret_scanner import SecretScanner
 
 # Auto-load custom sanitizers from pyproject.toml on module import
 _config_loaded = False
@@ -135,7 +136,13 @@ class SecurityAnalysisResult:
 
         for v in self.vulnerabilities:
             loc = f"line {v.sink_location[0]}" if v.sink_location else "unknown"
-            lines.append(f"  - {v.vulnerability_type} ({v.cwe_id}) at {loc}")
+            desc = v.vulnerability_type
+            
+            # Add detail for hardcoded secrets if available
+            if v.sink_type == SecuritySink.HARDCODED_SECRET and v.taint_path:
+                desc = f"{desc}: {v.taint_path[0]}"
+                
+            lines.append(f"  - {desc} ({v.cwe_id}) at {loc}")
 
         return "\n".join(lines)
 
@@ -160,6 +167,7 @@ class SecurityAnalyzer:
         """Initialize the security analyzer."""
         self._taint_tracker: Optional[TaintTracker] = None
         self._current_taint_map: Dict[str, TaintInfo] = {}
+        self._secret_scanner = SecretScanner()
 
     def analyze(self, code: str) -> SecurityAnalysisResult:
         """
@@ -192,7 +200,10 @@ class SecurityAnalyzer:
         self._analyze_node(tree, result)
 
         # Collect results
-        result.vulnerabilities = self._taint_tracker.get_vulnerabilities()
+        taint_vulns = self._taint_tracker.get_vulnerabilities()
+        secret_vulns = self._secret_scanner.scan(tree)
+        result.vulnerabilities = taint_vulns + secret_vulns
+        
         result.taint_flows = {
             name: self._taint_tracker.get_taint(name)
             for name in self._current_taint_map.keys()

@@ -35,7 +35,18 @@ code-scalpel scan demos/vibe_check.py
 #   Taint path: request.args → user_id → query_base → final_query
 ```
 
-### 2. Analysis: Understand Complex Code
+### 2. Secret Scanning: Detect Hardcoded Secrets
+
+```python
+# Detects AWS Keys, Stripe Secrets, Private Keys, and more
+# Handles bytes, f-strings, and variable assignments
+
+code-scalpel scan demos/config.py
+# → Hardcoded Secret (AWS Access Key) detected at line 12
+# → Hardcoded Secret (Stripe Secret Key) detected at line 45
+```
+
+### 3. Analysis: Understand Complex Code
 
 ```python
 from code_scalpel import CodeAnalyzer
@@ -54,7 +65,7 @@ print(f"Functions: {result.metrics.num_functions}")
 print(f"Complexity: {result.metrics.cyclomatic_complexity}")
 ```
 
-### 3. Test Generation: Cover Every Path
+### 4. Test Generation: Cover Every Path
 
 ```bash
 # Z3 solver derives exact inputs for all branches

@@ -10,7 +10,7 @@ Code Scalpel is a Python toolkit for AI-driven code analysis and transformation.
 - **PDG Analysis** - Build Program Dependence Graphs for data/control flow (100% coverage)
 - **Program Slicing** - Extract relevant code subsets for analysis
 - **Dead Code Detection** - Find unused functions, variables, and imports
-- **Security Analysis** - Detect SQLi, XSS, command injection via taint analysis
+- **Security Analysis** - Detect SQLi, XSS, command injection, and hardcoded secrets
 - **AI Agent Integration** - Works with Autogen, CrewAI, and other frameworks
 - **MCP Server** - HTTP API for AI agents to query code analysis
 
