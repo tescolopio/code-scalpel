@@ -1145,7 +1145,7 @@ def run_server(
     print(f"Code Scalpel MCP Server v{__version__}")
     print(f"Project Root: {PROJECT_ROOT}")
 
-    if transport == "streamable-http":
+    if transport == "streamable-http" or transport == "sse":
         from mcp.server.transport_security import TransportSecuritySettings
 
         mcp.settings.host = host
@@ -1162,7 +1162,7 @@ def run_server(
             print(f"WARNING: LAN access enabled. Host validation disabled.")
             print(f"Only use on trusted networks!")
 
-        mcp.run(transport="streamable-http")
+        mcp.run(transport=transport)
     else:
         mcp.run()
 
@@ -1173,7 +1173,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Code Scalpel MCP Server")
     parser.add_argument(
         "--transport",
-        choices=["stdio", "streamable-http"],
+        choices=["stdio", "streamable-http", "sse"],
         default="stdio",
         help="Transport type (default: stdio)",
     )

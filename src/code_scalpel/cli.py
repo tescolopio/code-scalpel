@@ -455,7 +455,13 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
     # MCP command (Model Context Protocol - recommended)
     mcp_parser = subparsers.add_parser("mcp", help="Start MCP server (for Claude Desktop, Cursor)")
     mcp_parser.add_argument(
-        "--http", action="store_true", help="Use HTTP transport instead of stdio"
+        "--transport",
+        choices=["stdio", "sse", "streamable-http"],
+        default="stdio",
+        help="Transport type (default: stdio)",
+    )
+    mcp_parser.add_argument(
+        "--http", action="store_true", help="Use HTTP transport (alias for --transport sse)"
     )
     mcp_parser.add_argument(
         "--host", default="127.0.0.1", help="Host to bind to for HTTP (default: 127.0.0.1)"
@@ -505,7 +511,10 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
         return start_server(args.host, args.port)
 
     elif args.command == "mcp":
-        transport = "streamable-http" if args.http else "stdio"
+        transport = args.transport
+        if args.http:
+            transport = "sse"
+        
         allow_lan = getattr(args, "allow_lan", False)
         root_path = getattr(args, "root", None)
         return start_mcp_server(transport, args.host, args.port, allow_lan, root_path)
