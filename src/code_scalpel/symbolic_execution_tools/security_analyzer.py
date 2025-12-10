@@ -339,6 +339,10 @@ class SecurityAnalyzer:
             self._analyze_call(node.func.value, location)
 
         # Also check args that are calls
+        # Also check keyword args that are calls (e.g., annotate(val=RawSQL(...)))
+        for keyword in node.keywords:
+            if isinstance(keyword.value, ast.Call):
+                self._analyze_call(keyword.value, location)
         for arg in node.args:
             if isinstance(arg, ast.Call):
                 self._analyze_call(arg, location)
