@@ -93,10 +93,10 @@ from .security_analyzer import (
     find_path_traversals,
 )
 
-# Emit warning on import so users know about limitations
+# Emit info on import so users know about limitations
 warnings.warn(
-    "symbolic_execution_tools is BETA (v0.3.0). "
-    "Supports Int/Bool/String. See docs for limitations.",
+    "symbolic_execution_tools v1.2.0 (Stable). "
+    "Supports Int/Bool/String. See docs for type limitations.",
     category=UserWarning,
     stacklevel=2,
 )

@@ -94,7 +94,7 @@ Code Scalpel v1.2.0 is a precision toolkit for AI-driven code analysis.
 | Symbolic Engine | Stable | 100% |
 | Security Analysis | Stable | 100% |
 | MCP Server | Stable | 8 tools |
-| Surgical Tools | Stable | 89% |
+| Surgical Tools | **Beta** | 81-87% |
 
 **Test Suite:** 1597 tests passing
 

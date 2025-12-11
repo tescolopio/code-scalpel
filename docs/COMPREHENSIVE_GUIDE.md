@@ -35,8 +35,8 @@ Code Scalpel is a precision toolkit for AI-driven code analysis. Unlike general-
 |--------|---------|----------|
 | **AST Tools** | Parse code into Abstract Syntax Trees | Stable (100% coverage) |
 | **PDG Tools** | Build Program Dependence Graphs | Stable (100% coverage) |
-| **Surgical Extractor** | Token-efficient code extraction with cross-file deps | Stable |
-| **Surgical Patcher** | Safe, atomic code modifications | Stable |
+| **Surgical Extractor** | Token-efficient code extraction with cross-file deps | Beta (81% coverage) |
+| **Surgical Patcher** | Safe, atomic code modifications | Beta (87% coverage) |
 | **Symbolic Execution** | Explore execution paths with Z3 | Stable (100% coverage) |
 | **Security Analysis** | Taint-based vulnerability detection | Stable (100% coverage) |
 | **MCP Server** | Model Context Protocol integration (8 tools) | Stable |
@@ -358,20 +358,26 @@ for path in result.paths:
 
 ```python
 from code_scalpel.symbolic_execution_tools import ConstraintSolver
+from z3 import Int
 
 solver = ConstraintSolver()
 
-# Add constraints
-solver.add_constraint("x > 0")
-solver.add_constraint("x < 100")
-solver.add_constraint("x % 2 == 0")
+# Create symbolic variables
+x = Int('x')
 
-# Check satisfiability
-if solver.check():
-    model = solver.get_model()
-    print(f"Solution: x = {model['x']}")
+# Solve with constraints
+result = solver.solve(
+    constraints=[x > 0, x < 100, x % 2 == 0],
+    variables=[x]
+)
+
+# Check result
+if result.is_sat():
+    print(f"Solution: x = {result.model['x']}")
+elif result.status.name == 'UNKNOWN':
+    print("Solver timed out or constraint undecidable")
 else:
-    print("No solution exists")
+    print("No solution exists (UNSAT)")
 ```
 
 #### Supported Types

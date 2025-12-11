@@ -189,10 +189,11 @@ See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 
 ## Stats
 
-- **1597** tests passing
-- **100%** PDG coverage, **100%** AST coverage, **100%** Symbolic Execution coverage
-- **3** languages supported
-- **8** MCP tools (including surgical extraction)
+- **1,597** tests passing
+- **100%** coverage: PDG, AST, Symbolic Execution, Security Analysis
+- **Beta**: Surgical Tools (81-87% coverage)
+- **3** languages supported (Python full, JS/Java structural)
+- **8** MCP tools
 - **200x** cache speedup
 
 ## License

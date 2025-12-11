@@ -28,13 +28,9 @@ from .constraint_solver import ConstraintSolver, SolverStatus
 logger = logging.getLogger(__name__)
 
 
-# Emit warning on import - this is still experimental
-warnings.warn(
-    "symbolic_execution_tools is EXPERIMENTAL and incomplete. "
-    "The engine will fail on most inputs. Use ast_tools or pdg_tools for production.",
-    UserWarning,
-    stacklevel=2,
-)
+# Note: The symbolic engine has type limitations
+# It handles Int/Bool/String but not Float/List/Dict
+# Loop unrolling is bounded to prevent explosion
 
 
 class PathStatus(Enum):
