@@ -1,6 +1,7 @@
 import ast
-from typing import Any, List, Dict
+from typing import Any, List
 from .interface import IParser, ParseResult, Language
+
 
 class PythonParser(IParser):
     """Python implementation of the parser interface."""
@@ -16,35 +17,41 @@ class PythonParser(IParser):
                 errors=[],
                 warnings=[],
                 metrics=metrics,
-                language=Language.PYTHON
+                language=Language.PYTHON,
             )
         except SyntaxError as e:
-            errors.append({
-                "type": "SyntaxError",
-                "message": e.msg,
-                "line": e.lineno,
-                "column": e.offset,
-                "text": e.text.strip() if e.text else None
-            })
+            errors.append(
+                {
+                    "type": "SyntaxError",
+                    "message": e.msg,
+                    "line": e.lineno,
+                    "column": e.offset,
+                    "text": e.text.strip() if e.text else None,
+                }
+            )
             return ParseResult(
                 ast=None,
                 errors=errors,
                 warnings=[],
                 metrics={},
-                language=Language.PYTHON
+                language=Language.PYTHON,
             )
 
     def get_functions(self, ast_tree: Any) -> List[str]:
         if not isinstance(ast_tree, ast.AST):
             return []
-        return [node.name for node in ast.walk(ast_tree) 
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        return [
+            node.name
+            for node in ast.walk(ast_tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
 
     def get_classes(self, ast_tree: Any) -> List[str]:
         if not isinstance(ast_tree, ast.AST):
             return []
-        return [node.name for node in ast.walk(ast_tree) 
-                if isinstance(node, ast.ClassDef)]
+        return [
+            node.name for node in ast.walk(ast_tree) if isinstance(node, ast.ClassDef)
+        ]
 
     def _calculate_complexity(self, node: ast.AST) -> int:
         """Calculate cyclomatic complexity."""

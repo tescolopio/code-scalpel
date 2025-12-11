@@ -135,7 +135,7 @@ class PDGUtils:
         if not nodes:
             return set()
 
-        ancestors = {nx.ancestors(pdg, node) for node in nodes}
+        ancestors = [nx.ancestors(pdg, node) for node in nodes]
         return set.intersection(*ancestors)
 
     @staticmethod
@@ -144,7 +144,7 @@ class PDGUtils:
         if not nodes:
             return set()
 
-        descendants = {nx.descendants(pdg, node) for node in nodes}
+        descendants = [nx.descendants(pdg, node) for node in nodes]
         return set.intersection(*descendants)
 
     @staticmethod

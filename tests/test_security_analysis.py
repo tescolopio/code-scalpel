@@ -8,30 +8,12 @@ Tests:
 - Vulnerability detection (SQL injection, XSS, etc.)
 """
 
-import warnings
-
-# Suppress the BETA warning for cleaner test output
-warnings.filterwarnings("ignore", message="symbolic_execution_tools")
-
 from code_scalpel.symbolic_execution_tools.type_inference import (
     TypeInferenceEngine,
     InferredType,
 )
 from code_scalpel.symbolic_execution_tools.ir_interpreter import IRSymbolicInterpreter
 from code_scalpel.ir.normalizers.python_normalizer import PythonNormalizer
-
-
-class SymbolicInterpreter:
-    def __init__(self, max_loop_iterations=10):
-        self.interp = IRSymbolicInterpreter(max_loop_iterations=max_loop_iterations)
-        self.max_loop_iterations = max_loop_iterations
-
-    def execute(self, code: str):
-        ir = PythonNormalizer().normalize(code)
-        return self.interp.execute(ir)
-
-    def declare_symbolic(self, name, sort):
-        return self.interp.declare_symbolic(name, sort)
 
 
 from code_scalpel.symbolic_execution_tools.taint_tracker import (
@@ -54,6 +36,19 @@ from code_scalpel.symbolic_execution_tools.security_analyzer import (
 )
 
 import z3
+
+
+class SymbolicInterpreter:
+    def __init__(self, max_loop_iterations=10):
+        self.interp = IRSymbolicInterpreter(max_loop_iterations=max_loop_iterations)
+        self.max_loop_iterations = max_loop_iterations
+
+    def execute(self, code: str):
+        ir = PythonNormalizer().normalize(code)
+        return self.interp.execute(ir)
+
+    def declare_symbolic(self, name, sort):
+        return self.interp.declare_symbolic(name, sort)
 
 
 # =============================================================================
@@ -1306,8 +1301,6 @@ class TestTaintTrackerCoverage:
         from code_scalpel.symbolic_execution_tools.taint_tracker import (
             load_sanitizers_from_config,
         )
-        import tempfile
-        import os
 
         # Test with non-existent path returns 0
         count = load_sanitizers_from_config("/nonexistent/path/config.toml")
@@ -1648,7 +1641,6 @@ class TestTaintTrackerConfigEdgeCases:
     def test_load_sanitizers_from_config_none_config(self):
         """Test load_sanitizers_from_config returns 0 when config is None (line 383)."""
         from unittest.mock import patch
-        import os.path
         from code_scalpel.symbolic_execution_tools.taint_tracker import (
             load_sanitizers_from_config,
         )

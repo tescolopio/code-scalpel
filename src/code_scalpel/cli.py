@@ -517,6 +517,10 @@ For more information, visit: https://github.com/tescolopio/code-scalpel
         
         allow_lan = getattr(args, "allow_lan", False)
         root_path = getattr(args, "root", None)
+
+        if allow_lan and args.host == "127.0.0.1":
+            args.host = "0.0.0.0"
+
         return start_mcp_server(transport, args.host, args.port, allow_lan, root_path)
 
     elif args.command == "version":

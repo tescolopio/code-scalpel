@@ -174,9 +174,9 @@ eval(user_input)
         self.assertIn(result["risk_level"], ["high", "critical", "medium"])
         # Check for vulnerabilities (new format) or issues (fallback format)
         has_findings = (
-            result.get("has_vulnerabilities", False) or
-            len(result.get("vulnerabilities", [])) > 0 or
-            len(result.get("issues", [])) > 0
+            result.get("has_vulnerabilities", False)
+            or len(result.get("vulnerabilities", [])) > 0
+            or len(result.get("issues", [])) > 0
         )
         self.assertTrue(has_findings, "Should detect eval vulnerability")
 
@@ -295,9 +295,9 @@ def BadFunc():
         # New taint-based API returns different fields
         # Check for new format (vulnerabilities) or old format (recommendations)
         has_security_info = (
-            "vulnerabilities" in data or 
-            "recommendations" in data or
-            "vulnerability_count" in data
+            "vulnerabilities" in data
+            or "recommendations" in data
+            or "vulnerability_count" in data
         )
         self.assertTrue(has_security_info)
 
@@ -418,7 +418,10 @@ class TestMCPServerConfig(unittest.TestCase):
 
     def test_create_app_with_custom_config(self):
         """Test creating app with custom config."""
-        from code_scalpel.integrations.rest_api_server import MCPServerConfig, create_app
+        from code_scalpel.integrations.rest_api_server import (
+            MCPServerConfig,
+            create_app,
+        )
 
         config = MCPServerConfig(cache_enabled=False)
         app = create_app(config)
@@ -430,7 +433,10 @@ class TestMCPServerConfig(unittest.TestCase):
 
     def test_code_size_limit_enforced(self):
         """Test that code size limit is enforced."""
-        from code_scalpel.integrations.rest_api_server import MCPServerConfig, create_app
+        from code_scalpel.integrations.rest_api_server import (
+            MCPServerConfig,
+            create_app,
+        )
 
         # Create app with very small max code size
         config = MCPServerConfig(max_code_size=10)
@@ -469,7 +475,6 @@ class TestMCPServerRunServer(unittest.TestCase):
     def test_run_server_production_warning(self):
         """Test that debug mode is disabled in production."""
         import os
-        import warnings
 
         from code_scalpel.integrations.rest_api_server import run_server
 

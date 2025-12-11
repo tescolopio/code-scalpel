@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Dict
 from dataclasses import dataclass
 from enum import Enum
 
+
 class Language(Enum):
     """Supported programming languages."""
+
     PYTHON = "python"
     JAVASCRIPT = "javascript"
     TYPESCRIPT = "typescript"
@@ -12,14 +14,17 @@ class Language(Enum):
     CPP = "cpp"
     UNKNOWN = "unknown"
 
+
 @dataclass
 class ParseResult:
     """Result of code parsing."""
+
     ast: Any  # AST structure (language-dependent)
     errors: List[Dict[str, Any]]
     warnings: List[str]
     metrics: Dict[str, Any]
     language: Language
+
 
 class IParser(ABC):
     """Interface for language-specific parsers."""

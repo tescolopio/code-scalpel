@@ -1,4 +1,4 @@
-# Code Scalpel v1.1.0 - Comprehensive Documentation
+# Code Scalpel v1.2.0 - Comprehensive Documentation
 
 **The AI Agent Toolkit for Precision Code Analysis**
 
@@ -15,12 +15,13 @@
    - [Symbolic Execution](#symbolic-execution)
    - [Security Analysis](#security-analysis)
 5. [MCP Server](#mcp-server)
-6. [AI Agent Integrations](#ai-agent-integrations)
-7. [CLI Reference](#cli-reference)
-8. [Real-World Examples](#real-world-examples)
-9. [API Reference](#api-reference)
-10. [Performance & Caching](#performance--caching)
-11. [Troubleshooting](#troubleshooting)
+6. [Surgical Tools](#surgical-tools)
+7. [AI Agent Integrations](#ai-agent-integrations)
+8. [CLI Reference](#cli-reference)
+9. [Real-World Examples](#real-world-examples)
+10. [API Reference](#api-reference)
+11. [Performance & Caching](#performance--caching)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -34,13 +35,15 @@ Code Scalpel is a precision toolkit for AI-driven code analysis. Unlike general-
 |--------|---------|----------|
 | **AST Tools** | Parse code into Abstract Syntax Trees | Stable (100% coverage) |
 | **PDG Tools** | Build Program Dependence Graphs | Stable (100% coverage) |
-| **Symbolic Execution** | Explore execution paths with Z3 | Beta (76% coverage) |
-| **Security Analysis** | Taint-based vulnerability detection | Beta |
-| **MCP Server** | Model Context Protocol integration | Stable |
+| **Surgical Extractor** | Token-efficient code extraction with cross-file deps | Stable |
+| **Surgical Patcher** | Safe, atomic code modifications | Stable |
+| **Symbolic Execution** | Explore execution paths with Z3 | Stable (99% coverage) |
+| **Security Analysis** | Taint-based vulnerability detection | Stable (99% coverage) |
+| **MCP Server** | Model Context Protocol integration (8 tools) | Stable |
 
 ### Supported Languages
 
-- **Python**: Full support (AST, PDG, Symbolic, Security)
+- **Python**: Full support (AST, PDG, Symbolic, Security, Surgical Tools)
 - **JavaScript/JSX**: Structural parsing (via tree-sitter)
 - **Java**: Structural parsing (via tree-sitter)
 
@@ -305,7 +308,7 @@ print(f"Slice size: {info.size}, complexity: {info.complexity}")
 
 ### Symbolic Execution
 
-**Beta Feature** - Explore execution paths using Z3 constraint solving.
+**Stable (99% coverage)** - Explore execution paths using Z3 constraint solving.
 
 #### Basic Symbolic Analysis
 
@@ -504,6 +507,9 @@ code-scalpel mcp --port 8593
 | `symbolic_execute` | Explore execution paths with Z3 |
 | `generate_unit_tests` | Generate pytest/unittest from paths |
 | `simulate_refactor` | Verify a refactor is safe before applying |
+| `extract_code` | **NEW** Token-efficient extraction from file path |
+| `update_symbol` | **NEW** Surgical modification with validation |
+| `crawl_project` | **NEW** Project structure discovery |
 
 ### Using with Claude Desktop
 
@@ -594,6 +600,130 @@ def test_is_adult_path_1():
     """Test case for path where age < 18"""
     assert is_adult(17) == False
 ```
+
+---
+
+## Surgical Tools
+
+The Surgical Tools provide token-efficient code extraction and modification for AI agents. These tools minimize context window usage while maximizing precision.
+
+### Token Efficiency Comparison
+
+| Approach | Tokens to Agent | Tokens from Agent |
+|----------|-----------------|-------------------|
+| Traditional (full file) | ~10,000 | ~10,000 |
+| Surgical (file_path) | ~50 | ~200 |
+| **Savings** | **99.5%** | **98%** |
+
+### SurgicalExtractor
+
+Extract specific code elements without reading entire files:
+
+```python
+from code_scalpel import SurgicalExtractor
+
+# Create extractor from file path (not code string!)
+extractor = SurgicalExtractor.from_file("/path/to/module.py")
+
+# Extract just what you need
+result = extractor.get_function("process_data")
+# Returns: function code + docstring + dependencies
+
+# Extract with full context (decorators, type hints)
+result = extractor.get_function_with_context("validate_user")
+
+# Get class with all methods
+result = extractor.get_class("UserService")
+```
+
+### Cross-File Dependency Resolution
+
+Automatically resolve imports and dependencies:
+
+```python
+from code_scalpel import SurgicalExtractor
+
+# Resolve all dependencies for a symbol
+resolution = SurgicalExtractor.resolve_cross_file_dependencies(
+    file_path="/path/to/service.py",
+    symbol_name="UserService",
+    project_root="/path/to/project"
+)
+
+# Get dependency tree
+for dep in resolution.dependencies:
+    print(f"{dep.file_path}::{dep.name} ({dep.symbol_type})")
+    
+# Get full context as combined code
+full_code = resolution.full_context
+```
+
+### SurgicalPatcher
+
+Modify code with validation and backup:
+
+```python
+from code_scalpel import SurgicalPatcher
+
+# Create patcher for file
+patcher = SurgicalPatcher("/path/to/module.py")
+
+# Update a function (validates syntax before saving)
+patcher.update_function("calculate_total", '''
+def calculate_total(items: list[Item]) -> float:
+    """Calculate total with tax."""
+    subtotal = sum(item.price for item in items)
+    return subtotal * 1.08
+''')
+
+# Update a method in a class
+patcher.update_method("UserService", "authenticate", '''
+def authenticate(self, username: str, password: str) -> bool:
+    """Authenticate user with rate limiting."""
+    if self.rate_limiter.is_blocked(username):
+        raise RateLimitError()
+    return self._verify_credentials(username, password)
+''')
+
+# Save changes (creates backup)
+patcher.save()
+
+# Or discard changes
+patcher.discard_changes()
+```
+
+### MCP Tool: extract_code
+
+```json
+{
+  "file_path": "/path/to/module.py",
+  "name": "UserService",
+  "extraction_type": "class",
+  "include_cross_file_deps": true
+}
+```
+
+Response includes:
+- Extracted code
+- Line numbers
+- Dependencies
+- Cross-file context (if enabled)
+
+### MCP Tool: update_symbol
+
+```json
+{
+  "file_path": "/path/to/module.py",
+  "target_name": "process_data",
+  "symbol_type": "function",
+  "new_code": "def process_data(items):\n    return [transform(i) for i in items]"
+}
+```
+
+Response includes:
+- Success status
+- Backup path
+- Validation results
 
 ---
 
@@ -1030,4 +1160,4 @@ from code_scalpel.integrations import (
 
 ---
 
-*Code Scalpel v1.1.0 - Built with surgical precision for AI-driven code analysis.*
+*Code Scalpel v1.2.0 - Built with surgical precision for AI-driven code analysis.*

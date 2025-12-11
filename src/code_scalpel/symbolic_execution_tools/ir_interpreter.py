@@ -275,12 +275,16 @@ class LanguageSemantics(ABC):
     # -------------------------------------------------------------------------
 
     @abstractmethod
-    def unary_neg(self, operand: ExprRef, state: SymbolicState) -> Optional[ExprRef]:  # pragma: no cover
+    def unary_neg(
+        self, operand: ExprRef, state: SymbolicState
+    ) -> Optional[ExprRef]:  # pragma: no cover
         """Handle negation: -operand"""
         ...
 
     @abstractmethod
-    def unary_not(self, operand: ExprRef, state: SymbolicState) -> Optional[BoolRef]:  # pragma: no cover
+    def unary_not(
+        self, operand: ExprRef, state: SymbolicState
+    ) -> Optional[BoolRef]:  # pragma: no cover
         """Handle logical not: not operand"""
         ...
 
@@ -289,7 +293,9 @@ class LanguageSemantics(ABC):
     # -------------------------------------------------------------------------
 
     @abstractmethod
-    def to_bool(self, value: ExprRef, state: SymbolicState) -> Optional[BoolRef]:  # pragma: no cover
+    def to_bool(
+        self, value: ExprRef, state: SymbolicState
+    ) -> Optional[BoolRef]:  # pragma: no cover
         """
         Convert a value to boolean for conditionals.
 
@@ -1009,7 +1015,9 @@ class IRSymbolicInterpreter(IRNodeVisitor):
                 next_states.extend(body_states)
 
             current_states = next_states
-            if not current_states:  # pragma: no branch - rare case when all paths pruned
+            if (
+                not current_states
+            ):  # pragma: no branch - rare case when all paths pruned
                 break  # pragma: no cover - defensive break when all paths pruned
 
         return current_states

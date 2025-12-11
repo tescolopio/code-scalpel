@@ -224,7 +224,7 @@ class RefactorSimulator:
             match = hunk_pattern.match(line)
             if match:
                 old_start = int(match.group(1)) - 1  # 0-indexed
-                new_start = int(match.group(3)) - 1
+                int(match.group(3)) - 1
                 i += 1
 
                 # Process hunk
@@ -295,13 +295,17 @@ class RefactorSimulator:
             for vuln in new_result.get("vulnerabilities", []):
                 vuln_key = (vuln.get("type"), vuln.get("line"))
                 if vuln_key not in old_vulns:
-                    issues.append(SecurityIssue(
-                        type=vuln.get("type", "Unknown"),
-                        severity=vuln.get("severity", "medium"),
-                        line=vuln.get("line"),
-                        description=vuln.get("description", "Security vulnerability"),
-                        cwe=vuln.get("cwe"),
-                    ))
+                    issues.append(
+                        SecurityIssue(
+                            type=vuln.get("type", "Unknown"),
+                            severity=vuln.get("severity", "medium"),
+                            line=vuln.get("line"),
+                            description=vuln.get(
+                                "description", "Security vulnerability"
+                            ),
+                            cwe=vuln.get("cwe"),
+                        )
+                    )
 
         except ImportError:
             # Fallback to pattern-based detection
@@ -316,26 +320,76 @@ class RefactorSimulator:
         issues = []
 
         dangerous_patterns = [
-            ("eval(", "Code Injection", "CWE-94", "high", "eval() can execute arbitrary code"),
-            ("exec(", "Code Injection", "CWE-94", "high", "exec() can execute arbitrary code"),
-            ("os.system(", "Command Injection", "CWE-78", "high", "os.system() can execute shell commands"),
-            ("subprocess.call(", "Command Injection", "CWE-78", "medium", "subprocess with shell=True is dangerous"),
-            ("cursor.execute(", "SQL Injection", "CWE-89", "high", "SQL query may be injectable"),
-            ("render_template_string(", "XSS", "CWE-79", "medium", "Template injection risk"),
-            ("pickle.loads(", "Deserialization", "CWE-502", "high", "Insecure deserialization"),
-            ("yaml.load(", "Deserialization", "CWE-502", "medium", "yaml.load() is unsafe, use safe_load()"),
+            (
+                "eval(",
+                "Code Injection",
+                "CWE-94",
+                "high",
+                "eval() can execute arbitrary code",
+            ),
+            (
+                "exec(",
+                "Code Injection",
+                "CWE-94",
+                "high",
+                "exec() can execute arbitrary code",
+            ),
+            (
+                "os.system(",
+                "Command Injection",
+                "CWE-78",
+                "high",
+                "os.system() can execute shell commands",
+            ),
+            (
+                "subprocess.call(",
+                "Command Injection",
+                "CWE-78",
+                "medium",
+                "subprocess with shell=True is dangerous",
+            ),
+            (
+                "cursor.execute(",
+                "SQL Injection",
+                "CWE-89",
+                "high",
+                "SQL query may be injectable",
+            ),
+            (
+                "render_template_string(",
+                "XSS",
+                "CWE-79",
+                "medium",
+                "Template injection risk",
+            ),
+            (
+                "pickle.loads(",
+                "Deserialization",
+                "CWE-502",
+                "high",
+                "Insecure deserialization",
+            ),
+            (
+                "yaml.load(",
+                "Deserialization",
+                "CWE-502",
+                "medium",
+                "yaml.load() is unsafe, use safe_load()",
+            ),
         ]
 
         for line_num, line in enumerate(new_code.splitlines(), 1):
             for pattern, vuln_type, cwe, severity, desc in dangerous_patterns:
                 if pattern in line and pattern not in original_code:
-                    issues.append(SecurityIssue(
-                        type=vuln_type,
-                        severity=severity,
-                        line=line_num,
-                        description=f"Introduced {desc}",
-                        cwe=cwe,
-                    ))
+                    issues.append(
+                        SecurityIssue(
+                            type=vuln_type,
+                            severity=severity,
+                            line=line_num,
+                            description=f"Introduced {desc}",
+                            cwe=cwe,
+                        )
+                    )
 
         return issues
 
@@ -360,11 +414,19 @@ class RefactorSimulator:
                 old_tree = ast.parse(original)
                 new_tree = ast.parse(new_code)
 
-                old_funcs = {n.name for n in ast.walk(old_tree) if isinstance(n, ast.FunctionDef)}
-                new_funcs = {n.name for n in ast.walk(new_tree) if isinstance(n, ast.FunctionDef)}
+                old_funcs = {
+                    n.name for n in ast.walk(old_tree) if isinstance(n, ast.FunctionDef)
+                }
+                new_funcs = {
+                    n.name for n in ast.walk(new_tree) if isinstance(n, ast.FunctionDef)
+                }
 
-                old_classes = {n.name for n in ast.walk(old_tree) if isinstance(n, ast.ClassDef)}
-                new_classes = {n.name for n in ast.walk(new_tree) if isinstance(n, ast.ClassDef)}
+                old_classes = {
+                    n.name for n in ast.walk(old_tree) if isinstance(n, ast.ClassDef)
+                }
+                new_classes = {
+                    n.name for n in ast.walk(new_tree) if isinstance(n, ast.ClassDef)
+                }
 
                 old_imports = set()
                 new_imports = set()
@@ -373,13 +435,17 @@ class RefactorSimulator:
                     if isinstance(node, ast.Import):
                         old_imports.update(a.name for a in node.names)
                     elif isinstance(node, ast.ImportFrom):
-                        old_imports.update(f"{node.module}.{a.name}" for a in node.names)
+                        old_imports.update(
+                            f"{node.module}.{a.name}" for a in node.names
+                        )
 
                 for node in ast.walk(new_tree):
                     if isinstance(node, ast.Import):
                         new_imports.update(a.name for a in node.names)
                     elif isinstance(node, ast.ImportFrom):
-                        new_imports.update(f"{node.module}.{a.name}" for a in node.names)
+                        new_imports.update(
+                            f"{node.module}.{a.name}" for a in node.names
+                        )
 
                 changes["functions_added"] = list(new_funcs - old_funcs)
                 changes["functions_removed"] = list(old_funcs - new_funcs)
@@ -392,11 +458,11 @@ class RefactorSimulator:
                 pass
 
         # Count line changes
-        diff = list(difflib.unified_diff(
-            original.splitlines(),
-            new_code.splitlines(),
-            lineterm=""
-        ))
+        diff = list(
+            difflib.unified_diff(
+                original.splitlines(), new_code.splitlines(), lineterm=""
+            )
+        )
 
         for line in diff:
             if line.startswith("+") and not line.startswith("+++"):
@@ -422,7 +488,9 @@ class RefactorSimulator:
         lines_removed = structural_changes.get("lines_removed", 0)
 
         if lines_removed > lines_added * 2:
-            warnings.append(f"Large deletion: {lines_removed} lines removed vs {lines_added} added")
+            warnings.append(
+                f"Large deletion: {lines_removed} lines removed vs {lines_added} added"
+            )
 
         if lines_added > 100:
             warnings.append(f"Large addition: {lines_added} new lines")

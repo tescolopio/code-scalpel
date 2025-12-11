@@ -15,8 +15,7 @@ This is a flow-insensitive analysis: we track the LAST assignment to each variab
 
 import ast
 from enum import Enum, auto
-from typing import Dict, Optional, Union
-from dataclasses import dataclass
+from typing import Dict
 
 from z3 import IntSort, BoolSort, StringSort, Sort
 

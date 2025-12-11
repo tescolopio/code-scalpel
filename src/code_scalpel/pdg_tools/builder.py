@@ -63,11 +63,11 @@ class PDGBuilder(ast.NodeVisitor):
         """Handle module-level code by creating a module scope."""
         # Create module-level scope for variable tracking
         self.enter_scope("module", "__module__", "module_0")
-        
+
         # Visit all top-level statements
         for stmt in node.body:
             self.visit(stmt)
-        
+
         # Exit module scope
         self.exit_scope()
 

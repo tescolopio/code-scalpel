@@ -1,6 +1,7 @@
 import tree_sitter_java
 from tree_sitter import Language, Parser
 
+
 class JavaParser:
     def __init__(self):
         self.JAVA_LANGUAGE = Language(tree_sitter_java.language())
@@ -10,7 +11,7 @@ class JavaParser:
     def parse(self, code: str) -> dict:
         tree = self.parser.parse(bytes(code, "utf8"))
         root_node = tree.root_node
-        
+
         functions = []
         classes = []
         imports = []
@@ -19,33 +20,41 @@ class JavaParser:
 
         # Helper to get text from node
         def get_text(node):
-            return code[node.start_byte:node.end_byte]
+            return code[node.start_byte : node.end_byte]
 
         # Traverse the tree
         stack = [root_node]
         while stack:
             node = stack.pop()
-            
+
             if node.type == "method_declaration":
                 # Extract method name
                 name_node = node.child_by_field_name("name")
                 if name_node:
                     functions.append(get_text(name_node))
-            
+
             elif node.type == "class_declaration":
                 name_node = node.child_by_field_name("name")
                 if name_node:
                     classes.append(get_text(name_node))
-            
+
             elif node.type == "import_declaration":
                 # Extract import path
                 # import com.example.MyClass;
                 # The structure is usually import_declaration -> scoped_identifier
-                imports.append(get_text(node).replace("import ", "").replace(";", "").strip())
+                imports.append(
+                    get_text(node).replace("import ", "").replace(";", "").strip()
+                )
 
-            elif node.type in ["if_statement", "for_statement", "while_statement", "case_label", "catch_clause"]:
+            elif node.type in [
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "case_label",
+                "catch_clause",
+            ]:
                 complexity += 1
-            
+
             elif node.type == "binary_expression":
                 operator = node.child_by_field_name("operator")
                 if operator and get_text(operator) in ["&&", "||"]:
@@ -61,5 +70,5 @@ class JavaParser:
             "imports": imports,
             "complexity": complexity,
             "lines_of_code": len(code.splitlines()),
-            "issues": issues
+            "issues": issues,
         }

@@ -8,6 +8,17 @@ from .factory import ParserFactory
 from .python_parser import PythonParser
 
 from .python_parsers.python_parsers_bandit import PythonParser as BanditPythonParser
+
+__all__ = [
+    "BaseParser",
+    "Language",
+    "ParseResult",
+    "PreprocessorConfig",
+    "IParser",
+    "ParserFactory",
+    "PythonParser",
+    "BanditPythonParser",
+]
 from .python_parsers.python_parsers_flake8 import PythonParser as Flake8PythonParser
 from .python_parsers.python_parsers_mypy import PythonParser as MypyPythonParser
 from .python_parsers.python_parsers_prospector import (

@@ -7,35 +7,33 @@ No mocking, no unit isolation - just code in, results out.
 If these tests pass, Operation Redemption is COMPLETE.
 """
 
-import pytest
-from z3 import Int, Bool, IntSort, BoolSort
+from z3 import Int, Bool, IntSort
 
+from code_scalpel.symbolic_execution_tools.constraint_solver import ConstraintSolver
 from code_scalpel.symbolic_execution_tools.engine import (
     SymbolicAnalyzer,
-    AnalysisResult,
-    PathResult,
-    PathStatus,
 )
 from code_scalpel.symbolic_execution_tools.ir_interpreter import IRSymbolicInterpreter
 from code_scalpel.ir.normalizers.python_normalizer import PythonNormalizer
+
 
 class SymbolicInterpreter:
     def __init__(self, max_loop_iterations=10):
         self.interp = IRSymbolicInterpreter(max_loop_iterations=max_loop_iterations)
         self.max_loop_iterations = max_loop_iterations
-        
+
     def execute(self, code: str):
         ir = PythonNormalizer().normalize(code)
         return self.interp.execute(ir)
 
     def declare_symbolic(self, name, sort):
         return self.interp.declare_symbolic(name, sort)
-from code_scalpel.symbolic_execution_tools.constraint_solver import ConstraintSolver
 
 
 # =============================================================================
 # SECTION 1: Basic End-to-End Analysis
 # =============================================================================
+
 
 class TestBasicAnalysis:
     """Test basic code analysis end-to-end."""
@@ -48,10 +46,10 @@ y = x + 5
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         assert result.total_paths >= 1
         assert result.feasible_count >= 1
-        
+
         # Check that we found the path
         feasible = result.get_feasible_paths()
         assert len(feasible) >= 1
@@ -67,20 +65,20 @@ else:
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         # With concrete x=5, should have only 1 feasible path
         assert result.feasible_count >= 1
 
     def test_symbolic_input_creates_paths(self):
         """
         Symbolic input should create multiple execution paths.
-        
+
         When x is unconstrained, both x>0 and x<=0 are possible.
         """
         # Create interpreter directly to declare symbolic input
         interp = SymbolicInterpreter()
         interp.declare_symbolic("x", IntSort())
-        
+
         code = """
 if x > 0:
     result = 1
@@ -88,7 +86,7 @@ else:
     result = 0
 """
         exec_result = interp.execute(code)
-        
+
         # Two paths: x > 0 and x <= 0
         assert len(exec_result.states) == 2
 
@@ -101,7 +99,7 @@ for i in range(3):
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         assert result.total_paths >= 1
         assert result.feasible_count >= 1
 
@@ -110,62 +108,54 @@ for i in range(3):
 # SECTION 2: Bug Finding with ConstraintSolver
 # =============================================================================
 
+
 class TestBugFinding:
     """Test the ability to find specific inputs using the solver."""
 
     def test_find_secret_password(self):
         """
         Classic bug finding: What input reaches the secret?
-        
+
         Question: What value of password causes result == 1?
         Answer: password = 1234
         """
         solver = ConstraintSolver()
         password = Int("password")
-        
+
         # Find a password that equals 1234
-        result = solver.solve(
-            constraints=[password == 1234],
-            variables=[password]
-        )
-        
+        result = solver.solve(constraints=[password == 1234], variables=[password])
+
         assert result.is_sat()
         assert result.model["password"] == 1234
 
     def test_find_division_by_zero(self):
         """
         Find inputs that cause division by zero.
-        
+
         Question: What value of divisor triggers the error path?
         Answer: divisor = 0
         """
         solver = ConstraintSolver()
         divisor = Int("divisor")
-        
+
         # Find divisor == 0
-        result = solver.solve(
-            constraints=[divisor == 0],
-            variables=[divisor]
-        )
-        
+        result = solver.solve(constraints=[divisor == 0], variables=[divisor])
+
         assert result.is_sat()
         assert result.model["divisor"] == 0
 
     def test_find_boundary_condition(self):
         """
         Find the boundary where behavior changes.
-        
+
         Question: What age triggers the "adult" branch?
         """
         solver = ConstraintSolver()
         age = Int("age")
-        
+
         # Find age >= 18
-        result = solver.solve(
-            constraints=[age >= 18],
-            variables=[age]
-        )
-        
+        result = solver.solve(constraints=[age >= 18], variables=[age])
+
         assert result.is_sat()
         assert result.model["age"] >= 18
 
@@ -173,6 +163,7 @@ class TestBugFinding:
 # =============================================================================
 # SECTION 3: Path Exploration
 # =============================================================================
+
 
 class TestPathExploration:
     """Test path exploration capabilities."""
@@ -191,9 +182,9 @@ else:
         interp = SymbolicInterpreter()
         interp.declare_symbolic("a", IntSort())
         interp.declare_symbolic("b", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Three paths: (a>0,b>0), (a>0,b<=0), (a<=0)
         assert len(exec_result.states) == 3
 
@@ -213,9 +204,9 @@ else:
         interp = SymbolicInterpreter()
         interp.declare_symbolic("x", IntSort())
         interp.declare_symbolic("y", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Four paths: combinations of (x>10, x<=10) × (y>5, y<=5)
         assert len(exec_result.states) == 4
 
@@ -231,9 +222,9 @@ if x > 10:
 """
         interp = SymbolicInterpreter()
         interp.declare_symbolic("x", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Should have pruned the x>10 AND x<5 path
         # Paths: (x>10 AND x>=5), (x<=10)
         feasible = [s for s in exec_result.states if s.is_feasible()]
@@ -243,6 +234,7 @@ if x > 10:
 # =============================================================================
 # SECTION 4: Loop Handling
 # =============================================================================
+
 
 class TestLoopHandling:
     """Test bounded loop unrolling."""
@@ -256,10 +248,10 @@ for i in range(3):
 """
         interp = SymbolicInterpreter(max_loop_iterations=10)
         exec_result = interp.execute(code)
-        
+
         assert len(exec_result.states) >= 1
         # After the loop, total should be 3
-        state = exec_result.states[0]
+        exec_result.states[0]
         # The value should be symbolic but evaluate to 3
 
     def test_while_loop_bounded(self):
@@ -272,7 +264,7 @@ while i < 10:
         # Set low iteration limit
         interp = SymbolicInterpreter(max_loop_iterations=5)
         exec_result = interp.execute(code)
-        
+
         # Should terminate despite loop potentially running 10 times
         assert len(exec_result.states) >= 1
 
@@ -285,9 +277,9 @@ while i < n:
 """
         interp = SymbolicInterpreter(max_loop_iterations=3)
         interp.declare_symbolic("n", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Multiple paths based on when loop exits
         assert len(exec_result.states) >= 1
 
@@ -296,6 +288,7 @@ while i < n:
 # SECTION 5: Solver Integration
 # =============================================================================
 
+
 class TestSolverIntegration:
     """Test constraint solver integration."""
 
@@ -303,27 +296,21 @@ class TestSolverIntegration:
         """Prove that an assertion is always true."""
         solver = ConstraintSolver()
         x = Int("x")
-        
+
         # x*x is always >= 0 for integers
         # To prove: x*x >= 0 is VALID
-        result = solver.prove(
-            preconditions=[],
-            assertion=(x * x >= 0)
-        )
-        
+        result = solver.prove(preconditions=[], assertion=(x * x >= 0))
+
         assert result.is_valid()
 
     def test_find_counterexample(self):
         """Find a counterexample to an invalid assertion."""
         solver = ConstraintSolver()
         x = Int("x")
-        
+
         # x > 10 is NOT always true - find counterexample
-        result = solver.prove(
-            preconditions=[],
-            assertion=(x > 10)
-        )
-        
+        result = solver.prove(preconditions=[], assertion=(x > 10))
+
         # Should find counterexample where x <= 10
         assert not result.is_valid()
         assert result.counterexample is not None
@@ -334,12 +321,9 @@ class TestSolverIntegration:
         solver = ConstraintSolver()
         x = Int("x")
         y = Int("y")
-        
-        result = solver.solve(
-            constraints=[x + y == 10, x > y],
-            variables=[x, y]
-        )
-        
+
+        result = solver.solve(constraints=[x + y == 10, x > y], variables=[x, y])
+
         assert result.is_sat()
         # x + y should equal 10
         assert result.model["x"] + result.model["y"] == 10
@@ -350,12 +334,9 @@ class TestSolverIntegration:
         """Detect unsatisfiable constraints."""
         solver = ConstraintSolver()
         x = Int("x")
-        
-        result = solver.solve(
-            constraints=[x > 10, x < 5],  # Impossible!
-            variables=[x]
-        )
-        
+
+        result = solver.solve(constraints=[x > 10, x < 5], variables=[x])  # Impossible!
+
         assert not result.is_sat()
         assert result.model is None
 
@@ -363,6 +344,7 @@ class TestSolverIntegration:
 # =============================================================================
 # SECTION 6: Full Pipeline Tests
 # =============================================================================
+
 
 class TestFullPipeline:
     """Test complete analysis pipeline."""
@@ -378,7 +360,7 @@ def check(x):
         # Note: We don't execute functions, but we can analyze the structure
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         # Should complete without error
         assert result is not None
 
@@ -393,7 +375,7 @@ e = a - b
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         assert result.feasible_count >= 1
 
     def test_analyze_boolean_operations(self):
@@ -407,7 +389,7 @@ t = not p
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         assert result.feasible_count >= 1
 
     def test_type_marshaling(self):
@@ -415,24 +397,22 @@ t = not p
         solver = ConstraintSolver()
         x = Int("x")
         b = Bool("b")
-        
-        result = solver.solve(
-            constraints=[x == 42, b == True],
-            variables=[x, b]
-        )
-        
+
+        result = solver.solve(constraints=[x == 42, b], variables=[x, b])
+
         assert result.is_sat()
-        
+
         # Values should be Python natives, not Z3 objects
         assert isinstance(result.model["x"], int)
         assert isinstance(result.model["b"], bool)
         assert result.model["x"] == 42
-        assert result.model["b"] == True
+        assert result.model["b"]
 
 
 # =============================================================================
 # SECTION 7: Edge Cases
 # =============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
@@ -441,7 +421,7 @@ class TestEdgeCases:
         """Empty code should not crash."""
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze("")
-        
+
         # Should complete without error
         assert result.total_paths >= 0
 
@@ -449,7 +429,7 @@ class TestEdgeCases:
         """Whitespace-only code should not crash."""
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze("   \n\n   ")
-        
+
         assert result.total_paths >= 0
 
     def test_comments_only(self):
@@ -460,7 +440,7 @@ class TestEdgeCases:
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         assert result is not None
 
     def test_pass_statement(self):
@@ -470,13 +450,14 @@ pass
 """
         analyzer = SymbolicAnalyzer()
         result = analyzer.analyze(code)
-        
+
         assert result.total_paths >= 1
 
 
 # =============================================================================
 # SECTION 8: Real-World Scenarios
 # =============================================================================
+
 
 class TestRealWorldScenarios:
     """Test real-world scenario patterns."""
@@ -491,9 +472,9 @@ else:
 """
         interp = SymbolicInterpreter()
         interp.declare_symbolic("x", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Two paths: x<0 and x>=0
         assert len(exec_result.states) == 2
 
@@ -508,9 +489,9 @@ else:
         interp = SymbolicInterpreter()
         interp.declare_symbolic("a", IntSort())
         interp.declare_symbolic("b", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Two paths: a>b and a<=b
         assert len(exec_result.states) == 2
 
@@ -526,9 +507,9 @@ else:
 """
         interp = SymbolicInterpreter()
         interp.declare_symbolic("x", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Three paths: x<0, x>100, 0<=x<=100
         assert len(exec_result.states) == 3
 
@@ -544,8 +525,8 @@ else:
 """
         interp = SymbolicInterpreter()
         interp.declare_symbolic("x", IntSort())
-        
+
         exec_result = interp.execute(code)
-        
+
         # Three paths: positive, negative, zero
         assert len(exec_result.states) == 3

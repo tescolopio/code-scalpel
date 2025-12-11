@@ -336,20 +336,22 @@ class TestBuilderCoverageGaps:
 
     def test_scope_post_init_with_provided_variables(self):
         """Test Scope __post_init__ when variables is provided."""
-        scope = Scope(type="function", name="test", node_id="n1", variables={"x": "def_x"})
+        scope = Scope(
+            type="function", name="test", node_id="n1", variables={"x": "def_x"}
+        )
         assert scope.variables == {"x": "def_x"}
 
     def test_for_loop_with_else(self):
         """Test for loop with else clause (lines 181-184)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def search(items, target):
     for item in items:
         if item == target:
             return item
     else:
         return None
-'''
+"""
         pdg, call_graph = builder.build(code)
         for_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "for"]
         assert len(for_nodes) >= 1
@@ -357,13 +359,13 @@ def search(items, target):
     def test_while_loop_with_variable_condition(self):
         """Test while loop with variable in condition (line 205)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def countdown(n):
     x = n
     while x > 0:
         x = x - 1
     return x
-'''
+"""
         pdg, call_graph = builder.build(code)
         while_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "while"]
         assert len(while_nodes) >= 1
@@ -371,14 +373,14 @@ def countdown(n):
     def test_try_except_with_handler(self):
         """Test try-except block (lines 262-289)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def safe_divide(a, b):
     try:
         result = a / b
     except ZeroDivisionError:
         result = 0
     return result
-'''
+"""
         pdg, call_graph = builder.build(code)
         try_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "try"]
         except_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "except"]
@@ -388,13 +390,13 @@ def safe_divide(a, b):
     def test_try_bare_except(self):
         """Test try-except with bare except (exception_type is None)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def risky():
     try:
         do_something()
     except:
         pass
-'''
+"""
         pdg, call_graph = builder.build(code)
         except_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "except"]
         assert len(except_nodes) >= 1
@@ -402,13 +404,13 @@ def risky():
     def test_call_with_positional_args(self):
         """Test function call with positional arguments (lines 294-296)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def process():
     a = 1
     b = 2
     result = calculate(a, b)
     return result
-'''
+"""
         pdg, call_graph = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -416,12 +418,12 @@ def process():
     def test_call_with_keyword_args(self):
         """Test function call with keyword arguments (lines 302-304)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def configure():
     x = 10
     y = 20
     setup(width=x, height=y)
-'''
+"""
         pdg, call_graph = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -429,12 +431,12 @@ def configure():
     def test_loop_variable_tuple_unpacking(self):
         """Test loop variable with tuple unpacking (lines 318-322)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def process_pairs(pairs):
     for x, y in pairs:
         result = x + y
     return result
-'''
+"""
         pdg, call_graph = builder.build(code)
         for_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "for"]
         assert len(for_nodes) >= 1
@@ -442,12 +444,12 @@ def process_pairs(pairs):
     def test_loop_variable_list_unpacking(self):
         """Test loop variable with list unpacking."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def process_items(items):
     for [a, b, c] in items:
         total = a + b + c
     return total
-'''
+"""
         pdg, call_graph = builder.build(code)
         for_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "for"]
         assert len(for_nodes) >= 1
@@ -455,11 +457,11 @@ def process_items(items):
     def test_call_with_subscript_func(self):
         """Test call with subscript as function (line 271)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     funcs = [f1, f2, f3]
     funcs[0]()
-'''
+"""
         pdg, call_graph = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -467,10 +469,10 @@ def test():
     def test_call_with_attribute(self):
         """Test call with attribute access (lines 268-269)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     obj.method()
-'''
+"""
         pdg, call_graph = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -478,10 +480,11 @@ def test():
     def test_call_at_module_level(self):
         """Test call outside function context (line 278 branch)."""
         builder = PDGBuilder()
-        code = 'result = some_function(1, 2)'
+        code = "result = some_function(1, 2)"
         pdg, call_graph = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
+
 
 class TestAssignmentCoverage:
     """Tests for visit_Assign and visit_AugAssign methods."""
@@ -489,14 +492,14 @@ class TestAssignmentCoverage:
     def test_simple_assignment(self):
         """Test basic variable assignment."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10
-'''
+"""
         pdg, _ = builder.build(code)
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) == 1
-        
+
         node_data = pdg.nodes[assign_nodes[0]]
         assert "x" in node_data.get("targets", [])
         assert "x" in node_data.get("defines", [])
@@ -504,14 +507,14 @@ def test():
     def test_tuple_unpacking_assignment(self):
         """Test tuple unpacking (line 270-272)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     a, b = 1, 2
-'''
+"""
         pdg, _ = builder.build(code)
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) == 1
-        
+
         node_data = pdg.nodes[assign_nodes[0]]
         assert "a" in node_data.get("targets", [])
         assert "b" in node_data.get("targets", [])
@@ -519,14 +522,14 @@ def test():
     def test_list_unpacking_assignment(self):
         """Test list unpacking."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     [x, y] = [1, 2]
-'''
+"""
         pdg, _ = builder.build(code)
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) == 1
-        
+
         node_data = pdg.nodes[assign_nodes[0]]
         assert "x" in node_data.get("targets", [])
         assert "y" in node_data.get("targets", [])
@@ -534,41 +537,44 @@ def test():
     def test_assignment_with_data_dependency(self):
         """Test assignment uses previous variable (lines 290-292)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10
     y = x + 5
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         # Find edges with data_dependency
-        data_edges = [(s, t) for s, t, d in pdg.edges(data=True) 
-                      if d.get("type") == "data_dependency"]
+        data_edges = [
+            (s, t)
+            for s, t, d in pdg.edges(data=True)
+            if d.get("type") == "data_dependency"
+        ]
         # There should be an edge from x's definition to y's definition
         assert len(data_edges) >= 1
 
     def test_assignment_with_call(self):
         """Test assignment with function call in RHS (lines 295-298)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     result = func(1, 2)
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
 
     def test_assignment_inside_control(self):
         """Test assignment inside control structure (lines 285-287)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     if True:
         x = 10
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         # Check for control_dependency edge to the assignment
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) >= 1
@@ -576,51 +582,54 @@ def test():
     def test_augmented_assignment_basic(self):
         """Test augmented assignment (+=)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10
     x += 5
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) == 2  # x = 10 and x += 5
-        
+
         # Check for data dependency from first x to augmented assignment
-        data_edges = [(s, t) for s, t, d in pdg.edges(data=True) 
-                      if d.get("type") == "data_dependency"]
+        data_edges = [
+            (s, t)
+            for s, t, d in pdg.edges(data=True)
+            if d.get("type") == "data_dependency"
+        ]
         assert len(data_edges) >= 1
 
     def test_augmented_assignment_all_ops(self):
         """Test different augmented assignment operators."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10
     x -= 1
     x *= 2
     x //= 3
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) == 4
 
     def test_assignment_registers_definition(self):
         """Test that assignment registers variable for later use."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10
     while x > 0:
         x = x - 1
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         # The while condition should have data dependency to x's definition
         while_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "while"]
         assert len(while_nodes) == 1
-        
+
         # Check for data dependency edge to while node
         while_in_edges = list(pdg.in_edges(while_nodes[0], data=True))
         data_deps = [e for e in while_in_edges if e[2].get("type") == "data_dependency"]
@@ -629,11 +638,11 @@ def test():
     def test_decorator_no_crash(self):
         """Test that decorator doesn't crash (line 392)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 @decorator
 def test():
     pass
-'''
+"""
         # Should not raise
         pdg, _ = builder.build(code)
         assert len(pdg.nodes()) >= 1
@@ -641,12 +650,12 @@ def test():
     def test_multiple_targets_assignment(self):
         """Test assignment with multiple targets: a = b = 10."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     a = b = 10
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         # This creates one assign node with multiple targets
         assert len(assign_nodes) >= 1
@@ -658,18 +667,21 @@ class TestDecoratorCoverage:
     def test_call_decorator_creates_edge(self):
         """Test that call decorator creates decorator_dependency edge (line 399)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 @decorator(arg=1)
 def test():
     pass
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         # Should have a decorator_dependency edge
-        decorator_edges = [(s, t) for s, t, d in pdg.edges(data=True) 
-                           if d.get("type") == "decorator_dependency"]
+        decorator_edges = [
+            (s, t)
+            for s, t, d in pdg.edges(data=True)
+            if d.get("type") == "decorator_dependency"
+        ]
         assert len(decorator_edges) >= 1
-        
+
         # The call node should exist
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -677,36 +689,42 @@ def test():
     def test_simple_decorator_no_edge(self):
         """Test that simple Name decorator doesn't crash (None case)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 @simple_decorator
 def test():
     pass
-'''
+"""
         # Should not crash
         pdg, _ = builder.build(code)
-        
+
         # No decorator_dependency edge since decorator returns None
-        decorator_edges = [(s, t) for s, t, d in pdg.edges(data=True) 
-                           if d.get("type") == "decorator_dependency"]
+        [
+            (s, t)
+            for s, t, d in pdg.edges(data=True)
+            if d.get("type") == "decorator_dependency"
+        ]
         # Edge count depends on implementation - just ensure no crash
         assert len(pdg.nodes()) >= 1
 
     def test_multiple_decorators(self):
         """Test function with multiple decorators."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 @decorator1(a=1)
 @decorator2(b=2)
 def test():
     pass
-'''
+"""
         pdg, _ = builder.build(code)
-        
+
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) == 2
-        
-        decorator_edges = [(s, t) for s, t, d in pdg.edges(data=True) 
-                           if d.get("type") == "decorator_dependency"]
+
+        decorator_edges = [
+            (s, t)
+            for s, t, d in pdg.edges(data=True)
+            if d.get("type") == "decorator_dependency"
+        ]
         assert len(decorator_edges) >= 2
 
 
@@ -717,10 +735,10 @@ class TestBuilderBranchPartials:
         """Test tuple unpacking with non-Name element (branch 271->270)."""
         builder = PDGBuilder()
         # a[0], b = 1, 2 - a[0] is Subscript, not Name
-        code = '''
+        code = """
 def test(a):
     a[0], b = 1, 2
-'''
+"""
         pdg, _ = builder.build(code)
         # Should only capture 'b' as target, not a[0]
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
@@ -730,10 +748,10 @@ def test(a):
         """Test augmented assign with non-Name target (branches 331, 341, 344)."""
         builder = PDGBuilder()
         # a[0] += 1 - target is Subscript, not Name
-        code = '''
+        code = """
 def test(a):
     a[0] += 1
-'''
+"""
         pdg, _ = builder.build(code)
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) >= 1
@@ -742,10 +760,10 @@ def test(a):
         """Test augmented assign with undefined variable (branch 332->336)."""
         builder = PDGBuilder()
         # x += 1 without prior definition - def_node will be None
-        code = '''
+        code = """
 def test():
     x += 1
-'''
+"""
         pdg, _ = builder.build(code)
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) >= 1
@@ -753,11 +771,11 @@ def test():
     def test_augassign_rhs_undefined(self):
         """Test augmented assign with undefined RHS variable (branch 337->336)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10
     x += undefined_var
-'''
+"""
         pdg, _ = builder.build(code)
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) >= 2
@@ -765,13 +783,13 @@ def test():
     def test_assign_no_call_in_value(self):
         """Test assignment without call in RHS (branch 298->295)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     x = 10 + 20
-'''
+"""
         pdg, _ = builder.build(code)
         # No call nodes
-        call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
+        [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         # Might be 0 or more depending on what's in the code
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) >= 1
@@ -783,10 +801,10 @@ class TestBuilderMoreBranchPartials:
     def test_call_arg_undefined_var(self):
         """Test call with undefined variable argument (branch 381->380)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     func(undefined_var)
-'''
+"""
         pdg, _ = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -794,10 +812,10 @@ def test():
     def test_call_keyword_undefined_var(self):
         """Test call with undefined keyword arg (branch 389->388)."""
         builder = PDGBuilder()
-        code = '''
+        code = """
 def test():
     func(x=undefined_var)
-'''
+"""
         pdg, _ = builder.build(code)
         call_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "call"]
         assert len(call_nodes) >= 1
@@ -806,11 +824,11 @@ def test():
         """Test for loop with subscript target (branch 406->exit)."""
         builder = PDGBuilder()
         # for a[0] in items - target is Subscript
-        code = '''
+        code = """
 def test(a, items):
     for a[0] in items:
         pass
-'''
+"""
         pdg, _ = builder.build(code)
         for_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "for"]
         assert len(for_nodes) >= 1
@@ -819,11 +837,11 @@ def test(a, items):
         """Test for loop tuple with non-Name element (branch 409->408)."""
         builder = PDGBuilder()
         # for a[0], b in items - first element is Subscript
-        code = '''
+        code = """
 def test(a, items):
     for a[0], b in items:
         pass
-'''
+"""
         pdg, _ = builder.build(code)
         for_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "for"]
         assert len(for_nodes) >= 1

@@ -8,8 +8,6 @@ Goal: Get cli.py from 0% to at least 50% coverage.
 import subprocess
 import sys
 
-import pytest
-
 
 class TestCLIBasics:
     """Test basic CLI functionality."""
@@ -22,7 +20,9 @@ class TestCLIBasics:
             text=True,
         )
         assert result.returncode == 0
-        assert "code-scalpel" in result.stdout.lower() or "usage" in result.stdout.lower()
+        assert (
+            "code-scalpel" in result.stdout.lower() or "usage" in result.stdout.lower()
+        )
         assert "analyze" in result.stdout
         assert "server" in result.stdout
         assert "version" in result.stdout
@@ -128,7 +128,11 @@ class TestCLIAnalyze:
             text=True,
         )
         # Should fail gracefully
-        assert result.returncode != 0 or "error" in result.stderr.lower() or "not found" in result.stdout.lower()
+        assert (
+            result.returncode != 0
+            or "error" in result.stderr.lower()
+            or "not found" in result.stdout.lower()
+        )
 
     def test_analyze_syntax_error_code(self):
         """Test analyzing code with syntax errors."""
@@ -147,7 +151,11 @@ class TestCLIAnalyze:
         # Should handle gracefully, not crash
         # May return 0 with error message or non-zero
         combined = result.stdout + result.stderr
-        assert result.returncode != 0 or "error" in combined.lower() or "syntax" in combined.lower()
+        assert (
+            result.returncode != 0
+            or "error" in combined.lower()
+            or "syntax" in combined.lower()
+        )
 
 
 class TestCLIServer:
@@ -186,13 +194,17 @@ class TestCLIEdgeCases:
         )
         # Should show error or usage
         combined = result.stdout + result.stderr
-        assert result.returncode != 0 or "error" in combined.lower() or "usage" in combined.lower()
+        assert (
+            result.returncode != 0
+            or "error" in combined.lower()
+            or "usage" in combined.lower()
+        )
 
     def test_analyze_non_python_file(self, tmp_path):
         """Test analyzing a non-Python file (should warn)."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("Just some text content")
-        
+
         result = subprocess.run(
             [sys.executable, "-m", "code_scalpel.cli", "analyze", str(test_file)],
             capture_output=True,
@@ -205,14 +217,16 @@ class TestCLIEdgeCases:
     def test_analyze_file_with_dead_code(self, tmp_path):
         """Test analyzing a file with dead code for detection."""
         test_file = tmp_path / "dead_code.py"
-        test_file.write_text("""
+        test_file.write_text(
+            """
 def unused_function():
     return "never called"
 
 def main():
     return 42
-""")
-        
+"""
+        )
+
         result = subprocess.run(
             [sys.executable, "-m", "code_scalpel.cli", "analyze", str(test_file)],
             capture_output=True,
@@ -226,17 +240,25 @@ def main():
         """Test file analysis with JSON output."""
         test_file = tmp_path / "sample.py"
         test_file.write_text("x = 1\ny = 2\n")
-        
+
         result = subprocess.run(
-            [sys.executable, "-m", "code_scalpel.cli", "analyze", str(test_file), "--json"],
+            [
+                sys.executable,
+                "-m",
+                "code_scalpel.cli",
+                "analyze",
+                str(test_file),
+                "--json",
+            ],
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0
-        
+
         import json
+
         # Find JSON in output
-        for line in result.stdout.strip().split('\n'):
+        for line in result.stdout.strip().split("\n"):
             try:
                 data = json.loads(line)
                 if isinstance(data, dict):
@@ -248,7 +270,8 @@ def main():
     def test_analyze_complex_code(self, tmp_path):
         """Test analyzing more complex code with all features."""
         test_file = tmp_path / "complex.py"
-        test_file.write_text("""
+        test_file.write_text(
+            """
 import os
 
 class Calculator:
@@ -270,8 +293,9 @@ def main():
     calc = Calculator()
     calc.add(5).add(10)
     return calc.get_value()
-""")
-        
+"""
+        )
+
         result = subprocess.run(
             [sys.executable, "-m", "code_scalpel.cli", "analyze", str(test_file)],
             capture_output=True,
@@ -279,7 +303,11 @@ def main():
         )
         assert result.returncode == 0
         # Should detect classes and functions
-        assert "Classes" in result.stdout or "Functions" in result.stdout or "Metrics" in result.stdout
+        assert (
+            "Classes" in result.stdout
+            or "Functions" in result.stdout
+            or "Metrics" in result.stdout
+        )
 
 
 class TestCLIDirectImport:
@@ -288,18 +316,18 @@ class TestCLIDirectImport:
     def test_analyze_file_not_found(self):
         """Test analyze_file with nonexistent file."""
         from code_scalpel.cli import analyze_file
-        
+
         result = analyze_file("/nonexistent/path/to/file.py")
         assert result == 1
 
     def test_analyze_file_non_py_extension(self, tmp_path, capsys):
         """Test analyze_file warns for non-.py files."""
         from code_scalpel.cli import analyze_file
-        
+
         test_file = tmp_path / "test.txt"
         test_file.write_text("x = 1")
-        
-        result = analyze_file(str(test_file))
+
+        analyze_file(str(test_file))
         captured = capsys.readouterr()
         assert "Warning" in captured.err
 
@@ -307,16 +335,16 @@ class TestCLIDirectImport:
         """Test analyze_file with JSON output format."""
         from code_scalpel.cli import analyze_file
         import json
-        
+
         test_file = tmp_path / "test.py"
         test_file.write_text("def foo(): return 42")
-        
+
         result = analyze_file(str(test_file), output_format="json")
         captured = capsys.readouterr()
-        
+
         assert result == 0
         # Output should contain valid JSON
-        output_lines = captured.out.strip().split('\n')
+        output_lines = captured.out.strip().split("\n")
         found_json = False
         for line in output_lines:
             try:
@@ -332,13 +360,13 @@ class TestCLIDirectImport:
         """Test analyze_code with JSON output format."""
         from code_scalpel.cli import analyze_code
         import json
-        
+
         result = analyze_code("x = 1", output_format="json")
         captured = capsys.readouterr()
-        
+
         assert result == 0
         # Try to parse JSON from output
-        output_lines = captured.out.strip().split('\n')
+        output_lines = captured.out.strip().split("\n")
         for line in output_lines:
             try:
                 data = json.loads(line)
@@ -350,23 +378,23 @@ class TestCLIDirectImport:
     def test_analyze_code_syntax_error(self, capsys):
         """Test analyze_code with code that has syntax error."""
         from code_scalpel.cli import analyze_code
-        
+
         result = analyze_code("def broken(")
         captured = capsys.readouterr()
-        
+
         # May succeed (with error in result) or fail
-        combined = captured.out + captured.err
+        captured.out + captured.err
         assert result in [0, 1]
 
     def test_main_no_args(self, capsys, monkeypatch):
         """Test main with no arguments shows help."""
         from code_scalpel.cli import main
         import sys
-        
-        monkeypatch.setattr(sys, 'argv', ['code-scalpel'])
+
+        monkeypatch.setattr(sys, "argv", ["code-scalpel"])
         result = main()
         captured = capsys.readouterr()
-        
+
         assert result == 0
         assert "usage" in captured.out.lower() or "code-scalpel" in captured.out.lower()
 
@@ -374,11 +402,11 @@ class TestCLIDirectImport:
         """Test main version command."""
         from code_scalpel.cli import main
         import sys
-        
-        monkeypatch.setattr(sys, 'argv', ['code-scalpel', 'version'])
+
+        monkeypatch.setattr(sys, "argv", ["code-scalpel", "version"])
         result = main()
         captured = capsys.readouterr()
-        
+
         assert result == 0
         assert "0.1.0" in captured.out or "Code Scalpel" in captured.out
 
@@ -386,20 +414,20 @@ class TestCLIDirectImport:
         """Test main analyze --code."""
         from code_scalpel.cli import main
         import sys
-        
-        monkeypatch.setattr(sys, 'argv', ['code-scalpel', 'analyze', '--code', 'x = 1'])
+
+        monkeypatch.setattr(sys, "argv", ["code-scalpel", "analyze", "--code", "x = 1"])
         result = main()
-        captured = capsys.readouterr()
-        
+        capsys.readouterr()
+
         assert result == 0
 
     def test_main_analyze_no_input(self, capsys, monkeypatch):
         """Test main analyze without file or code."""
         from code_scalpel.cli import main
         import sys
-        
-        monkeypatch.setattr(sys, 'argv', ['code-scalpel', 'analyze'])
+
+        monkeypatch.setattr(sys, "argv", ["code-scalpel", "analyze"])
         result = main()
-        captured = capsys.readouterr()
-        
+        capsys.readouterr()
+
         assert result == 1  # Should fail with exit code 1

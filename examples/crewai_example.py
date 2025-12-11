@@ -74,8 +74,6 @@ def demo_crewai_integration():
         - OPENAI_API_KEY or other LLM configuration
     """
     try:
-        from typing import Type
-
         from crewai import Agent, Crew, Task
         from crewai.tools import BaseTool
         from pydantic import BaseModel, Field

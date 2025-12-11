@@ -202,6 +202,16 @@ class PDGTransformer:
             metrics={"nodes_created": len(new_nodes)},
         )
 
+    def _reconnect_split_dependencies(self, original_node: str, new_nodes: list[str]) -> None:
+        """Reconnect dependencies for split nodes."""
+        # Incoming edges go to the first new node
+        for pred, _, data in list(self.pdg.in_edges(original_node, data=True)):
+            self.pdg.add_edge(pred, new_nodes[0], **data)
+
+        # Outgoing edges come from the last new node
+        for _, succ, data in list(self.pdg.out_edges(original_node, data=True)):
+            self.pdg.add_edge(new_nodes[-1], succ, **data)
+
     def insert_node(
         self, node: str, data: dict, dependencies: list = None
     ) -> TransformationResult:
@@ -269,14 +279,17 @@ class PDGTransformer:
 
         predecessors = list(self.pdg.predecessors(old_node))
         successors = list(self.pdg.successors(old_node))
+
+        # Capture edge data
+        in_edges_data = {pred: self.pdg.edges[pred, old_node] for pred in predecessors}
+        out_edges_data = {succ: self.pdg.edges[old_node, succ] for succ in successors}
+
         self.pdg.remove_node(old_node)
         self.pdg.add_node(new_node, **data)
         for predecessor in predecessors:
-            edge_data = self.pdg.edges[predecessor, old_node]
-            self.pdg.add_edge(predecessor, new_node, **edge_data)
+            self.pdg.add_edge(predecessor, new_node, **in_edges_data[predecessor])
         for successor in successors:
-            edge_data = self.pdg.edges[old_node, successor]
-            self.pdg.add_edge(new_node, successor, **edge_data)
+            self.pdg.add_edge(new_node, successor, **out_edges_data[successor])
 
         return TransformationResult(
             success=True,
@@ -565,3 +578,40 @@ class PDGTransformer:
             if "body_nodes" in loop_data:
                 loop_body.update(loop_data["body_nodes"])
         return loop_body
+
+    def _create_method_node(
+        self, method_name: str, nodes: list[str], parameters: list[str] = None
+    ) -> str:
+        """Create a new method node representing extracted code."""
+        method_node = f"method_{method_name}"
+        self.pdg.add_node(
+            method_node,
+            type="function",
+            name=method_name,
+            parameters=parameters or [],
+            body_nodes=nodes,
+        )
+        return method_node
+
+    def _update_method_dependencies(
+        self, method_node: str, extracted_nodes: list[str]
+    ) -> None:
+        """Update dependencies for the new method node."""
+        # Incoming edges to extracted nodes become incoming edges to method node
+        for node in extracted_nodes:
+            for pred, _, data in list(self.pdg.in_edges(node, data=True)):
+                if pred not in extracted_nodes:
+                    self.pdg.add_edge(pred, method_node, **data)
+
+            # Outgoing edges from extracted nodes become outgoing edges from method node
+            for _, succ, data in list(self.pdg.out_edges(node, data=True)):
+                if succ not in extracted_nodes:
+                    self.pdg.add_edge(method_node, succ, **data)
+
+    def _depends_on_loop_variables(self, node: str, loop_node: str) -> bool:
+        """Check if a node depends on variables modified in the loop."""
+        # Check if there is a data dependency path from loop_node to node
+        try:
+            return nx.has_path(self.pdg, loop_node, node)
+        except nx.NetworkXError:
+            return False

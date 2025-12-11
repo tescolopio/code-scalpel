@@ -14,7 +14,7 @@ class TestTestGenerator:
         """Test generating tests for a simple function."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def classify(x):
     if x > 0:
         return "positive"
@@ -22,7 +22,7 @@ def classify(x):
         return "negative"
     else:
         return "zero"
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code, function_name="classify")
 
@@ -34,10 +34,10 @@ def classify(x):
         """Test that function name is auto-detected."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def my_function(a, b):
     return a + b
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code)
 
@@ -47,10 +47,10 @@ def my_function(a, b):
         """Test pytest code generation format."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def add(x, y):
     return x + y
-'''
+"""
         generator = TestGenerator(framework="pytest")
         result = generator.generate(code, function_name="add")
 
@@ -63,10 +63,10 @@ def add(x, y):
         """Test unittest code generation format."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def add(x, y):
     return x + y
-'''
+"""
         generator = TestGenerator(framework="unittest")
         result = generator.generate(code, function_name="add")
 
@@ -80,12 +80,12 @@ def add(x, y):
         """Test that branches generate multiple test cases."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def check(x):
     if x > 10:
         return "big"
     return "small"
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code, function_name="check")
 
@@ -96,12 +96,12 @@ def check(x):
         """Test that test cases include input values."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def double(n):
     if n > 0:
         return n * 2
     return 0
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code, function_name="double")
 
@@ -120,10 +120,10 @@ def double(n):
         """Test that generated pytest code is valid Python."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def is_even(n):
     return n % 2 == 0
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code, function_name="is_even")
 
@@ -194,16 +194,26 @@ def is_even(n):
         """Test generating tests from a pre-computed symbolic result."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def abs_val(x):
     if x < 0:
         return -x
     return x
-'''
+"""
         symbolic_result = {
             "paths": [
-                {"path_id": 0, "conditions": ["x < 0"], "state": {"x": -5}, "reachable": True},
-                {"path_id": 1, "conditions": ["not (x < 0)"], "state": {"x": 5}, "reachable": True},
+                {
+                    "path_id": 0,
+                    "conditions": ["x < 0"],
+                    "state": {"x": -5},
+                    "reachable": True,
+                },
+                {
+                    "path_id": 1,
+                    "conditions": ["not (x < 0)"],
+                    "state": {"x": 5},
+                    "reachable": True,
+                },
             ],
             "symbolic_vars": ["x"],
             "constraints": ["x < 0"],
@@ -228,10 +238,10 @@ class TestTestGeneratorEdgeCases:
         """Test generating tests for function with no branches."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def identity(x):
     return x
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code, function_name="identity")
 
@@ -242,10 +252,10 @@ def identity(x):
         """Test generating tests for function with no parameters."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def get_constant():
     return 42
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code, function_name="get_constant")
 
@@ -257,7 +267,7 @@ def get_constant():
         """Test that first non-private function is selected."""
         from code_scalpel.generators import TestGenerator
 
-        code = '''
+        code = """
 def _private():
     pass
 
@@ -266,7 +276,7 @@ def public_func():
 
 def another_func():
     return 2
-'''
+"""
         generator = TestGenerator()
         result = generator.generate(code)
 

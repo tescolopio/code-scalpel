@@ -214,7 +214,7 @@ class TestAnalysisCache:
 
     def test_version_change_invalidates_cache(self):
         """Test that changing tool version invalidates cache entries.
-        
+
         This ensures that upgrading code-scalpel automatically invalidates
         old cache entries, preventing stale results from older analysis.
         """
@@ -223,26 +223,26 @@ class TestAnalysisCache:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CacheConfig(cache_dir=Path(tmpdir))
-            
+
             # Simulate version 0.7.0
             original_version = cache_module.TOOL_VERSION
             cache_module.TOOL_VERSION = "0.7.0"
-            
+
             try:
                 cache1 = AnalysisCache(config)
                 code = "def foo(): return 1"
                 cache1.set(code, "analysis", {"version": "0.7.0"})
-                
+
                 # Same version should hit
                 assert cache1.get(code, "analysis") == {"version": "0.7.0"}
-                
+
                 # Simulate upgrade to version 0.8.0
                 cache_module.TOOL_VERSION = "0.8.0"
                 cache2 = AnalysisCache(config)
-                
+
                 # Different version should miss (automatic invalidation)
                 assert cache2.get(code, "analysis") is None
-                
+
                 # New version can set its own cache
                 cache2.set(code, "analysis", {"version": "0.8.0"})
                 assert cache2.get(code, "analysis") == {"version": "0.8.0"}
@@ -312,6 +312,7 @@ class TestCacheIntegration:
     async def test_analyze_code_caching(self):
         """Test that analyze_code uses cache."""
         import os
+
         os.environ["SCALPEL_CACHE_ENABLED"] = "1"
 
         from code_scalpel.mcp.server import analyze_code
@@ -331,6 +332,7 @@ class TestCacheIntegration:
     async def test_security_scan_caching(self):
         """Test that security_scan uses cache."""
         import os
+
         os.environ["SCALPEL_CACHE_ENABLED"] = "1"
 
         from code_scalpel.mcp.server import security_scan
@@ -361,23 +363,26 @@ class TestSymbolicCaching:
             # Configure cache to use temp directory
             config = CacheConfig(cache_dir=Path(tmpdir))
             cache = AnalysisCache(config)
-            
+
             # Patch get_cache to return our test cache
             import code_scalpel.utilities.cache as cache_module
+
             original_get_cache = cache_module.get_cache
             cache_module.get_cache = lambda *args, **kwargs: cache
 
             try:
-                from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+                from code_scalpel.symbolic_execution_tools.engine import (
+                    SymbolicAnalyzer,
+                )
 
                 analyzer = SymbolicAnalyzer(enable_cache=True)
-                code = '''
+                code = """
 x = 10
 if x > 5:
     y = x + 1
 else:
     y = x - 1
-'''
+"""
                 # First analysis (cache miss)
                 start1 = time.perf_counter()
                 result1 = analyzer.analyze(code)
@@ -395,8 +400,10 @@ else:
 
                 # Verify cache hit is faster (at least 2x faster)
                 # Note: This can be flaky on slow systems, so we're generous
-                assert time2 < time1, f"Cache hit ({time2:.4f}s) should be faster than miss ({time1:.4f}s)"
-                
+                assert (
+                    time2 < time1
+                ), f"Cache hit ({time2:.4f}s) should be faster than miss ({time1:.4f}s)"
+
                 # Verify from_cache flag
                 assert result2.from_cache is True
 
@@ -412,7 +419,7 @@ else:
 
         code = "x = 1"
         result = analyzer.analyze(code)
-        
+
         # Should still work without cache
         assert result.total_paths >= 1
         assert result.from_cache is False
@@ -430,17 +437,20 @@ else:
             cache = AnalysisCache(config)
 
             import code_scalpel.utilities.cache as cache_module
+
             original_get_cache = cache_module.get_cache
             cache_module.get_cache = lambda *args, **kwargs: cache
 
             try:
-                from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
+                from code_scalpel.symbolic_execution_tools.engine import (
+                    SymbolicAnalyzer,
+                )
 
                 code = "x = 10"
 
                 # Analyzer with default config
                 analyzer1 = SymbolicAnalyzer(max_loop_iterations=10)
-                result1 = analyzer1.analyze(code)
+                analyzer1.analyze(code)
 
                 # Analyzer with different config
                 analyzer2 = SymbolicAnalyzer(max_loop_iterations=20)

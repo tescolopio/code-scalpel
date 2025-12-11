@@ -17,3 +17,5 @@ esprima
 javalang
 tree-sitter
 tree-sitter-java
+mcp
+uvicorn

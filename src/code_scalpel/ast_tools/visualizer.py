@@ -309,7 +309,7 @@ class ASTVisualizer:
 
     def _nodes_equal(self, node1: ast.AST, node2: ast.AST) -> bool:
         """Check if two AST nodes are equal."""
-        if type(node1) != type(node2):
+        if type(node1) is not type(node2):
             return False
         for field in node1._fields:
             if getattr(node1, field) != getattr(node2, field):

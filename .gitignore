@@ -140,4 +140,5 @@ generated/
 *.generated.*
 
 # Misc
-.*.sw[po]
+.*.sw[po]debug_sink.py
+tests/test_secret_scanner.py

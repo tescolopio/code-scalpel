@@ -497,25 +497,25 @@ class PDGAnalyzer:
 
     def _is_loop_invariant(self, node: str, loop: str) -> bool:
         """Check if a node is loop invariant.
-        
+
         A node is loop invariant if:
         1. It doesn't depend on any variable modified in the loop
         2. All its operands are either constants or loop-invariant themselves
         """
         if node not in self.pdg:
             return False
-            
+
         node_data = self.pdg.nodes[node]
-        
+
         # Get variables used by this node
         uses = set(node_data.get("uses", []))
-        
+
         # Get all variables modified in the loop body
         loop_modified = set()
         for succ in self.pdg.successors(loop):
             succ_data = self.pdg.nodes.get(succ, {})
             loop_modified.update(succ_data.get("defines", []))
-        
+
         # Node is invariant if it doesn't use any loop-modified variables
         return not uses.intersection(loop_modified)
 
@@ -525,19 +525,19 @@ class PDGAnalyzer:
 
     def _parse_condition_constraint(self, condition: str, var: str) -> Optional[tuple]:
         """Parse a condition into a constraint for a variable.
-        
+
         Returns a tuple (operator, value) if the condition constrains the variable.
         E.g., "x > 5" for var="x" returns (">", 5)
         """
         import re
-        
+
         # Simple pattern matching for common comparisons
         # Matches: var op number or number op var
         patterns = [
             rf"{var}\s*(>|<|>=|<=|==|!=)\s*(-?\d+)",  # x > 5
             rf"(-?\d+)\s*(>|<|>=|<=|==|!=)\s*{var}",  # 5 < x
         ]
-        
+
         for i, pattern in enumerate(patterns):
             match = re.search(pattern, condition)
             if match:
@@ -546,9 +546,16 @@ class PDGAnalyzer:
                     return (op, int(value))
                 else:  # number op var - flip the operator
                     value, op = match.groups()
-                    flip_ops = {">": "<", "<": ">", ">=": "<=", "<=": ">=", "==": "==", "!=": "!="}
+                    flip_ops = {
+                        ">": "<",
+                        "<": ">",
+                        ">=": "<=",
+                        "<=": ">=",
+                        "==": "==",
+                        "!=": "!=",
+                    }
                     return (flip_ops.get(op, op), int(value))
-        
+
         return None
 
     def _solve_constraints(

@@ -28,7 +28,7 @@ from ..nodes import (
     IRReturn,
     IRWhile,
     IRParameter,
-    IRNode
+    IRNode,
 )
 from ..operators import BinaryOperator
 from .base import BaseNormalizer
@@ -75,14 +75,14 @@ class JavaVisitor(TreeSitterVisitor):
             # Skip comments and whitespace
             if not child.is_named:
                 continue
-            
+
             res = self.visit(child)
             if res:
                 if isinstance(res, list):
                     body.extend(res)
                 else:
                     body.append(res)
-                    
+
         return IRModule(body=body, source_language=self.language)
 
     def visit_class_declaration(self, node: Any) -> IRClassDef:
@@ -91,10 +91,10 @@ class JavaVisitor(TreeSitterVisitor):
         """
         name_node = node.child_by_field_name("name")
         name = self.get_text(name_node) if name_node else "Anonymous"
-        
+
         body_node = node.child_by_field_name("body")
         body = []
-        
+
         if body_node:
             for child in body_node.children:
                 if child.type == "method_declaration":
@@ -108,9 +108,9 @@ class JavaVisitor(TreeSitterVisitor):
 
         return IRClassDef(
             name=name,
-            bases=[], # Java extends/implements logic could go here
+            bases=[],  # Java extends/implements logic could go here
             body=body,
-            source_language=self.language
+            source_language=self.language,
         )
 
     def visit_method_declaration(self, node: Any) -> IRFunctionDef:
@@ -119,7 +119,7 @@ class JavaVisitor(TreeSitterVisitor):
         """
         name_node = node.child_by_field_name("name")
         name = self.get_text(name_node)
-        
+
         # Parameters
         params = []
         params_node = node.child_by_field_name("parameters")
@@ -129,20 +129,20 @@ class JavaVisitor(TreeSitterVisitor):
                     p_name = child.child_by_field_name("name")
                     if p_name:
                         params.append(IRParameter(name=self.get_text(p_name)))
-        
+
         # Body
         body_node = node.child_by_field_name("body")
         body_stmts = []
         if body_node:
             # visit_block returns List[IRNode]
             body_stmts = self.visit(body_node)
-        
+
         return IRFunctionDef(
             name=name,
             params=params,
             body=body_stmts,
-            return_type=None, # TODO: Extract return type
-            source_language=self.language
+            return_type=None,  # TODO: Extract return type
+            source_language=self.language,
         )
 
     def visit_block(self, node: Any) -> List[IRNode]:
@@ -164,11 +164,11 @@ class JavaVisitor(TreeSitterVisitor):
         # This node contains type and declarators
         # We want to return a list of assignments/declarations
         declarators = []
-        
+
         for child in node.children:
             if child.type == "variable_declarator":
                 declarators.append(self.visit(child))
-        
+
         # If single declarator, return it. If multiple, return list?
         # IRBlock expects statements.
         # For simplicity, let's return the first one or a list if multiple
@@ -180,10 +180,10 @@ class JavaVisitor(TreeSitterVisitor):
         """x = 5"""
         name_node = node.child_by_field_name("name")
         value_node = node.child_by_field_name("value")
-        
+
         target = IRName(id=self.get_text(name_node))
         value = self.visit(value_node) if value_node else IRConstant(value=None)
-        
+
         return IRAssign(targets=[target], value=value)
 
     def visit_expression_statement(self, node: Any) -> Any:
@@ -198,18 +198,15 @@ class JavaVisitor(TreeSitterVisitor):
         """x = y"""
         left = node.child_by_field_name("left")
         right = node.child_by_field_name("right")
-        
-        return IRAssign(
-            targets=[self.visit(left)],
-            value=self.visit(right)
-        )
+
+        return IRAssign(targets=[self.visit(left)], value=self.visit(right))
 
     def visit_method_invocation(self, node: Any) -> IRCall:
         """obj.method(arg)"""
         name_node = node.child_by_field_name("name")
         object_node = node.child_by_field_name("object")
         args_node = node.child_by_field_name("arguments")
-        
+
         func_name = self.get_text(name_node)
         if object_node:
             # method call on object
@@ -217,29 +214,25 @@ class JavaVisitor(TreeSitterVisitor):
             # We might represent this as a specialized IR node or just a name "obj.method"
             # For now, let's use IRName with the full dotted path if simple
             func_name = f"{obj_text}.{func_name}"
-            
+
         args = []
         if args_node:
             for child in args_node.children:
                 if child.is_named:
                     args.append(self.visit(child))
-                    
-        return IRCall(
-            func=IRName(id=func_name),
-            args=args,
-            kwargs={}
-        )
+
+        return IRCall(func=IRName(id=func_name), args=args, kwargs={})
 
     def visit_if_statement(self, node: Any) -> IRIf:
         """if (cond) { ... } else { ... }"""
         condition_node = node.child_by_field_name("condition")
         consequence_node = node.child_by_field_name("consequence")
         alternative_node = node.child_by_field_name("alternative")
-        
+
         condition = self.visit(condition_node) if condition_node else None
         consequence = self.visit(consequence_node) if consequence_node else []
         alternative = self.visit(alternative_node) if alternative_node else []
-        
+
         # Helper to ensure list of nodes
         def to_list(n):
             if isinstance(n, list):
@@ -247,25 +240,20 @@ class JavaVisitor(TreeSitterVisitor):
             return [n] if n else []
 
         return IRIf(
-            test=condition,
-            body=to_list(consequence),
-            orelse=to_list(alternative)
+            test=condition, body=to_list(consequence), orelse=to_list(alternative)
         )
 
     def visit_while_statement(self, node: Any) -> IRWhile:
         """while (cond) { ... }"""
         condition = self.visit(node.child_by_field_name("condition"))
         body = self.visit(node.child_by_field_name("body"))
-        
+
         def to_list(n):
             if isinstance(n, list):
                 return n
             return [n] if n else []
 
-        return IRWhile(
-            test=condition,
-            body=to_list(body)
-        )
+        return IRWhile(test=condition, body=to_list(body))
 
     def visit_return_statement(self, node: Any) -> IRReturn:
         """return x;"""
@@ -275,7 +263,7 @@ class JavaVisitor(TreeSitterVisitor):
             if child.is_named:
                 expr = self.visit(child)
                 break
-        
+
         return IRReturn(value=expr)
 
     def visit_binary_expression(self, node: Any) -> IRBinaryOp:
@@ -283,7 +271,7 @@ class JavaVisitor(TreeSitterVisitor):
         left = self.visit(node.child_by_field_name("left"))
         right = self.visit(node.child_by_field_name("right"))
         operator_text = self.get_text(node.child_by_field_name("operator"))
-        
+
         # Map operator text to BinaryOperator enum if possible, or just use text for now if allowed
         # The IRBinaryOp expects a BinaryOperator enum usually, but let's check definition.
         # It says op: BinaryOperator = None.
@@ -296,8 +284,10 @@ class JavaVisitor(TreeSitterVisitor):
             "/": BinaryOperator.DIV,
             "%": BinaryOperator.MOD,
         }
-        op = op_map.get(operator_text, BinaryOperator.ADD) # Default to ADD if unknown for now
-        
+        op = op_map.get(
+            operator_text, BinaryOperator.ADD
+        )  # Default to ADD if unknown for now
+
         return IRBinaryOp(left=left, op=op, right=right)
 
     def visit_identifier(self, node: Any) -> IRName:
@@ -310,7 +300,7 @@ class JavaVisitor(TreeSitterVisitor):
         # Strip quotes
         text = self.get_text(node)
         return IRConstant(value=text[1:-1])
-    
+
     def visit_true(self, node: Any) -> IRConstant:
         return IRConstant(value=True)
 

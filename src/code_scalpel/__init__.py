@@ -19,7 +19,7 @@ For AI agent integrations:
     >>> from code_scalpel.integrations import AutogenScalpel, CrewAIScalpel
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "Tim Escolopio"
 __email__ = "3dtsus@gmail.com"
 
@@ -57,6 +57,36 @@ from .pdg_tools import (
     build_pdg,
 )
 
+# Project Crawler
+from .project_crawler import (
+    ProjectCrawler,
+    CrawlResult,
+    FileAnalysisResult,
+    crawl_project,
+)
+
+# Surgical Extractor (Token-efficient extraction)
+from .surgical_extractor import (
+    SurgicalExtractor,
+    ExtractionResult,
+    ContextualExtraction,
+    CrossFileSymbol,
+    CrossFileResolution,
+    extract_function,
+    extract_class,
+    extract_method,
+    extract_with_context,
+)
+
+# Surgical Patcher (Safe code modification)
+from .surgical_patcher import (
+    SurgicalPatcher,
+    PatchResult,
+    update_function_in_file,
+    update_class_in_file,
+    update_method_in_file,
+)
+
 __all__ = [
     # Version info
     "__version__",
@@ -81,6 +111,27 @@ __all__ = [
     "PDGBuilder",
     "PDGAnalyzer",
     "build_pdg",
+    # Project Crawler
+    "ProjectCrawler",
+    "CrawlResult",
+    "FileAnalysisResult",
+    "crawl_project",
+    # Surgical Extractor
+    "SurgicalExtractor",
+    "ExtractionResult",
+    "ContextualExtraction",
+    "CrossFileSymbol",
+    "CrossFileResolution",
+    "extract_function",
+    "extract_class",
+    "extract_method",
+    "extract_with_context",
+    # Surgical Patcher
+    "SurgicalPatcher",
+    "PatchResult",
+    "update_function_in_file",
+    "update_class_in_file",
+    "update_method_in_file",
     # MCP Server
     "create_app",
     "run_server",

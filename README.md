@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://pypi.org/project/code-scalpel/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-1016%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
+[![Tests](https://img.shields.io/badge/tests-1593%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
 
 **Precision Code Analysis for the AI Era**
 
@@ -118,6 +118,9 @@ Add to `claude_desktop_config.json`:
 | `symbolic_execute` | Explore all execution paths with Z3 |
 | `generate_unit_tests` | Create pytest/unittest from symbolic paths |
 | `simulate_refactor` | Verify changes are safe before applying |
+| `extract_code` | **NEW** Surgically extract functions/classes with cross-file deps |
+| `update_symbol` | **NEW** Safely replace functions/classes in files |
+| `crawl_project` | **NEW** Discover project structure and file analysis |
 
 ## Features
 
@@ -186,10 +189,10 @@ See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 
 ## Stats
 
-- **1016** tests passing
+- **1593** tests passing
 - **100%** PDG coverage, **100%** AST coverage
 - **3** languages supported
-- **5** MCP tools
+- **8** MCP tools (including surgical extraction)
 - **200x** cache speedup
 
 ## License
@@ -199,3 +202,5 @@ MIT License - see [LICENSE](LICENSE)
 ---
 
 **Built for the AI Agent Era** | [PyPI](https://pypi.org/project/code-scalpel/) | [GitHub](https://github.com/tescolopio/code-scalpel)
+
+<!-- mcp-name: io.github.tescolopio/code-scalpel -->

@@ -19,26 +19,18 @@ This solver ALWAYS returns Python-native types:
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 
 import z3
 from z3 import (
     ExprRef,
     BoolRef,
-    ArithRef,
     Solver,
-    Optimize,
     sat,
     unsat,
-    unknown,
-    And,
     Not,
-    is_int_value,
-    is_bool,
-    is_true,
-    is_false,
     simplify,
 )
 
@@ -289,7 +281,7 @@ class ConstraintSolver:
             # Try to get as fraction, then convert to float
             try:
                 return float(z3_value.as_decimal(10).rstrip("?"))
-            except:
+            except Exception:
                 return float(z3_value.numerator_as_long()) / float(
                     z3_value.denominator_as_long()
                 )

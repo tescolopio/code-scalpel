@@ -13,10 +13,10 @@ class TestRefactorSimulator:
         """Test that safe refactors are detected as safe."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def add(x, y):
     return x + y
-'''
+"""
         new_code = '''
 def add(x, y):
     """Add two numbers."""
@@ -32,34 +32,37 @@ def add(x, y):
         """Test that introducing eval() is detected as unsafe."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def process(data):
     return data.upper()
-'''
-        new_code = '''
+"""
+        new_code = """
 def process(data):
     return eval(data)
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
         assert result.is_safe is False
         assert result.status.value == "unsafe"
-        assert any("eval" in issue.description.lower() or "code injection" in issue.type.lower()
-                   for issue in result.security_issues)
+        assert any(
+            "eval" in issue.description.lower()
+            or "code injection" in issue.type.lower()
+            for issue in result.security_issues
+        )
 
     def test_unsafe_exec_injection(self):
         """Test that introducing exec() is detected as unsafe."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def run(code):
     print(code)
-'''
-        new_code = '''
+"""
+        new_code = """
 def run(code):
     exec(code)
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -70,15 +73,15 @@ def run(code):
         """Test that introducing os.system() is detected as unsafe."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def run_command(cmd):
     print(f"Would run: {cmd}")
-'''
-        new_code = '''
+"""
+        new_code = """
 import os
 def run_command(cmd):
     os.system(cmd)
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -89,20 +92,20 @@ def run_command(cmd):
         """Test that structural changes are tracked."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def foo():
     pass
 
 def bar():
     pass
-'''
-        new_code = '''
+"""
+        new_code = """
 def foo():
     pass
 
 def baz():
     pass
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -126,25 +129,25 @@ def baz():
         """Test strict mode treats medium severity as unsafe."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def load(data):
     return data
-'''
+"""
         # subprocess.call is medium severity
-        new_code = '''
+        new_code = """
 import subprocess
 def load(data):
     subprocess.call(data)
-'''
+"""
         # Normal mode
         simulator = RefactorSimulator(strict_mode=False)
-        result = simulator.simulate(original, new_code=new_code)
+        simulator.simulate(original, new_code=new_code)
         # Medium severity might be warning, not necessarily unsafe
-        
+
         # Strict mode
         strict_simulator = RefactorSimulator(strict_mode=True)
         strict_result = strict_simulator.simulate(original, new_code=new_code)
-        
+
         # In strict mode, any security issue should be unsafe
         if strict_result.security_issues:
             assert strict_result.is_safe is False
@@ -191,17 +194,17 @@ def load(data):
         """Test that line additions/removals are tracked."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def foo():
     pass
-'''
-        new_code = '''
+"""
+        new_code = """
 def foo():
     x = 1
     y = 2
     z = 3
     return x + y + z
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -215,14 +218,14 @@ class TestRefactorSimulatorPatch:
         """Test applying a simple unified diff patch."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''def foo():
+        original = """def foo():
     return 1
-'''
-        patch = '''@@ -1,2 +1,2 @@
+"""
+        patch = """@@ -1,2 +1,2 @@
  def foo():
 -    return 1
 +    return 2
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, patch=patch)
 
@@ -237,7 +240,7 @@ class TestRefactorSimulatorPatch:
 
         simulator = RefactorSimulator()
         # Should not crash
-        result = simulator.simulate(original, patch=patch)
+        simulator.simulate(original, patch=patch)
         # Result depends on implementation handling
 
 
@@ -248,15 +251,15 @@ class TestRefactorSimulatorSecurityPatterns:
         """Test SQL injection detection via cursor.execute."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def get_user(user_id):
     return {"id": user_id}
-'''
-        new_code = '''
+"""
+        new_code = """
 def get_user(user_id):
     cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
     return cursor.fetchone()
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -267,15 +270,15 @@ def get_user(user_id):
         """Test pickle.loads detection."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def load_data(data):
     return data
-'''
-        new_code = '''
+"""
+        new_code = """
 import pickle
 def load_data(data):
     return pickle.loads(data)
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -286,21 +289,23 @@ def load_data(data):
         """Test that yaml.safe_load is not flagged (only yaml.load)."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def load_config(data):
     return data
-'''
+"""
         # yaml.safe_load is safe
-        new_code = '''
+        new_code = """
 import yaml
 def load_config(data):
     return yaml.safe_load(data)
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
         # Should not flag yaml.safe_load
-        yaml_issues = [i for i in result.security_issues if "yaml" in i.description.lower()]
+        yaml_issues = [
+            i for i in result.security_issues if "yaml" in i.description.lower()
+        ]
         assert len(yaml_issues) == 0
 
 
@@ -311,17 +316,17 @@ class TestRefactorSimulatorWarnings:
         """Test warning when functions are removed."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '''
+        original = """
 def important_function():
     return "critical"
 
 def helper():
     pass
-'''
-        new_code = '''
+"""
+        new_code = """
 def helper():
     pass
-'''
+"""
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
@@ -331,12 +336,14 @@ def helper():
         """Test warning when many lines are deleted."""
         from code_scalpel.generators import RefactorSimulator
 
-        original = '\n'.join([f"line{i} = {i}" for i in range(50)])
+        original = "\n".join([f"line{i} = {i}" for i in range(50)])
         new_code = "x = 1"
 
         simulator = RefactorSimulator()
         result = simulator.simulate(original, new_code=new_code)
 
         # Should warn about large deletion
-        assert any("delet" in w.lower() for w in result.warnings) or \
-               result.structural_changes["lines_removed"] > 40
+        assert (
+            any("delet" in w.lower() for w in result.warnings)
+            or result.structural_changes["lines_removed"] > 40
+        )

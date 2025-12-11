@@ -65,14 +65,6 @@ Example (Custom Sanitizer):
 
 import warnings
 
-# Emit warning on import so users know about limitations
-warnings.warn(
-    "symbolic_execution_tools is BETA (v0.3.0). "
-    "Supports Int/Bool/String. See docs for limitations.",
-    category=UserWarning,
-    stacklevel=2,
-)
-
 from .constraint_solver import ConstraintSolver
 from .engine import SymbolicExecutionEngine, SymbolicAnalyzer
 
@@ -99,6 +91,14 @@ from .security_analyzer import (
     find_xss,
     find_command_injections,
     find_path_traversals,
+)
+
+# Emit warning on import so users know about limitations
+warnings.warn(
+    "symbolic_execution_tools is BETA (v0.3.0). "
+    "Supports Int/Bool/String. See docs for limitations.",
+    category=UserWarning,
+    stacklevel=2,
 )
 
 __all__ = [

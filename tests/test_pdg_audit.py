@@ -14,7 +14,6 @@ Test Categories:
 6. Regression Tests - specific scenarios that could break
 """
 
-import ast
 import sys
 import os
 
@@ -23,8 +22,8 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from code_scalpel.pdg_tools.builder import PDGBuilder, build_pdg, NodeType, Scope
-from code_scalpel.pdg_tools.analyzer import PDGAnalyzer, DependencyType
+from code_scalpel.pdg_tools.builder import PDGBuilder, build_pdg
+from code_scalpel.pdg_tools.analyzer import PDGAnalyzer
 from code_scalpel.pdg_tools.slicer import ProgramSlicer, SlicingCriteria, SliceType
 
 
@@ -98,13 +97,19 @@ z = y
         z_node = assign_nodes["z"]
 
         # Check chain: x -> y
-        x_edges = [e for _, e, d in pdg.out_edges(x_node, data=True) 
-                   if d.get("type") == "data_dependency"]
+        x_edges = [
+            e
+            for _, e, d in pdg.out_edges(x_node, data=True)
+            if d.get("type") == "data_dependency"
+        ]
         assert y_node in x_edges
 
         # Check chain: y -> z
-        y_edges = [e for _, e, d in pdg.out_edges(y_node, data=True) 
-                   if d.get("type") == "data_dependency"]
+        y_edges = [
+            e
+            for _, e, d in pdg.out_edges(y_node, data=True)
+            if d.get("type") == "data_dependency"
+        ]
         assert z_node in y_edges
 
     def test_multiple_uses_same_variable(self):
@@ -126,7 +131,8 @@ y = x + x
 
         # Should have data dependency
         data_edges = [
-            (u, v) for u, v, d in pdg.edges(data=True)
+            (u, v)
+            for u, v, d in pdg.edges(data=True)
             if d.get("type") == "data_dependency" and u == x_node and v == y_node
         ]
         assert len(data_edges) >= 1
@@ -144,7 +150,7 @@ y = x
         assign_nodes = [
             (n, d) for n, d in pdg.nodes(data=True) if d.get("type") == "assign"
         ]
-        
+
         # Find x assignments (there should be 2) and y assignment
         x_assigns = [(n, d) for n, d in assign_nodes if "x" in d.get("targets", [])]
         y_assign = next((n, d) for n, d in assign_nodes if "y" in d.get("targets", []))
@@ -152,7 +158,7 @@ y = x
         # y should depend on the second x assignment (x = 2), not the first
         # The second x assignment should be the one with value "2"
         x2_node = next(n for n, d in x_assigns if d.get("value") == "2")
-        
+
         # Check that y depends on x2
         has_dep = pdg.has_edge(x2_node, y_assign[0])
         assert has_dep, "y should depend on the reassigned x = 2"
@@ -179,10 +185,11 @@ if x > 0:
         assert len(assign_nodes) >= 1
 
         if_node = if_nodes[0]
-        
+
         # The assign should have a control dependency from the if
         ctrl_deps = [
-            (u, v) for u, v, d in pdg.edges(data=True)
+            (u, v)
+            for u, v, d in pdg.edges(data=True)
             if d.get("type") == "control_dependency" and u == if_node
         ]
         assert len(ctrl_deps) >= 1
@@ -199,12 +206,13 @@ else:
 
         if_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "if"]
         assert len(if_nodes) >= 1
-        
+
         if_node = if_nodes[0]
-        
+
         # Both branches should depend on the if
         ctrl_deps = [
-            (u, v) for u, v, d in pdg.edges(data=True)
+            (u, v)
+            for u, v, d in pdg.edges(data=True)
             if d.get("type") == "control_dependency" and u == if_node
         ]
         # Should have at least 2 control deps (one for each branch)
@@ -236,13 +244,15 @@ for i in range(10):
 
         for_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "for"]
         assert len(for_nodes) >= 1
-        
+
         for_node = for_nodes[0]
-        
+
         # Check for control dependency OR loop dependency (both are valid)
         ctrl_deps = [
-            (u, v) for u, v, d in pdg.edges(data=True)
-            if d.get("type") in ("control_dependency", "loop_dependency") and u == for_node
+            (u, v)
+            for u, v, d in pdg.edges(data=True)
+            if d.get("type") in ("control_dependency", "loop_dependency")
+            and u == for_node
         ]
         assert len(ctrl_deps) >= 1
 
@@ -268,7 +278,7 @@ w = 2
 
         # These should have no incoming control dependencies from if
         if_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "if"]
-        
+
         if if_nodes and x_node and w_node:
             if_node = if_nodes[0]
             assert not pdg.has_edge(if_node, x_node)
@@ -315,23 +325,25 @@ def foo(a):
         pdg, _ = build_pdg(code)
 
         # Find parameter node
-        param_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "parameter"]
-        
+        param_nodes = [
+            n for n, d in pdg.nodes(data=True) if d.get("type") == "parameter"
+        ]
+
         # Parameters should exist
         assert len(param_nodes) >= 1
 
     def test_scope_enter_exit(self):
         """Scope should be properly managed on enter/exit."""
         builder = PDGBuilder()
-        
+
         # Initially no scopes
         assert len(builder.scopes) == 0
-        
+
         # Enter a scope
         scope = builder.enter_scope("function", "test", "node_1")
         assert len(builder.scopes) == 1
         assert builder.get_current_scope() == scope
-        
+
         # Exit scope
         exited = builder.exit_scope()
         assert exited == scope
@@ -341,22 +353,22 @@ def foo(a):
     def test_nested_scope_variable_shadowing(self):
         """Inner scope variable should shadow outer scope."""
         builder = PDGBuilder()
-        
+
         # Enter outer scope and define x
         outer = builder.enter_scope("function", "outer", "outer_1")
         outer.variables["x"] = "outer_x_def"
-        
+
         # Enter inner scope and define x (shadows outer)
         inner = builder.enter_scope("function", "inner", "inner_1")
         inner.variables["x"] = "inner_x_def"
-        
+
         # Find definition should return inner scope's x
         result = builder._find_definition("x")
         assert result == "inner_x_def"
-        
+
         # Exit inner scope
         builder.exit_scope()
-        
+
         # Now should find outer scope's x
         result = builder._find_definition("x")
         assert result == "outer_x_def"
@@ -385,7 +397,7 @@ first, *rest, last = [1, 2, 3, 4, 5]
 """
         pdg, _ = build_pdg(code)
         assert pdg is not None
-        
+
         # Should have created assignment node
         assign_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "assign"]
         assert len(assign_nodes) >= 1
@@ -440,7 +452,7 @@ def foo():
     pass
 """
         pdg, _ = build_pdg(code)
-        
+
         func_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "function"]
         assert len(func_nodes) >= 1
 
@@ -452,7 +464,7 @@ class MyClass:
     pass
 """
         pdg, _ = build_pdg(code)
-        
+
         class_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "class"]
         assert len(class_nodes) >= 1
 
@@ -475,7 +487,7 @@ finally:
     cleanup()
 """
         pdg, _ = build_pdg(code)
-        
+
         try_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "try"]
         assert len(try_nodes) >= 1
 
@@ -549,7 +561,7 @@ class TestAnalyzerCorrectness:
 
         analyzer = PDGAnalyzer(pdg)
         complexity = analyzer._calculate_cyclomatic_complexity()
-        
+
         # Base 1 + 2 ifs = 3
         assert complexity == 3
 
@@ -561,7 +573,7 @@ class TestAnalyzerCorrectness:
 
         analyzer = PDGAnalyzer(pdg)
         complexity = analyzer._calculate_cyclomatic_complexity()
-        
+
         # Base 1 + 1 while + 1 for = 3
         assert complexity == 3
 
@@ -634,7 +646,7 @@ class TestAnalyzerCorrectness:
 
         analyzer = PDGAnalyzer(pdg)
         path = ["n1", "n2", "n3"]
-        
+
         assert analyzer._is_path_sanitized(path) is True
 
     def test_unsanitized_path_detection(self):
@@ -646,7 +658,7 @@ class TestAnalyzerCorrectness:
 
         analyzer = PDGAnalyzer(pdg)
         path = ["n1", "n2", "n3"]
-        
+
         assert analyzer._is_path_sanitized(path) is False
 
 
@@ -667,9 +679,9 @@ class TestSlicerCorrectness:
 
         slicer = ProgramSlicer(pdg)
         criteria = SlicingCriteria(nodes={"n3"}, variables=set())
-        
+
         slice_result = slicer.compute_slice(criteria, SliceType.BACKWARD)
-        
+
         # Should include n1, n2, n3
         assert "n3" in slice_result.nodes()
         assert "n2" in slice_result.nodes()
@@ -685,9 +697,9 @@ class TestSlicerCorrectness:
 
         slicer = ProgramSlicer(pdg)
         criteria = SlicingCriteria(nodes={"n3"}, variables=set())
-        
+
         slice_result = slicer.compute_slice(criteria, SliceType.BACKWARD)
-        
+
         # Should include n1, n3 but NOT n2
         assert "n3" in slice_result.nodes()
         assert "n1" in slice_result.nodes()
@@ -704,9 +716,9 @@ class TestSlicerCorrectness:
 
         slicer = ProgramSlicer(pdg)
         criteria = SlicingCriteria(nodes={"n1"}, variables=set())
-        
+
         slice_result = slicer.compute_slice(criteria, SliceType.FORWARD)
-        
+
         # Should include n1, n2, n3
         assert "n1" in slice_result.nodes()
         assert "n2" in slice_result.nodes()
@@ -726,9 +738,9 @@ class TestSlicerCorrectness:
         slicer = ProgramSlicer(pdg)
         source = SlicingCriteria(nodes={"n1"}, variables=set())
         target = SlicingCriteria(nodes={"n3"}, variables=set())
-        
+
         chop = slicer.compute_chop(source, target)
-        
+
         # Chop n1->n3 should include n1, n2, n3 but NOT n4
         assert "n1" in chop.nodes()
         assert "n2" in chop.nodes()
@@ -747,9 +759,9 @@ class TestSlicerCorrectness:
 
         slicer = ProgramSlicer(pdg)
         criteria = SlicingCriteria(nodes={"n3"}, variables=set())
-        
+
         slice_result = slicer.compute_slice(criteria, SliceType.THIN)
-        
+
         # Thin slice: only n3 and its direct dep n2
         assert "n3" in slice_result.nodes()
         assert "n2" in slice_result.nodes()
@@ -767,14 +779,11 @@ class TestSlicerCorrectness:
 
         slicer = ProgramSlicer(pdg)
         criteria = SlicingCriteria(
-            nodes={"n3"}, 
-            variables=set(),
-            include_control=True,
-            include_data=False
+            nodes={"n3"}, variables=set(), include_control=True, include_data=False
         )
-        
+
         slice_result = slicer.compute_slice(criteria, SliceType.BACKWARD)
-        
+
         # Should include n1 (control) and n3, but NOT n2 (data only)
         assert "n3" in slice_result.nodes()
         assert "n1" in slice_result.nodes()
@@ -803,7 +812,7 @@ def calculate(x, y):
         analyzer = PDGAnalyzer(pdg)
         data_flow = analyzer.analyze_data_flow()
         control_flow = analyzer.analyze_control_flow()
-        
+
         assert "def_use_chains" in data_flow
         assert "cyclomatic_complexity" in control_flow
 
@@ -811,7 +820,7 @@ def calculate(x, y):
         slicer = ProgramSlicer(pdg)
         # Find a return node to slice from
         return_nodes = [n for n, d in pdg.nodes(data=True) if d.get("type") == "return"]
-        
+
         if return_nodes:
             criteria = SlicingCriteria(nodes={return_nodes[0]}, variables=set())
             slice_result = slicer.compute_slice(criteria, SliceType.BACKWARD)
@@ -827,12 +836,12 @@ def calculate(x, y):
         pdg.add_edge("n2", "n3", type="data_dependency")
 
         analyzer = PDGAnalyzer(pdg)
-        vulnerabilities = analyzer.perform_security_analysis()
+        analyzer.perform_security_analysis()
 
         # Should detect at least the taint source and sink
         sources = analyzer._identify_taint_sources()
         sinks = analyzer._identify_taint_sinks()
-        
+
         assert "n1" in sources
         assert "n3" in sinks
 
@@ -842,7 +851,7 @@ def calculate(x, y):
         pdg.add_node("loop1", type="for")
         pdg.add_node("n1", type="assign", uses=["const"], defines=["temp"])
         pdg.add_node("n2", type="assign", uses=["i", "temp"], defines=["result"])
-        
+
         # n1 doesn't use any loop-modified variables
         # n2 uses i which is loop variable
         pdg.add_edge("loop1", "n1", type="control_dependency")
@@ -851,7 +860,7 @@ def calculate(x, y):
         pdg.nodes["n2"]["defines"] = ["i", "result"]  # i is modified in loop
 
         analyzer = PDGAnalyzer(pdg)
-        
+
         # n1 should be loop invariant (doesn't use loop-modified vars)
         assert analyzer._is_loop_invariant("n1", "loop1") is True
 

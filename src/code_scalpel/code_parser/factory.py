@@ -1,10 +1,11 @@
-from typing import Dict, Type, Optional
+from typing import Dict, Type
 from .interface import IParser, Language
 from .python_parser import PythonParser
 
+
 class ParserFactory:
     """Factory for creating language-specific parsers."""
-    
+
     _parsers: Dict[Language, Type[IParser]] = {
         Language.PYTHON: PythonParser,
     }
@@ -25,8 +26,8 @@ class ParserFactory:
     @staticmethod
     def detect_language(filename: str) -> Language:
         """Detect language from filename extension."""
-        ext = filename.split('.')[-1].lower() if '.' in filename else ""
-        
+        ext = filename.split(".")[-1].lower() if "." in filename else ""
+
         mapping = {
             "py": Language.PYTHON,
             "pyi": Language.PYTHON,
@@ -39,5 +40,5 @@ class ParserFactory:
             "cc": Language.CPP,
             "h": Language.CPP,
         }
-        
+
         return mapping.get(ext, Language.UNKNOWN)

@@ -348,7 +348,7 @@ def create_app(config: Optional[MCPServerConfig] = None) -> Flask:
     def symbolic_analysis() -> Response:
         """
         Perform symbolic execution analysis on Python code.
-        
+
         v0.3.0+: Uses Z3-powered symbolic execution to enumerate paths.
 
         Request body:
@@ -427,39 +427,41 @@ def create_app(config: Optional[MCPServerConfig] = None) -> Flask:
     def list_tools() -> Response:
         """
         List all available MCP tools/endpoints.
-        
+
         This endpoint helps agents discover what capabilities are available.
         """
-        return jsonify({
-            "service": "code-scalpel-mcp",
-            "version": __version__,
-            "tools": [
-                {
-                    "name": "analyze",
-                    "endpoint": "/analyze",
-                    "method": "POST",
-                    "description": "Analyze Python code for style and security issues",
-                },
-                {
-                    "name": "security",
-                    "endpoint": "/security", 
-                    "method": "POST",
-                    "description": "Taint-based security scan (SQLi, XSS, Command Injection, Path Traversal)",
-                },
-                {
-                    "name": "symbolic",
-                    "endpoint": "/symbolic",
-                    "method": "POST", 
-                    "description": "Symbolic execution to enumerate paths and generate test inputs",
-                },
-                {
-                    "name": "refactor",
-                    "endpoint": "/refactor",
-                    "method": "POST",
-                    "description": "Refactor Python code based on analysis",
-                },
-            ]
-        })
+        return jsonify(
+            {
+                "service": "code-scalpel-mcp",
+                "version": __version__,
+                "tools": [
+                    {
+                        "name": "analyze",
+                        "endpoint": "/analyze",
+                        "method": "POST",
+                        "description": "Analyze Python code for style and security issues",
+                    },
+                    {
+                        "name": "security",
+                        "endpoint": "/security",
+                        "method": "POST",
+                        "description": "Taint-based security scan (SQLi, XSS, Command Injection, Path Traversal)",
+                    },
+                    {
+                        "name": "symbolic",
+                        "endpoint": "/symbolic",
+                        "method": "POST",
+                        "description": "Symbolic execution to enumerate paths and generate test inputs",
+                    },
+                    {
+                        "name": "refactor",
+                        "endpoint": "/refactor",
+                        "method": "POST",
+                        "description": "Refactor Python code based on analysis",
+                    },
+                ],
+            }
+        )
 
     return app
 
@@ -504,13 +506,18 @@ if __name__ == "__main__":
     import os
 
     parser = argparse.ArgumentParser(description="Code Scalpel MCP Server")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8080, help="Port to bind to (default: 8080)")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode (development only)")
-    
+    parser.add_argument(
+        "--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=8080, help="Port to bind to (default: 8080)"
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable debug mode (development only)"
+    )
+
     args = parser.parse_args()
-    
+
     # Only enable debug mode in development
     is_development = os.environ.get("FLASK_ENV", "development") == "development"
     run_server(host=args.host, port=args.port, debug=args.debug and is_development)
-

@@ -18,6 +18,7 @@ import os
 
 app = FastAPI(title="Vulnerable Demo API")
 
+
 # Database setup
 def get_db():
     return sqlite3.connect("app.db")
@@ -30,17 +31,17 @@ def get_db():
 async def search_users(q: str = Query(..., description="Search query")):
     """
     Search users by name.
-    
+
     VULNERABILITY: Direct string concatenation in SQL query.
     Code Scalpel should detect: USER_INPUT -> q -> query -> cursor.execute()
     """
     db = get_db()
     cursor = db.cursor()
-    
+
     # BAD: SQL Injection
     query = f"SELECT * FROM users WHERE name LIKE '%{q}%'"
     cursor.execute(query)  # CWE-89: SQL Injection
-    
+
     return {"users": cursor.fetchall()}
 
 
@@ -51,14 +52,14 @@ async def search_users(q: str = Query(..., description="Search query")):
 async def export_data(filename: str):
     """
     Export database to a file.
-    
+
     VULNERABILITY: User-controlled filename in shell command.
     Code Scalpel should detect: filename -> cmd -> subprocess.run()
     """
     # BAD: Command Injection
     cmd = f"sqlite3 app.db .dump > /tmp/{filename}"
     subprocess.run(cmd, shell=True)  # CWE-78: Command Injection
-    
+
     return {"status": "exported", "file": filename}
 
 
@@ -69,7 +70,7 @@ async def export_data(filename: str):
 async def get_profile(user_id: int, request: Request):
     """
     Display user profile page.
-    
+
     VULNERABILITY: User data rendered directly into HTML.
     Code Scalpel should detect taint flow to HTML response.
     """
@@ -77,12 +78,12 @@ async def get_profile(user_id: int, request: Request):
     cursor = db.cursor()
     cursor.execute("SELECT name, bio FROM users WHERE id = ?", (user_id,))
     user = cursor.fetchone()
-    
+
     if not user:
         raise HTTPException(status_code=404)
-    
+
     name, bio = user
-    
+
     # BAD: XSS - user bio rendered without escaping
     html = f"""
     <html>
@@ -92,7 +93,7 @@ async def get_profile(user_id: int, request: Request):
         </body>
     </html>
     """  # CWE-79: XSS
-    
+
     return HTMLResponse(content=html)
 
 
@@ -103,17 +104,17 @@ async def get_profile(user_id: int, request: Request):
 async def download_file(filename: str):
     """
     Download a file from the uploads directory.
-    
+
     VULNERABILITY: User-controlled path without validation.
     Code Scalpel should detect: filename -> filepath -> open()
     """
     # BAD: Path Traversal
     filepath = f"/app/uploads/{filename}"  # User could pass "../../../etc/passwd"
-    
+
     if os.path.exists(filepath):
         with open(filepath, "r") as f:  # CWE-22: Path Traversal
             return {"content": f.read()}
-    
+
     raise HTTPException(status_code=404)
 
 
@@ -128,10 +129,10 @@ async def get_user(user_id: int):
     """
     db = get_db()
     cursor = db.cursor()
-    
+
     # GOOD: Parameterized query
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    
+
     return {"user": cursor.fetchone()}
 
 

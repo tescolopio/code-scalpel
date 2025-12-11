@@ -14,7 +14,7 @@ Example:
 
 import ast
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -33,10 +33,10 @@ class TestCase:
         """Convert test case to pytest function."""
         lines = [
             f"def test_{self.function_name}_path_{self.path_id}():",
-            f'    """',
+            '    """',
             f"    Path {self.path_id}: {self.description}",
             f"    Conditions: {', '.join(self.path_conditions) or 'No branches'}",
-            f'    """',
+            '    """',
         ]
 
         # Setup inputs
@@ -52,7 +52,9 @@ class TestCase:
 
         # Assert (we can't know expected output without execution, but we verify no crash)
         lines.append("    # Path is reachable with these inputs")
-        lines.append("    assert result is not None or result is None  # Executed successfully")
+        lines.append(
+            "    assert result is not None or result is None  # Executed successfully"
+        )
 
         return "\n".join(lines)
 
@@ -117,11 +119,13 @@ class GeneratedTestSuite:
             lines.append(self._to_unittest_method(test_case, i))
             lines.append("")
 
-        lines.extend([
-            "",
-            'if __name__ == "__main__":',
-            "    unittest.main()",
-        ])
+        lines.extend(
+            [
+                "",
+                'if __name__ == "__main__":',
+                "    unittest.main()",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -130,7 +134,10 @@ class GeneratedTestSuite:
         try:
             tree = ast.parse(self.source_code)
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name == self.function_name:
+                if (
+                    isinstance(node, ast.FunctionDef)
+                    and node.name == self.function_name
+                ):
                     return ast.unparse(node)
         except Exception:
             pass
@@ -319,33 +326,47 @@ class TestGenerator:
                         constraints.append(condition)
 
                         # True branch
-                        paths.append({
-                            "path_id": path_id,
-                            "conditions": [condition],
-                            "state": {var: self._generate_satisfying_value(condition, var, True) 
-                                     for var in symbolic_vars},
-                            "reachable": True,
-                        })
+                        paths.append(
+                            {
+                                "path_id": path_id,
+                                "conditions": [condition],
+                                "state": {
+                                    var: self._generate_satisfying_value(
+                                        condition, var, True
+                                    )
+                                    for var in symbolic_vars
+                                },
+                                "reachable": True,
+                            }
+                        )
                         path_id += 1
 
                         # False branch
-                        paths.append({
-                            "path_id": path_id,
-                            "conditions": [f"not ({condition})"],
-                            "state": {var: self._generate_satisfying_value(condition, var, False) 
-                                     for var in symbolic_vars},
-                            "reachable": True,
-                        })
+                        paths.append(
+                            {
+                                "path_id": path_id,
+                                "conditions": [f"not ({condition})"],
+                                "state": {
+                                    var: self._generate_satisfying_value(
+                                        condition, var, False
+                                    )
+                                    for var in symbolic_vars
+                                },
+                                "reachable": True,
+                            }
+                        )
                         path_id += 1
 
                 # If no branches, single path
                 if not paths:
-                    paths.append({
-                        "path_id": 0,
-                        "conditions": [],
-                        "state": {var: 0 for var in symbolic_vars},
-                        "reachable": True,
-                    })
+                    paths.append(
+                        {
+                            "path_id": 0,
+                            "conditions": [],
+                            "state": {var: 0 for var in symbolic_vars},
+                            "reachable": True,
+                        }
+                    )
 
             except SyntaxError:
                 pass
@@ -363,12 +384,34 @@ class TestGenerator:
         # Parse common patterns
         # x > 0, x < 0, x == 0, x >= N, x <= N
         patterns = [
-            (rf"{var}\s*>\s*(\d+)", lambda m: int(m.group(1)) + 1 if should_satisfy else int(m.group(1)) - 1),
-            (rf"{var}\s*<\s*(\d+)", lambda m: int(m.group(1)) - 1 if should_satisfy else int(m.group(1)) + 1),
-            (rf"{var}\s*>=\s*(\d+)", lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) - 1),
-            (rf"{var}\s*<=\s*(\d+)", lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) + 1),
-            (rf"{var}\s*==\s*(\d+)", lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) + 1),
-            (rf"{var}\s*!=\s*(\d+)", lambda m: int(m.group(1)) + 1 if should_satisfy else int(m.group(1))),
+            (
+                rf"{var}\s*>\s*(\d+)",
+                lambda m: int(m.group(1)) + 1
+                if should_satisfy
+                else int(m.group(1)) - 1,
+            ),
+            (
+                rf"{var}\s*<\s*(\d+)",
+                lambda m: int(m.group(1)) - 1
+                if should_satisfy
+                else int(m.group(1)) + 1,
+            ),
+            (
+                rf"{var}\s*>=\s*(\d+)",
+                lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) - 1,
+            ),
+            (
+                rf"{var}\s*<=\s*(\d+)",
+                lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) + 1,
+            ),
+            (
+                rf"{var}\s*==\s*(\d+)",
+                lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) + 1,
+            ),
+            (
+                rf"{var}\s*!=\s*(\d+)",
+                lambda m: int(m.group(1)) + 1 if should_satisfy else int(m.group(1)),
+            ),
         ]
 
         for pattern, value_fn in patterns:
@@ -416,25 +459,29 @@ class TestGenerator:
             else:
                 description = "Default/linear execution path"
 
-            test_cases.append(TestCase(
-                path_id=path_id,
-                function_name=function_name,
-                inputs=inputs,
-                expected_behavior="Executes without error",
-                path_conditions=conditions,
-                description=description,
-            ))
+            test_cases.append(
+                TestCase(
+                    path_id=path_id,
+                    function_name=function_name,
+                    inputs=inputs,
+                    expected_behavior="Executes without error",
+                    path_conditions=conditions,
+                    description=description,
+                )
+            )
 
         # Ensure at least one test case
         if not test_cases:
-            test_cases.append(TestCase(
-                path_id=0,
-                function_name=function_name,
-                inputs={},
-                expected_behavior="Executes without error",
-                path_conditions=[],
-                description="Basic execution test",
-            ))
+            test_cases.append(
+                TestCase(
+                    path_id=0,
+                    function_name=function_name,
+                    inputs={},
+                    expected_behavior="Executes without error",
+                    path_conditions=[],
+                    description="Basic execution test",
+                )
+            )
 
         return test_cases
 

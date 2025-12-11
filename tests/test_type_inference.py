@@ -12,7 +12,6 @@ Scope (per RFC-001):
 Gall's Law: Start simple. Strings, lists, objects are OUT OF SCOPE.
 """
 
-import ast
 import pytest
 from z3 import IntSort, BoolSort
 
@@ -671,7 +670,6 @@ class TestCoverageCompleteness:
 
     def test_direct_ast_num_node(self):
         """Test handling of legacy ast.Num node (line 139)."""
-        import ast
 
         engine = TypeInferenceEngine()
 

@@ -1,4 +1,5 @@
 import json
+import base64
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -403,4 +404,161 @@ class PDGVisualizer:
                 current_line.append(word)
                 current_length += len(word) + 1
             else:
-                lines.append(" ".join(current_line))
+                if current_line:
+                    lines.append(" ".join(current_line))
+                current_line = [word]
+                current_length = len(word)
+
+        if current_line:
+            lines.append(" ".join(current_line))
+
+        return "\\n".join(lines)
+
+    def _generate_details_panel(self) -> str:
+        """Generate HTML for the details panel."""
+        return """
+        <div id="details" class="node-details">
+            <h3>Node Details</h3>
+            <div id="node-content">Select a node to view details</div>
+        </div>
+        """
+
+    def _get_d3_script(self) -> str:
+        """Generate D3.js script for interactive visualization."""
+        return """
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        const svg = d3.select("#graph")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(100))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        // Arrow marker
+        svg.append("defs").selectAll("marker")
+            .data(["end"])
+            .enter().append("marker")
+            .attr("id", "end")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 15)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#999");
+
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("class", "link")
+            .attr("stroke", "#999")
+            .attr("marker-end", "url(#end)");
+
+        const node = svg.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        node.append("circle")
+            .attr("r", 10)
+            .attr("fill", d => getNodeColor(d.type));
+
+        node.append("text")
+            .attr("dx", 12)
+            .attr("dy", ".35em")
+            .text(d => d.id);
+
+        node.on("click", (event, d) => {
+            const details = document.getElementById("details");
+            const content = document.getElementById("node-content");
+            details.style.display = "block";
+            
+            let html = `<strong>ID:</strong> ${d.id}<br>`;
+            html += `<strong>Type:</strong> ${d.type}<br>`;
+            
+            for (const [key, value] of Object.entries(d.data)) {
+                if (key !== "type") {
+                    html += `<strong>${key}:</strong> ${value}<br>`;
+                }
+            }
+            content.innerHTML = html;
+        });
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        function getNodeColor(type) {
+            const colors = {
+                "assign": "#a8d5e5",
+                "if": "#95c8d8",
+                "while": "#95c8d8",
+                "function": "#89cff0",
+                "call": "#d1e8ef"
+            };
+            return colors[type] || "#cccccc";
+        }
+        """
+
+    def _highlight_graph_differences(self, graph1_data: dict, graph2_data: dict) -> None:
+        """Highlight differences between two graphs."""
+        nodes1 = {n["id"] for n in graph1_data["nodes"]}
+        nodes2 = {n["id"] for n in graph2_data["nodes"]}
+        
+        # Mark added/removed nodes
+        for node in graph1_data["nodes"]:
+            if node["id"] not in nodes2:
+                node["data"]["_status"] = "removed"
+                
+        for node in graph2_data["nodes"]:
+            if node["id"] not in nodes1:
+                node["data"]["_status"] = "added"
+
+    def _generate_base64_image(self, pdg: nx.DiGraph) -> str:
+        """Generate base64 encoded image of the PDG."""
+        dot = self._create_digraph()
+        self._add_nodes(dot, pdg)
+        self._add_edges(dot, pdg)
+        self._apply_layout_settings(dot)
+        
+        # Render to PNG data
+        png_data = dot.pipe(format="png")
+        return base64.b64encode(png_data).decode("utf-8")
+

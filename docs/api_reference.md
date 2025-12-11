@@ -616,110 +616,140 @@ tools = scalpel.get_crewai_tools()
 
 ### MCP Server
 
-HTTP API server for AI agents.
+Code Scalpel provides a Model Context Protocol (MCP) server using the FastMCP library. This enables AI agents like Claude, Copilot, and others to query code analysis tools directly.
+
+#### Starting the Server
+
+```bash
+# stdio transport (default - for Claude Desktop, Cursor)
+code-scalpel mcp
+
+# HTTP transport (for network/Docker deployment)
+code-scalpel mcp --http --port 8593
+
+# With workspace root
+code-scalpel mcp --root /path/to/project
+```
+
+#### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `analyze_code` | Parse structure, extract functions/classes/imports |
+| `security_scan` | Detect SQLi, XSS, command injection via taint analysis |
+| `symbolic_execute` | Explore all execution paths with Z3 |
+| `generate_unit_tests` | Create pytest/unittest from symbolic paths |
+| `simulate_refactor` | Verify changes are safe before applying |
+| `extract_code` | Surgically extract functions/classes with cross-file deps |
+| `update_symbol` | Safely replace functions/classes in files |
+| `crawl_project` | Discover project structure and file analysis |
+
+#### Tool: `extract_code`
+
+Token-efficient extraction of specific code elements.
 
 ```python
-from code_scalpel.integrations import create_app, run_server, MCPServerConfig
-
-# Create Flask app
-config = MCPServerConfig(
-    host="0.0.0.0",
-    port=8080,
-    debug=False,
-    cache_enabled=True,
-    max_code_size=100000
+# MCP Tool Call
+result = extract_code(
+    file_path="/project/src/utils.py",  # Server reads file (0 tokens to agent)
+    target_type="function",              # "function", "class", or "method"
+    target_name="calculate_tax",
+    include_cross_file_deps=True,        # Resolve imports from other files
+    context_depth=1                      # How deep to follow dependencies
 )
-app = create_app(config)
 
-# Or run directly
-run_server(host="0.0.0.0", port=8080)
+# Returns:
+# {
+#   "success": true,
+#   "target_name": "calculate_tax",
+#   "target_code": "def calculate_tax(amount): ...",
+#   "context_code": "# From models.py\nclass TaxRate: ...",
+#   "full_code": "...",  # Combined for LLM consumption
+#   "token_estimate": 150
+# }
 ```
 
-#### Endpoints
+#### Tool: `update_symbol`
 
-##### `GET /health`
+Safely replace a function, class, or method in a file.
 
-Health check endpoint.
+```python
+# MCP Tool Call
+result = update_symbol(
+    file_path="/project/src/utils.py",
+    target_type="function",
+    target_name="calculate_tax",
+    new_code="def calculate_tax(amount, rate=0.1):\n    return amount * rate",
+    create_backup=True
+)
+
+# Returns:
+# {
+#   "success": true,
+#   "backup_path": "/project/src/utils.py.bak",
+#   "lines_delta": -2,
+#   "old_code": "...",
+#   "new_code": "..."
+# }
+```
+
+#### Tool: `crawl_project`
+
+Discover and analyze project structure.
+
+```python
+# MCP Tool Call
+result = crawl_project(
+    root_path="/project",
+    include_patterns=["*.py"],
+    exclude_patterns=["**/test_*", "**/__pycache__/**"],
+    max_files=100,
+    include_analysis=True
+)
+
+# Returns file tree with analysis summaries
+```
+
+#### Claude Desktop Configuration
+
+Add to `claude_desktop_config.json`:
 
 ```json
 {
-  "status": "healthy",
-  "service": "code-scalpel-mcp",
-  "version": "0.1.0"
-}
-```
-
-##### `POST /analyze`
-
-Analyze code.
-
-**Request:**
-```json
-{
-  "code": "def hello(): return 42"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "analysis": {...},
-  "issues": [...],
-  "suggestions": [...],
-  "processing_time_ms": 15.2
-}
-```
-
-##### `POST /refactor`
-
-Refactor code.
-
-**Request:**
-```json
-{
-  "code": "def f(): x = 1; return 0",
-  "task": "remove dead code"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "original_code": "...",
-  "refactored_code": "...",
-  "analysis": {...},
-  "suggestions": [...],
-  "processing_time_ms": 25.5
-}
-```
-
-##### `POST /security`
-
-Security scan.
-
-**Request:**
-```json
-{
-  "code": "eval(user_input)"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "issues": [
-    {
-      "type": "eval_usage",
-      "description": "Use of eval() is dangerous",
-      "line": 1
+  "mcpServers": {
+    "code-scalpel": {
+      "command": "uvx",
+      "args": ["code-scalpel", "mcp", "--root", "/path/to/project"]
     }
-  ],
-  "risk_level": "high",
-  "recommendations": [...]
+  }
 }
+```
+
+#### VS Code / Cursor Configuration
+
+Create `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "code-scalpel": {
+      "command": "uvx",
+      "args": ["code-scalpel", "mcp", "--root", "${workspaceFolder}"]
+    }
+  }
+}
+```
+
+#### Docker Deployment
+
+```bash
+# Build
+docker build -t code-scalpel .
+
+# Run with HTTP transport
+docker run -p 8593:8593 -v $(pwd):/app/code code-scalpel
+
+# Connect at http://localhost:8593/mcp
 ```
 
 ---

@@ -15,11 +15,11 @@ class TestDjangoSQLInjection:
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from django.db.models.expressions import RawSQL
 user_input = request.GET.get("order")
 queryset = MyModel.objects.annotate(val=RawSQL(user_input, []))
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -34,11 +34,11 @@ queryset = MyModel.objects.annotate(val=RawSQL(user_input, []))
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from django.db.models import RawSQL
 search = request.POST.get("search")
 qs = Model.objects.annotate(custom=RawSQL(search, []))
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -52,10 +52,10 @@ qs = Model.objects.annotate(custom=RawSQL(search, []))
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 order_by = request.GET.get("sort")
 qs = extra(order_by)
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -68,11 +68,11 @@ qs = extra(order_by)
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from django.db.models import RawSQL
 # Safe: hardcoded SQL, no user input
 queryset = MyModel.objects.annotate(val=RawSQL("price * %s", [1.05]))
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -90,11 +90,11 @@ class TestSQLAlchemyInjection:
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from sqlalchemy import text
 user_query = request.args.get("query")
 result = session.execute(text(user_query))
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -109,11 +109,11 @@ result = session.execute(text(user_query))
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 import sqlalchemy
 query_str = input("Enter query: ")
 stmt = sqlalchemy.text(query_str)
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -127,11 +127,11 @@ stmt = sqlalchemy.text(query_str)
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from sqlalchemy.sql.expression import text
 search = request.form["search"]
 query = text(search)
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -144,11 +144,11 @@ query = text(search)
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from sqlalchemy import text
 # Safe: hardcoded SQL template
 stmt = text("SELECT * FROM users WHERE id = :id")
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -166,11 +166,11 @@ class TestFlaskJinja2XSS:
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from flask import Markup
 user_html = request.form.get("content")
 safe_html = Markup(user_html)  # DANGEROUS: bypasses auto-escaping
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -185,11 +185,11 @@ safe_html = Markup(user_html)  # DANGEROUS: bypasses auto-escaping
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from markupsafe import Markup
 comment = request.args.get("comment")
 rendered = Markup(comment)
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -203,11 +203,11 @@ rendered = Markup(comment)
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from markupsafe import Markup
 user_input = input("Enter HTML: ")
 html = Markup(user_input)
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -220,11 +220,11 @@ html = Markup(user_input)
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from markupsafe import Markup
 # Safe: hardcoded HTML, no user input
 header = Markup("<h1>Welcome</h1>")
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)
@@ -242,7 +242,7 @@ class TestCombinedFrameworkPatterns:
             SecurityAnalyzer,
         )
 
-        code = '''
+        code = """
 from django.db.models import RawSQL
 from flask import Markup
 
@@ -254,7 +254,7 @@ results = Model.objects.annotate(score=RawSQL(search, []))
 
 # XSS
 rendered = Markup(comment)
-'''
+"""
 
         analyzer = SecurityAnalyzer()
         result = analyzer.analyze(code)

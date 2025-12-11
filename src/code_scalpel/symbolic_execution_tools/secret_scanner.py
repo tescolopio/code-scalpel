@@ -8,37 +8,38 @@ tokens, and private keys.
 
 import ast
 import re
-from typing import List, Tuple, Pattern, Set, Any
+from typing import List, Tuple, Pattern, Set
 
 from .taint_tracker import Vulnerability, SecuritySink, TaintSource
+
 
 class SecretScanner(ast.NodeVisitor):
     """
     Scans AST for hardcoded secrets.
     """
-    
+
     def __init__(self) -> None:
         self.vulnerabilities: List[Vulnerability] = []
-        
+
         # High-confidence patterns for string literals
         self.string_patterns: List[Tuple[str, Pattern]] = [
             ("AWS Access Key", re.compile(r"AKIA[0-9A-Z]{16}")),
             ("Stripe Secret", re.compile(r"sk_live_[0-9a-zA-Z]{24}")),
             ("Private Key", re.compile(r"-----BEGIN RSA PRIVATE KEY-----")),
         ]
-        
+
         # Generic API Key heuristic
         # Matches assignments like: api_key = "..."
         self.generic_value_pattern = re.compile(r"^[a-zA-Z0-9_\-]{20,}$")
-        self.generic_keys: Set[str] = {'api_key', 'access_token'}
+        self.generic_keys: Set[str] = {"api_key", "access_token"}
 
     def scan(self, tree: ast.AST) -> List[Vulnerability]:
         """
         Scan an AST for hardcoded secrets.
-        
+
         Args:
             tree: The AST to scan
-            
+
         Returns:
             List of detected vulnerabilities
         """
@@ -51,15 +52,15 @@ class SecretScanner(ast.NodeVisitor):
         value = node.value
         if isinstance(value, bytes):
             try:
-                value = value.decode('utf-8', errors='ignore')
+                value = value.decode("utf-8", errors="ignore")
             except Exception:
                 value = None
-        
+
         if isinstance(value, str):
             for name, pattern in self.string_patterns:
                 if pattern.search(value):
                     self._add_vuln(name, node)
-        
+
         # Continue traversal (though Constant usually has no children)
         self.generic_visit(node)
 
@@ -77,12 +78,12 @@ class SecretScanner(ast.NodeVisitor):
         # Check if value is a string literal
         value_node = node.value
         string_val = None
-        
+
         if isinstance(value_node, ast.Constant) and isinstance(value_node.value, str):
             string_val = value_node.value
-        elif isinstance(value_node, ast.Str): # pragma: no cover
+        elif isinstance(value_node, ast.Str):  # pragma: no cover
             string_val = value_node.s
-            
+
         if string_val:
             # Check targets
             for target in node.targets:
@@ -90,7 +91,7 @@ class SecretScanner(ast.NodeVisitor):
                     if target.id in self.generic_keys:
                         if self.generic_value_pattern.match(string_val):
                             self._add_vuln("Generic API Key", value_node)
-        
+
         self.generic_visit(node)
 
     def _add_vuln(self, name: str, node: ast.AST) -> None:
@@ -98,7 +99,7 @@ class SecretScanner(ast.NodeVisitor):
         # Avoid duplicates if multiple patterns match or visited multiple times
         # (Simple check based on location)
         loc = (node.lineno, node.col_offset) if hasattr(node, "lineno") else (0, 0)
-        
+
         # Check if we already have this vuln
         for v in self.vulnerabilities:
             if v.sink_location == loc and v.sink_type == SecuritySink.HARDCODED_SECRET:
@@ -110,10 +111,10 @@ class SecretScanner(ast.NodeVisitor):
             taint_path=[],
             sink_location=loc,
             source_location=loc,
-            sanitizers_applied=set()
+            sanitizers_applied=set(),
         )
         # We store the secret type (e.g., "AWS Access Key") in the taint_path
         # so it can be reported in the summary.
         vuln.taint_path = [name]
-        
+
         self.vulnerabilities.append(vuln)

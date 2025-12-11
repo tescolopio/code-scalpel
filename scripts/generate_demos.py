@@ -86,7 +86,7 @@ def safe_version():
     # Target: The Java Architect
     # Proves: Cross-file dependency analysis
     # =========================================================================
-    auth_controller = '''/*
+    auth_controller = """/*
  * Enterprise Demo: Cross-File Call Graph
  * 
  * This demo proves Code Scalpel can analyze Enterprise Java projects
@@ -133,8 +133,8 @@ public class AuthController {
         auditLog("LOGOUT", user);
     }
 }
-'''
-    auth_service = '''/*
+"""
+    auth_service = """/*
  * Enterprise Demo: Service Layer
  * 
  * This file is called BY AuthController.java.
@@ -166,7 +166,7 @@ public class AuthService {
         return "admin".equals(username);
     }
 }
-'''
+"""
     with open("demos/enterprise/AuthController.java", "w") as f:
         f.write(auth_controller)
     with open("demos/enterprise/AuthService.java", "w") as f:
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     # =========================================================================
     # 4. README for the demos
     # =========================================================================
-    readme = '''# Code Scalpel Demo Suite
+    readme = """# Code Scalpel Demo Suite
 
 Evidence-based demonstrations proving Code Scalpel's core capabilities.
 
@@ -360,7 +360,7 @@ print(result.pytest_code)
 ```bash
 python scripts/run_demos.py
 ```
-'''
+"""
     with open("demos/README.md", "w") as f:
         f.write(readme)
     print("  ✓ Created demos/README.md")

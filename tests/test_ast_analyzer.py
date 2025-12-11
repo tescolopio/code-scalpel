@@ -579,11 +579,11 @@ def process_data(data):
     def test_sql_injection_with_string_formatting(self):
         """Test SQL injection detection with f-string (line 288)."""
         analyzer = ASTAnalyzer()
-        code = '''
+        code = """
 def unsafe_query(cursor, user_id):
     query = f"SELECT * FROM users WHERE id = {user_id}"
     cursor.execute(query)
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         issues = analyzer.find_security_issues(tree)
 
@@ -594,10 +594,10 @@ def unsafe_query(cursor, user_id):
     def test_sql_injection_with_binop_in_execute(self):
         """Test SQL injection with string concatenation in execute() (line 288)."""
         analyzer = ASTAnalyzer()
-        code = '''
+        code = """
 def unsafe_concat(cursor, name):
     cursor.execute("SELECT * FROM users WHERE name = '" + name + "'")
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         issues = analyzer.find_security_issues(tree)
 
@@ -609,10 +609,10 @@ def unsafe_concat(cursor, name):
     def test_sql_injection_with_fstring_in_execute(self):
         """Test SQL injection with f-string directly in execute() (line 288)."""
         analyzer = ASTAnalyzer()
-        code = '''
+        code = """
 def unsafe_fstring(cursor, user_id):
     cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         issues = analyzer.find_security_issues(tree)
 
@@ -660,10 +660,10 @@ class Config:
     def test_executemany_sql_injection(self):
         """Test SQL injection detection with executemany()."""
         analyzer = ASTAnalyzer()
-        code = '''
+        code = """
 def bulk_insert(cursor, data):
     cursor.executemany("INSERT INTO t VALUES (" + data + ")", items)
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         issues = analyzer.find_security_issues(tree)
 
@@ -715,12 +715,12 @@ def validate(x, y, z):
         """Test that _get_call_name handles Attribute (line 302) via find_security_issues."""
         analyzer = ASTAnalyzer()
         # Code with method call that triggers _get_call_name with Attribute type
-        code = '''
+        code = """
 def process(db, query):
     # This should trigger _get_call_name with Attribute type
     result = db.connection.execute("SELECT 1")
     return result
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         # find_security_issues calls _get_call_name internally
         issues = analyzer.find_security_issues(tree)
@@ -729,7 +729,7 @@ def process(db, query):
     def test_dangerous_function_with_attribute_access(self):
         """Test detection of dangerous functions via attribute (line 302 - _get_call_name Attribute branch)."""
         analyzer = ASTAnalyzer()
-        code = '''
+        code = """
 import os
 import subprocess
 
@@ -737,14 +737,14 @@ def run_commands(cmd):
     os.system(cmd)
     subprocess.call(cmd, shell=True)
     subprocess.Popen(cmd)
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         issues = analyzer.find_security_issues(tree)
 
         # Should detect dangerous functions called via attribute access
         dangerous_issues = [i for i in issues if i.get("type") == "dangerous_function"]
         assert len(dangerous_issues) >= 3
-        
+
         # Verify the function names are captured via attribute
         func_names = {i["function"] for i in dangerous_issues}
         assert "os.system" in func_names
@@ -755,14 +755,14 @@ def run_commands(cmd):
         """Test _get_call_name with unusual call patterns (line 302 - return '' branch)."""
         analyzer = ASTAnalyzer()
         # Code with subscript call - handlers[0]() - where func is ast.Subscript
-        code = '''
+        code = """
 def process():
     handlers = [func1, func2]
     handlers[0]()  # This is ast.Subscript, not Name or Attribute
     
     # Lambda call
     (lambda x: x)()
-'''
+"""
         tree = analyzer.parse_to_ast(code)
         # find_security_issues will call _get_call_name which should return "" for these
         issues = analyzer.find_security_issues(tree)
@@ -771,7 +771,7 @@ def process():
 
     def test_class_with_tuple_unpacking_assignment(self):
         """Test class with tuple unpacking in class body (branch 126->125).
-        
+
         This tests the case where ast.Assign target is NOT ast.Name,
         such as tuple unpacking: a, b = 1, 2
         """
@@ -797,7 +797,7 @@ class DataContainer:
 
     def test_function_calls_with_subscript_call(self):
         """Test extracting calls where func is Subscript (branch 226->222).
-        
+
         This tests the case in _extract_function_calls where child.func
         is neither ast.Name nor ast.Attribute (e.g., subscript call).
         """

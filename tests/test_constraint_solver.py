@@ -13,12 +13,10 @@ If the Type Marshaling tests fail, the MCP server will crash
 when trying to serialize results.
 """
 
-import pytest
-from z3 import Int, Bool, IntSort, BoolSort, And, Or, Not, Implies
+from z3 import Int, Bool, IntSort, Or, Not, Implies
 
 from code_scalpel.symbolic_execution_tools.constraint_solver import (
     ConstraintSolver,
-    SolverResult,
     SolverStatus,
 )
 
@@ -47,7 +45,7 @@ class TestBasicSatisfiability:
         solver = ConstraintSolver()
         flag = Bool("flag")
 
-        result = solver.solve([flag == True], [flag])
+        result = solver.solve([flag], [flag])
 
         assert result.status == SolverStatus.SAT
         assert result.model["flag"] is True
@@ -81,7 +79,7 @@ class TestBasicSatisfiability:
         flag = Bool("flag")
 
         # If flag is true, x must be positive
-        result = solver.solve([Implies(flag, x > 0), flag == True, x < 100], [x, flag])
+        result = solver.solve([Implies(flag, x > 0), flag, x < 100], [x, flag])
 
         assert result.status == SolverStatus.SAT
         assert result.model["flag"] is True
@@ -172,7 +170,7 @@ class TestTypeMarshaling:
         solver = ConstraintSolver()
         flag = Bool("flag")
 
-        result = solver.solve([flag == True], [flag])
+        result = solver.solve([flag], [flag])
 
         assert result.status == SolverStatus.SAT
         value = result.model["flag"]
@@ -188,7 +186,7 @@ class TestTypeMarshaling:
         solver = ConstraintSolver()
         flag = Bool("flag")
 
-        result = solver.solve([flag == False], [flag])
+        result = solver.solve([flag == False], [flag])  # noqa: E712
 
         assert result.status == SolverStatus.SAT
         value = result.model["flag"]
@@ -251,7 +249,7 @@ class TestTypeMarshaling:
         x = Int("x")
         flag = Bool("flag")
 
-        result = solver.solve([x == 42, flag == True], [x, flag])
+        result = solver.solve([x == 42, flag], [x, flag])
 
         # This should NOT raise TypeError
         json_str = json.dumps(result.model)
@@ -385,7 +383,7 @@ class TestEdgeCases:
         """Solving with no variables."""
         solver = ConstraintSolver()
 
-        result = solver.solve([Bool("temp") == True], [])
+        result = solver.solve([Bool("temp")], [])
 
         # Satisfiable, but no variables to report
         assert result.status == SolverStatus.SAT
@@ -578,13 +576,12 @@ class TestCoverageCompleteness:
 
     def test_marshal_symbolic_bool_true(self):
         """_marshal_z3_value handles symbolic bool simplified to true."""
-        from z3 import simplify
 
         solver = ConstraintSolver()
         flag = Bool("flag")
 
         # Constraint that forces flag to True
-        result = solver.solve([flag == True], [flag])
+        result = solver.solve([flag], [flag])
 
         assert result.status == SolverStatus.SAT
         assert result.model["flag"] is True
@@ -595,7 +592,7 @@ class TestCoverageCompleteness:
         solver = ConstraintSolver()
         flag = Bool("flag")
 
-        result = solver.solve([flag == False], [flag])
+        result = solver.solve([flag == False], [flag])  # noqa: E712
 
         assert result.status == SolverStatus.SAT
         assert result.model["flag"] is False
@@ -687,7 +684,7 @@ class TestCoverageCompleteness:
 
     def test_marshal_algebraic_value(self):
         """_marshal_z3_value handles algebraic values (e.g., sqrt(2))."""
-        from z3 import Real, Sqrt
+        from z3 import Real
 
         solver = ConstraintSolver()
         r = Real("r")
@@ -721,7 +718,7 @@ class TestCoverageCompleteness:
 
     def test_real_with_fraction(self):
         """_marshal_z3_value handles Real with clean fraction."""
-        from z3 import Real, RealVal, Q
+        from z3 import Real, RealVal
 
         solver = ConstraintSolver()
         r = Real("r")
@@ -759,7 +756,6 @@ class TestCoverageCompleteness:
 
     def test_solve_unknown_timeout(self):
         """solve() returns UNKNOWN status on very short timeout."""
-        from z3 import Real, And as Z3And
 
         # Create a problem that might cause timeout
         solver = ConstraintSolver(timeout_ms=1)  # 1ms timeout
@@ -783,18 +779,6 @@ class TestCoverageCompleteness:
         # Should be VALID (or possibly UNKNOWN with tiny timeout)
         assert result.status in (SolverStatus.VALID, SolverStatus.UNKNOWN)
 
-    def test_marshal_string_value(self):
-        """_marshal_z3_value handles string values correctly."""
-        from z3 import String, StringVal
-
-        solver = ConstraintSolver()
-        s = String("s")
-
-        result = solver.solve([s == StringVal("hello")], [s])
-
-        assert result.status == SolverStatus.SAT
-        assert result.model["s"] == "hello"
-
     def test_marshal_real_exception_fallback(self):
         """_marshal_z3_value handles Real fraction exception."""
         from z3 import Real, RealVal
@@ -808,20 +792,6 @@ class TestCoverageCompleteness:
         assert result.status == SolverStatus.SAT
         # Should be 0.75
         assert abs(result.model["r"] - 0.75) < 0.01
-
-    def test_marshal_algebraic_value(self):
-        """_marshal_z3_value handles algebraic numbers (sqrt etc)."""
-        from z3 import Real
-
-        solver = ConstraintSolver()
-        x = Real("x")
-
-        # x^2 == 2 gives sqrt(2) which is an algebraic number
-        result = solver.solve([x * x == 2, x > 0], [x])
-
-        assert result.status == SolverStatus.SAT
-        # sqrt(2) ≈ 1.414
-        assert abs(result.model["x"] - 1.414) < 0.01
 
     def test_solve_unknown_status(self):
         """solve() may return UNKNOWN on timeout."""
@@ -847,18 +817,6 @@ class TestCoverageCompleteness:
         # This should work regardless
         assert result.status == SolverStatus.SAT
 
-    def test_prove_invalid_with_counterexample(self):
-        """prove() returns INVALID with counterexample for false claim."""
-        solver = ConstraintSolver()
-        x = Int("x")
-
-        # Claim: x > 0 implies x > 100 (false for x=50)
-        result = solver.prove([x > 0], x > 100)
-
-        assert result.status == SolverStatus.INVALID
-        # Counterexample should show x value that disproves the claim
-        assert result.counterexample is not None
-
     def test_solve_with_empty_constraints(self):
         """solve() with empty constraints returns SAT."""
         solver = ConstraintSolver()
@@ -882,7 +840,7 @@ class TestCoverageCompleteness:
 
     def test_z3_to_python_symbolic_bool(self):
         """_z3_to_python handles symbolic bool (neither true nor false)."""
-        from z3 import Bool, simplify
+        from z3 import Bool
 
         solver = ConstraintSolver()
 
@@ -899,7 +857,6 @@ class TestCoverageCompleteness:
 
     def test_z3_to_python_real_exception_path(self):
         """_z3_to_python handles Real with exception in as_decimal."""
-        from z3 import Real, Sqrt
         from unittest.mock import MagicMock, patch
 
         solver = ConstraintSolver()

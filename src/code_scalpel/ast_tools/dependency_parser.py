@@ -1,16 +1,17 @@
 import os
 import json
 import re
-from typing import List, Dict, Any
+from typing import List, Dict
 
 try:
     import tomllib
 except ImportError:
     import tomli as tomllib
 
+
 class DependencyParser:
     """Parses project dependencies from standard configuration files."""
-    
+
     def __init__(self, root_path: str):
         self.root_path = root_path
 
@@ -18,32 +19,36 @@ class DependencyParser:
         """Returns dependencies grouped by ecosystem."""
         deps = {
             "python": self._parse_python_deps(),
-            "javascript": self._parse_javascript_deps()
+            "javascript": self._parse_javascript_deps(),
         }
         return {k: v for k, v in deps.items() if v}
 
     def _parse_python_deps(self) -> List[Dict[str, str]]:
         deps = []
-        
+
         # 1. pyproject.toml (PEP 621 & Poetry)
         pp_path = os.path.join(self.root_path, "pyproject.toml")
         if os.path.exists(pp_path):
             try:
                 with open(pp_path, "rb") as f:
                     data = tomllib.load(f)
-                
+
                 # Standard PEP 621
                 if "project" in data and "dependencies" in data["project"]:
                     for d in data["project"]["dependencies"]:
                         deps.append(self._parse_pep508(d))
-                
+
                 # Poetry
-                if "tool" in data and "poetry" in data["tool"] and "dependencies" in data["tool"]["poetry"]:
+                if (
+                    "tool" in data
+                    and "poetry" in data["tool"]
+                    and "dependencies" in data["tool"]["poetry"]
+                ):
                     for k, v in data["tool"]["poetry"]["dependencies"].items():
                         if k.lower() != "python":
                             deps.append({"name": k, "version": str(v)})
             except Exception:
-                pass # Fail silently, we are scanning
+                pass  # Fail silently, we are scanning
 
         # 2. requirements.txt
         req_path = os.path.join(self.root_path, "requirements.txt")
@@ -52,11 +57,15 @@ class DependencyParser:
                 with open(req_path, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
-                        if line and not line.startswith("#") and not line.startswith("-"):
+                        if (
+                            line
+                            and not line.startswith("#")
+                            and not line.startswith("-")
+                        ):
                             deps.append(self._parse_pep508(line))
             except Exception:
                 pass
-                
+
         return self._deduplicate(deps)
 
     def _parse_javascript_deps(self) -> List[Dict[str, str]]:

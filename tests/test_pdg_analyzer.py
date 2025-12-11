@@ -329,7 +329,7 @@ class TestAnalyzerCoverageGaps:
         g.add_node("n3", type="return", uses=["y"])
         g.add_edge("n1", "n2", type="data")
         g.add_edge("n2", "n3", type="data")
-        
+
         analyzer = PDGAnalyzer(g)
         sliced = analyzer.compute_program_slice("n1", direction="forward")
         # Forward slice from n1 should include n2 and n3
@@ -339,9 +339,11 @@ class TestAnalyzerCoverageGaps:
         """Test taint analysis with actual paths (lines 184-192)."""
         g = nx.DiGraph()
         g.add_node("source", type="call", function="input", taint_type="user_input")
-        g.add_node("sink", type="call", function="cursor.execute", sink_type="sql_query")
+        g.add_node(
+            "sink", type="call", function="cursor.execute", sink_type="sql_query"
+        )
         g.add_edge("source", "sink", type="data")
-        
+
         analyzer = PDGAnalyzer(g)
         vulns = analyzer._perform_taint_analysis()
         # Should find vulnerability from source to sink
@@ -353,7 +355,7 @@ class TestAnalyzerCoverageGaps:
         g.add_node("loop", type="while")
         g.add_node("invariant", type="assign")
         g.add_edge("loop", "invariant", type="control_dependency")
-        
+
         analyzer = PDGAnalyzer(g)
         invariants = analyzer._find_loop_invariant_code()
         assert isinstance(invariants, list)
@@ -362,7 +364,7 @@ class TestAnalyzerCoverageGaps:
         """Test value range analysis (lines 232, 246-251)."""
         g = nx.DiGraph()
         g.add_node("n1", type="assign", defines=["x"])
-        
+
         analyzer = PDGAnalyzer(g)
         ranges = analyzer._analyze_value_ranges()
         assert isinstance(ranges, dict)
@@ -370,11 +372,12 @@ class TestAnalyzerCoverageGaps:
     def test_find_common_subexpressions(self):
         """Test common subexpression detection (lines 350-351)."""
         import ast
+
         g = nx.DiGraph()
         expr = ast.parse("a + b", mode="eval").body
         g.add_node("n1", expression=expr)
         g.add_node("n2", expression=expr)
-        
+
         analyzer = PDGAnalyzer(g)
         common = analyzer._find_common_subexpressions()
         assert isinstance(common, list)
@@ -384,7 +387,7 @@ class TestAnalyzerCoverageGaps:
         g = nx.DiGraph()
         g.add_node("n1", type="computation", constant_value=42)
         g.add_node("n2", type="computation", constant_value=42)
-        
+
         analyzer = PDGAnalyzer(g)
         redundant = analyzer._find_redundant_computations()
         assert isinstance(redundant, list)
@@ -393,7 +396,7 @@ class TestAnalyzerCoverageGaps:
         """Test dead code detection (line 487)."""
         g = nx.DiGraph()
         g.add_node("dead", type="assign")  # No outgoing edges
-        
+
         analyzer = PDGAnalyzer(g)
         dead_code = analyzer._find_dead_code()
         assert len(dead_code) >= 1
@@ -405,7 +408,7 @@ class TestAnalyzerCoverageGaps:
         g.add_node("while_loop", type="while")
         g.add_node("for_loop", type="for")
         g.add_node("assign", type="assign")
-        
+
         analyzer = PDGAnalyzer(g)
         loops = analyzer._find_loops()
         assert "while_loop" in loops
@@ -420,7 +423,7 @@ class TestAnalyzerCoverageGaps:
         g.add_node("body2", type="call")
         g.add_edge("loop", "body1", type="control_dependency")
         g.add_edge("loop", "body2", type="control_dependency")
-        
+
         analyzer = PDGAnalyzer(g)
         body = analyzer._analyze_loop_body("loop")
         assert "body1" in body
@@ -458,7 +461,7 @@ class TestAnalyzerCoverageGaps:
         """Test exception matching with exact type (line 538)."""
         g = nx.DiGraph()
         analyzer = PDGAnalyzer(g)
-        
+
         exc = ValueError("test")
         assert analyzer._matches_exception(exc, "ValueError") is True
         assert analyzer._matches_exception(exc, "TypeError") is False
@@ -468,7 +471,7 @@ class TestAnalyzerCoverageGaps:
         """Test type inference (line 542)."""
         g = nx.DiGraph()
         analyzer = PDGAnalyzer(g)
-        
+
         assert analyzer._infer_type(42) is int
         assert analyzer._infer_type("hello") is str
         assert analyzer._infer_type([1, 2]) is list
@@ -555,22 +558,24 @@ class TestAnalyzerFinalCoverage:
     def test_taint_analysis_creates_vulnerability(self):
         """Test lines 184-192: Create actual SecurityVulnerability."""
         from code_scalpel.pdg_tools.analyzer import PDGAnalyzer, DependencyType
-        
+
         g = nx.DiGraph()
         # Source node - taint source (use call_target attribute)
         g.add_node("source1", type="call", call_target="input", taint_type="user_input")
         # Intermediate node - NOT a sanitizer
         g.add_node("mid1", type="assign")
         # Sink node - dangerous sink (use call_target with execute)
-        g.add_node("sink1", type="call", call_target="cursor.execute", sink_type="sql_query")
-        
+        g.add_node(
+            "sink1", type="call", call_target="cursor.execute", sink_type="sql_query"
+        )
+
         # Create path from source to sink
         g.add_edge("source1", "mid1", type=DependencyType.DATA.value)
         g.add_edge("mid1", "sink1", type=DependencyType.DATA.value)
-        
+
         analyzer = PDGAnalyzer(g)
         vulnerabilities = analyzer._perform_taint_analysis()
-        
+
         # Should find vulnerability since path is not sanitized
         assert len(vulnerabilities) >= 1
         assert any(v.source == "source1" for v in vulnerabilities)
@@ -579,15 +584,15 @@ class TestAnalyzerFinalCoverage:
     def test_value_range_with_condition_constraint(self):
         """Test lines 246-251: Parse condition constraint."""
         from code_scalpel.pdg_tools.analyzer import PDGAnalyzer, DependencyType
-        
+
         g = nx.DiGraph()
         # Add a condition node with a parseable condition
         g.add_node("if_node", type="if", condition="x > 5")
         g.add_node("body_node", type="assign", defines=["y"])
         g.add_edge("if_node", "body_node", type=DependencyType.CONTROL.value)
-        
+
         analyzer = PDGAnalyzer(g)
-        
+
         # Compute value range for x at body_node
         range_result = analyzer._compute_value_range("x", "body_node")
         # Should return something (even if empty tuple)
@@ -596,50 +601,56 @@ class TestAnalyzerFinalCoverage:
     def test_loop_invariant_detection(self):
         """Test line 216: Loop invariant detection with candidates."""
         from code_scalpel.pdg_tools.analyzer import PDGAnalyzer, DependencyType
-        
+
         g = nx.DiGraph()
         # Create a loop with a body node
         g.add_node("loop", type="for")
-        g.add_node("invariant", type="assign", defines=["c"])  # Loop invariant - c doesn't depend on loop
-        g.add_node("variant", type="assign", defines=["i"], uses=["i"])  # Loop variant - i depends on i
-        
+        g.add_node(
+            "invariant", type="assign", defines=["c"]
+        )  # Loop invariant - c doesn't depend on loop
+        g.add_node(
+            "variant", type="assign", defines=["i"], uses=["i"]
+        )  # Loop variant - i depends on i
+
         g.add_edge("loop", "invariant", type=DependencyType.CONTROL.value)
         g.add_edge("loop", "variant", type=DependencyType.CONTROL.value)
-        
+
         analyzer = PDGAnalyzer(g)
         result = analyzer._find_loop_invariant_code()
-        
+
         # Should return list (even if empty due to stub methods)
         assert isinstance(result, list)
 
     def test_redundant_computation_inner_branch(self):
         """Test line 378: Inner branch of redundant computation detection."""
         from code_scalpel.pdg_tools.analyzer import PDGAnalyzer
-        
+
         g = nx.DiGraph()
         # Create nodes with constant_value attribute - must use type="computation"
         g.add_node("comp1", type="computation", constant_value=100)
-        g.add_node("comp2", type="computation", constant_value=100)  # Same value - redundant
-        
+        g.add_node(
+            "comp2", type="computation", constant_value=100
+        )  # Same value - redundant
+
         analyzer = PDGAnalyzer(g)
         redundant = analyzer._find_redundant_computations()
-        
+
         # Should identify the redundancy
         assert len(redundant) >= 1
 
     def test_analyze_loop_body_with_children(self):
         """Test _analyze_loop_body returns candidates."""
         from code_scalpel.pdg_tools.analyzer import PDGAnalyzer, DependencyType
-        
+
         g = nx.DiGraph()
         g.add_node("loop", type="while")
         g.add_node("body1", type="assign")
         g.add_node("body2", type="call")
         g.add_edge("loop", "body1", type=DependencyType.CONTROL.value)
         g.add_edge("loop", "body2", type=DependencyType.CONTROL.value)
-        
+
         analyzer = PDGAnalyzer(g)
         candidates = analyzer._analyze_loop_body("loop")
-        
+
         # Should return body nodes as candidates
         assert isinstance(candidates, list)

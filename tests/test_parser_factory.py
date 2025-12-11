@@ -3,6 +3,7 @@ from code_scalpel.code_parser.factory import ParserFactory
 from code_scalpel.code_parser.interface import Language, IParser
 from code_scalpel.code_parser.python_parser import PythonParser
 
+
 class TestParserFactory:
     def test_detect_language(self):
         assert ParserFactory.detect_language("test.py") == Language.PYTHON
@@ -18,6 +19,7 @@ class TestParserFactory:
     def test_get_unsupported_parser(self):
         with pytest.raises(ValueError, match="No parser registered"):
             ParserFactory.get_parser(Language.JAVASCRIPT)  # Not implemented yet
+
 
 class TestPythonParser:
     def test_parse_valid_code(self):

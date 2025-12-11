@@ -4,6 +4,7 @@ Example demonstrating AutogenScalpel for code analysis.
 
 import os
 import sys
+import asyncio
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -22,8 +23,6 @@ def calculate_factorial(n):
         result *= i
     return result
 """
-
-import asyncio
 
 
 async def main():

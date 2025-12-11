@@ -20,6 +20,7 @@ from .tree_sitter_visitor import TreeSitterVisitor, VisitorContext
 # JavaScript normalizer requires tree-sitter, import conditionally
 try:
     from .javascript_normalizer import JavaScriptNormalizer
+
     _HAS_JAVASCRIPT = True
 except ImportError:
     JavaScriptNormalizer = None
