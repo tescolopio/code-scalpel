@@ -37,8 +37,8 @@ Code Scalpel is a precision toolkit for AI-driven code analysis. Unlike general-
 | **PDG Tools** | Build Program Dependence Graphs | Stable (100% coverage) |
 | **Surgical Extractor** | Token-efficient code extraction with cross-file deps | Stable |
 | **Surgical Patcher** | Safe, atomic code modifications | Stable |
-| **Symbolic Execution** | Explore execution paths with Z3 | Stable (99% coverage) |
-| **Security Analysis** | Taint-based vulnerability detection | Stable (99% coverage) |
+| **Symbolic Execution** | Explore execution paths with Z3 | Stable (100% coverage) |
+| **Security Analysis** | Taint-based vulnerability detection | Stable (100% coverage) |
 | **MCP Server** | Model Context Protocol integration (8 tools) | Stable |
 
 ### Supported Languages

@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://pypi.org/project/code-scalpel/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-1593%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
+[![Tests](https://img.shields.io/badge/tests-1597%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
 
 **Precision Code Analysis for the AI Era**
 
@@ -189,8 +189,8 @@ See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 
 ## Stats
 
-- **1593** tests passing
-- **100%** PDG coverage, **100%** AST coverage
+- **1597** tests passing
+- **100%** PDG coverage, **100%** AST coverage, **100%** Symbolic Execution coverage
 - **3** languages supported
 - **8** MCP tools (including surgical extraction)
 - **200x** cache speedup

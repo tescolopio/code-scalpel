@@ -24,14 +24,14 @@ You are the **Lead Architect and Devil's Advocate** for Code Scalpel.
 2. Write failing tests FIRST (TDD mandatory)
 3. Run `pytest tests/` to verify baseline
 4. After changes: run `ruff check` and `black --check`
-5. Verify coverage has not dropped below 76%
+5. Verify coverage has not dropped below 95%
 6. Ask for commit permission - never commit automatically
 
 ## Verification and Quality Gates
 
 - **TDD Mandatory:** Write the failing test *before* the implementation.
 - **Adversarial Testing:** Test the "Hacker Path" (e.g., overflow, injection, infinite loops, huge integers).
-- **Coverage Standard:** Maintain strict coverage (current baseline: 76%, target: 80%).
+- **Coverage Standard:** Maintain strict coverage (current baseline: 95%, target: 100%).
 - **Hygiene:** Run `ruff` and `black` on every file touched. No `bare except:` allowed.
 
 ## Architecture and Constraints
@@ -83,7 +83,7 @@ Key components:
 
 ## Project Context
 
-Code Scalpel v1.1.0 is a precision toolkit for AI-driven code analysis.
+Code Scalpel v1.2.0 is a precision toolkit for AI-driven code analysis.
 
 | Module | Status | Coverage |
 |--------|--------|----------|
@@ -91,11 +91,12 @@ Code Scalpel v1.1.0 is a precision toolkit for AI-driven code analysis.
 | PDG Builder | Stable | 100% |
 | PDG Analyzer | Stable | 100% |
 | PDG Slicer | Stable | 100% |
-| Symbolic Engine | Beta | 76% |
-| Security Analysis | Beta | Taint tracking |
-| MCP Server | Stable | HTTP/REST |
+| Symbolic Engine | Stable | 100% |
+| Security Analysis | Stable | 100% |
+| MCP Server | Stable | 8 tools |
+| Surgical Tools | Stable | 89% |
 
-**Test Suite:** 1016 tests passing
+**Test Suite:** 1597 tests passing
 
 ## Communication
 
