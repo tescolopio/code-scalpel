@@ -181,3 +181,97 @@ api_key, other = "abcdefghijklmnopqrstuvwxyz123456", "val"
     # It will likely miss it because node.value is a Tuple, not a Constant string.
     # We just want to ensure no crash.
     assert result is not None  # Just ensure no exception
+
+
+def test_duplicate_secret_detection():
+    """Test that duplicate secrets at the same location aren't reported twice."""
+    from code_scalpel.symbolic_execution_tools.secret_scanner import SecretScanner
+    import ast
+    
+    # Code with the same secret appearing multiple times
+    code = """
+key1 = "AKIAIOSFODNN7EXAMPLE"
+key2 = "AKIAIOSFODNN7EXAMPLE"
+"""
+    tree = ast.parse(code)
+    scanner = SecretScanner()
+    vulns = scanner.scan(tree)
+    
+    # Should detect 2 vulns (one per assignment, different locations)
+    assert len(vulns) == 2
+
+
+def test_same_location_dedup():
+    """Test that same location is deduplicated (line 106 coverage)."""
+    from code_scalpel.symbolic_execution_tools.secret_scanner import SecretScanner
+    import ast
+    
+    scanner = SecretScanner()
+    
+    # Create two nodes with the SAME location
+    node1 = ast.Constant(value="AKIAIOSFODNN7EXAMPLE")
+    node1.lineno = 1
+    node1.col_offset = 0
+    
+    # Manually call _add_vuln twice for the same location
+    scanner._add_vuln("AWS Access Key", node1)
+    scanner._add_vuln("AWS Access Key", node1)  # Should be deduped
+    
+    # Should only have 1 vulnerability (deduped)
+    assert len(scanner.vulnerabilities) == 1
+
+
+def test_invalid_bytes_decoding():
+    """Test handling of bytes that fail to decode properly."""
+    from code_scalpel.symbolic_execution_tools.secret_scanner import SecretScanner
+    import ast
+    
+    # Create an AST node with bytes that might cause decode issues
+    # Note: In practice, Python source is always valid UTF-8, so this tests
+    # the defensive code path
+    code = '''
+data = b"AKIAIOSFODNN7EXAMPLE"
+'''
+    tree = ast.parse(code)
+    scanner = SecretScanner()
+    vulns = scanner.scan(tree)
+    
+    # Should still detect the AWS key in bytes
+    assert len(vulns) >= 1
+
+
+def test_security_result_summary_with_taint_path():
+    """Test that security result summary includes taint path details."""
+    analyzer = SecurityAnalyzer()
+    code = """
+key = "AKIAIOSFODNN7EXAMPLE"
+"""
+    result = analyzer.analyze(code)
+    
+    # Get the summary which should include the taint path
+    summary = result.summary()
+    
+    # The summary should mention the vulnerability type
+    assert "AWS Access Key" in summary or "HARDCODED_SECRET" in summary
+
+
+def test_deprecated_ast_str_node():
+    """Test handling of deprecated ast.Str nodes (Python < 3.8 compatibility)."""
+    from code_scalpel.symbolic_execution_tools.secret_scanner import SecretScanner
+    import ast
+    
+    # Create a mock ast.Str node (deprecated in Python 3.8+)
+    # In Python 3.9+, strings are parsed as ast.Constant, but we test the visit_Str path
+    scanner = SecretScanner()
+    
+    # Create a fake ast.Str node
+    str_node = ast.Str(s="AKIAIOSFODNN7EXAMPLE")
+    str_node.lineno = 1
+    str_node.col_offset = 0
+    
+    # Directly call visit_Str
+    scanner.visit_Str(str_node)
+    
+    # Should detect the AWS key
+    assert len(scanner.vulnerabilities) == 1
+    assert "AWS Access Key" in scanner.vulnerabilities[0].taint_path

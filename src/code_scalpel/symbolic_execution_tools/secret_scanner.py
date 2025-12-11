@@ -51,10 +51,8 @@ class SecretScanner(ast.NodeVisitor):
         """Check string literals against high-confidence patterns."""
         value = node.value
         if isinstance(value, bytes):
-            try:
-                value = value.decode("utf-8", errors="ignore")
-            except Exception:
-                value = None
+            # errors='ignore' ensures this never raises - invalid bytes are skipped
+            value = value.decode("utf-8", errors="ignore")
 
         if isinstance(value, str):
             for name, pattern in self.string_patterns:
