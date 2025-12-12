@@ -81,7 +81,7 @@ def add(x, y):
         from code_scalpel.generators import TestGenerator
 
         code = """
-def check(x):
+def check(x: int):
     if x > 10:
         return "big"
     return "small"
@@ -89,7 +89,7 @@ def check(x):
         generator = TestGenerator()
         result = generator.generate(code, function_name="check")
 
-        # Should have test cases for both branches
+        # Should have test cases for both branches (requires type hint)
         assert len(result.test_cases) >= 2
 
     def test_test_case_has_inputs(self):

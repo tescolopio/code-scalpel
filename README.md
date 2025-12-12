@@ -262,6 +262,20 @@ pytest tests/
 
 See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 
+## Roadmap 2025
+
+See [docs/ROADMAP_2025.md](docs/ROADMAP_2025.md) for the complete roadmap.
+
+| Version | Target | Highlights |
+|---------|--------|------------|
+| **v1.3.0** | January 2025 | NoSQL/LDAP injection, hardcoded secrets, 95% coverage |
+| **v1.4.0** | February 2025 | XXE/SSTI detection, VS Code extension (preview) |
+| **v1.5.0** | March 2025 | Dependency CVE scan, call graph visualization |
+| **v2.0.0** | Q2 2025 | TypeScript/JavaScript support |
+| **v2.1.0** | Q3 2025 | AI-assisted auto-fix, full VS Code extension |
+
+**Strategic Focus:** Become the dominant polyglot security scanner with native AI agent integration.
+
 ## Stats
 
 - **1,669** tests passing
@@ -269,6 +283,7 @@ See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 - **95%** coverage: Surgical Tools (SurgicalExtractor 94%, SurgicalPatcher 96%)
 - **3** languages supported (Python full, JS/Java structural)
 - **8** MCP tools
+- **12** vulnerability types detected (SQL injection, XSS, command injection, path traversal, SSRF, weak crypto, hardcoded secrets, and more)
 - **200x** cache speedup
 
 ## License

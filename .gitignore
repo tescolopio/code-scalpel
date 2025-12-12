@@ -148,5 +148,14 @@ generated/
 *.generated.*
 
 # Misc
-.*.sw[po]debug_sink.py
-tests/test_secret_scanner.py
+.*.sw[po]
+
+# Ruff cache
+.ruff_cache/
+
+# Ad-hoc debug files (should not be committed)
+debug_*.py
+smoke_test*.py
+test_mcp_*.py
+verify_*.py
+stress_test*.sh

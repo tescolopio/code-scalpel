@@ -1,4 +1,4 @@
-# Code Scalpel v1.2.0 - Comprehensive Documentation
+# Code Scalpel v1.2.3 - Comprehensive Documentation
 
 **The AI Agent Toolkit for Precision Code Analysis**
 
@@ -1166,6 +1166,21 @@ from code_scalpel.integrations import (
 
 ---
 
-*Code Scalpel v1.2.0 - Built with surgical precision for AI-driven code analysis.*
+## What's New in v1.2.3
+
+**December 12, 2025 - Maintenance Release**
+
+- Repository cleanup (removed 22 obsolete files)
+- Development roadmap published ([DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md))
+- Test suite stability improvements
+- Documentation updates
+
+All critical bug fixes from v1.2.2 retained (100% vulnerability detection).
+
+**Next Release:** v1.3.0 "Hardening" - January 2025
+
+---
+
+*Code Scalpel v1.2.3 - Built with surgical precision for AI-driven code analysis.*
 
 *"Code Scalpel" is a trademark of 3D Tech Solutions LLC.*

@@ -110,10 +110,3 @@ Thanks to the external testing team for detailed bug reports that made this rele
 2. **Test Assertions:** Generated tests use `assert result is not None` as placeholder. Stronger assertions require return type inference (planned for v1.3.0).
 
 3. **Line Numbers:** Vulnerability reports show `line: null`. Source location extraction from IR nodes is planned for v1.2.2.
-
----
-
-## Contributors
-
-- Root cause analysis and fixes by development team
-- Issue reports by external testing team
