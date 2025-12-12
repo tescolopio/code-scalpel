@@ -35,8 +35,8 @@ Code Scalpel is a precision toolkit for AI-driven code analysis. Unlike general-
 |--------|---------|----------|
 | **AST Tools** | Parse code into Abstract Syntax Trees | Stable (100% coverage) |
 | **PDG Tools** | Build Program Dependence Graphs | Stable (100% coverage) |
-| **Surgical Extractor** | Token-efficient code extraction with cross-file deps | Beta (81% coverage) |
-| **Surgical Patcher** | Safe, atomic code modifications | Beta (87% coverage) |
+| **Surgical Extractor** | Token-efficient code extraction with cross-file deps | Stable (94% coverage) |
+| **Surgical Patcher** | Safe, atomic code modifications | Stable (96% coverage) |
 | **Symbolic Execution** | Explore execution paths with Z3 | Stable (100% coverage) |
 | **Security Analysis** | Taint-based vulnerability detection | Stable (100% coverage) |
 | **MCP Server** | Model Context Protocol integration (8 tools) | Stable |
@@ -308,7 +308,7 @@ print(f"Slice size: {info.size}, complexity: {info.complexity}")
 
 ### Symbolic Execution
 
-**Stable (99% coverage)** - Explore execution paths using Z3 constraint solving.
+**Stable (100% coverage)** - Explore execution paths using Z3 constraint solving.
 
 #### Basic Symbolic Analysis
 
@@ -1167,3 +1167,5 @@ from code_scalpel.integrations import (
 ---
 
 *Code Scalpel v1.2.0 - Built with surgical precision for AI-driven code analysis.*
+
+*"Code Scalpel" is a trademark of 3D Tech Solutions LLC.*

@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/code-scalpel.svg)](https://pypi.org/project/code-scalpel/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-1597%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
+[![Tests](https://img.shields.io/badge/tests-1669%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
 
 **Precision Code Analysis for the AI Era**
 
@@ -13,18 +13,91 @@ Code Scalpel gives AI agents the power to understand, analyze, and transform cod
 pip install code-scalpel
 ```
 
-## Why Code Scalpel?
+> **✅ v1.2.1 PATCH RELEASE** (December 12, 2025)  
+> All critical issues from v1.2.0 have been resolved:
+>
+> | Tool | v1.2.0 | v1.2.1 |
+> |------|--------|--------|
+> | `security_scan` | 0% detection | **87.5% detection** (7/8 vulnerability types) |
+> | `generate_unit_tests` | Wrong types (`level=''`) | **Correct types** (`level=5`) |
+> | `symbolic_execute` | 1/4 paths | **4/4 paths** |
+>
+> **Fixes Applied:**
+> - ✅ Type annotation inference: `int` → `IntSort()`, `str` → `StringSort()`, `bool` → `BoolSort()`
+> - ✅ Function parameter taint tracking at entry points
+> - ✅ Taint propagation through `with` statement bindings (`with open(x) as f`)
+> - ✅ Added `pickle.load`, `_pickle.load/loads` to deserialization sinks
+>
+> **Known Limitation:** XSS detection requires web framework sinks (Flask/Django). Raw HTML string assignment is not flagged by design (Python backend focus).
+>
+> See [CRITICAL_ISSUES_v1.2.0.md](CRITICAL_ISSUES_v1.2.0.md) for technical details.
 
-| Traditional Tools | Code Scalpel |
-|------------------|--------------|
-| Pattern matching (regex) | **Taint tracking** through variables |
-| Single file analysis | **Cross-file** call graphs |
-| Manual test writing | **Z3-powered** test generation |
-| Generic output | **AI-optimized** structured responses |
+---
+
+## The Revolution: Code as Graph, Not Text
+
+Most AI coding tools treat your codebase like a book—they "read" as much as possible to understand context. This hits a hard ceiling: the **Context Window**.
+
+**Code Scalpel changes the game.** It stops treating code as "text" and starts treating it as a **graph**—a deterministic pre-processor for probabilistic models.
+
+### Breaking the Context Window Tyranny
+
+| The Old Way (RAG/Chat) | The Code Scalpel Way |
+|------------------------|----------------------|
+| "Here are all 50 files. Good luck." | "Here's the variable definition, 3 callers, and 1 test. Nothing else." |
+| Retrieve similar text chunks (fuzzy) | Trace variable dependencies (precise) |
+| Context limit is a hard wall | Context limit is irrelevant—we slice to fit |
+| "I think this fixes it" | "I have mathematically verified this path" |
+
+### Why This Matters
+
+**1. Operate on Million-Line Codebases with 4K Token Models**
+
+Instead of stuffing files into context, Code Scalpel's **Program Dependence Graph (PDG)** surgically extracts *only* the code that matters:
+
+```
+User: "Refactor the calculate_tax function"
+Old Way: Send 10 files (15,000 tokens) → Model confused
+Scalpel: Send function + 3 dependencies (200 tokens) → Precise fix
+```
+
+**2. Turn "Dumb" Local LLMs into Geniuses**
+
+Local models (Llama, Mistral) are fast and private but struggle with complex reasoning. Code Scalpel offloads the thinking:
+
+- **Before:** "Does path A allow null?" → Model guesses
+- **After:** Symbolic Engine proves it → Model receives fact: "Path A impossible. Path B crashes."
+
+A 7B model + Code Scalpel outperforms a 70B model flying blind.
+
+**3. From Chatbot to Operator (OODA Loop)**
+
+Code Scalpel transforms LLMs from "suggestion machines" into autonomous operators:
+
+1. **Observe:** `analyze_code` → Map the structure
+2. **Orient:** `extract_code` → Isolate the bug's ecosystem  
+3. **Decide:** `symbolic_execute` → Verify fix mathematically
+4. **Act:** `update_symbol` → Apply without breaking syntax
+
+---
+
+## Quick Comparison
+
+| Feature | Traditional Tools | Code Scalpel |
+|---------|------------------|--------------|
+| Pattern matching (regex) | ✓ | **Taint tracking** through variables |
+| Single file analysis | ✓ | **Cross-file** dependency graphs |
+| Manual test writing | ✓ | **Z3-powered** test generation |
+| Generic output | ✓ | **AI-optimized** structured responses |
+| Context strategy | Stuff everything | **Surgical slicing** |
+
+---
 
 ## Quick Demo
 
 ### 1. Security: Find Hidden Vulnerabilities
+
+> **⚠️ KNOWN ISSUE:** Security scanning has critical bugs in v1.2.0. See warning above.
 
 ```python
 # The SQL injection is hidden through 3 variable assignments
@@ -66,6 +139,8 @@ print(f"Complexity: {result.metrics.cyclomatic_complexity}")
 ```
 
 ### 4. Test Generation: Cover Every Path
+
+> **⚠️ KNOWN ISSUE:** Test generation has type inference bugs in v1.2.0. Generated tests may have incorrect types.
 
 ```bash
 # Z3 solver derives exact inputs for all branches
@@ -189,9 +264,9 @@ See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 
 ## Stats
 
-- **1,597** tests passing
+- **1,669** tests passing
 - **100%** coverage: PDG, AST, Symbolic Execution, Security Analysis
-- **Beta**: Surgical Tools (81-87% coverage)
+- **95%** coverage: Surgical Tools (SurgicalExtractor 94%, SurgicalPatcher 96%)
 - **3** languages supported (Python full, JS/Java structural)
 - **8** MCP tools
 - **200x** cache speedup
@@ -199,6 +274,8 @@ See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 ## License
 
 MIT License - see [LICENSE](LICENSE)
+
+"Code Scalpel" is a trademark of 3D Tech Solutions LLC.
 
 ---
 

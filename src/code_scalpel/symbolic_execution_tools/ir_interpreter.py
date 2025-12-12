@@ -54,6 +54,8 @@ from z3 import (
     Or,
     Solver,
     Sort,
+    String,
+    StringVal,
     sat,
 )
 
@@ -1066,6 +1068,8 @@ class IRSymbolicInterpreter(IRNodeVisitor):
             return BoolVal(value)
         elif isinstance(value, int):
             return IntVal(value)
+        elif isinstance(value, str):
+            return StringVal(value)
         elif value is None:
             return None
         else:

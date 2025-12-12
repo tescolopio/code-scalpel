@@ -599,12 +599,16 @@ def _security_scan_sync(code: str) -> SecurityResult:
         taint_sources = []
 
         for vuln in result.get("vulnerabilities", []):
+            # Extract line number from sink_location tuple (line, col)
+            sink_loc = vuln.get("sink_location")
+            line_number = sink_loc[0] if sink_loc and isinstance(sink_loc, (list, tuple)) else None
+            
             vulnerabilities.append(
                 VulnerabilityInfo(
                     type=vuln.get("type", "Unknown"),
                     cwe=vuln.get("cwe", "Unknown"),
                     severity=vuln.get("severity", "medium"),
-                    line=vuln.get("line"),
+                    line=line_number,
                     description=vuln.get("description", ""),
                 )
             )

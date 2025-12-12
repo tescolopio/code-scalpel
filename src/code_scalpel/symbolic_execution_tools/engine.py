@@ -22,6 +22,7 @@ from .state_manager import SymbolicState
 from ..ir.normalizers.python_normalizer import PythonNormalizer
 from ..ir.normalizers.javascript_normalizer import JavaScriptNormalizer
 from ..ir.normalizers.java_normalizer import JavaNormalizer
+from ..ir.nodes import IRFunctionDef, IRModule
 from .ir_interpreter import IRSymbolicInterpreter
 from .constraint_solver import ConstraintSolver, SolverStatus
 
@@ -271,7 +272,54 @@ class SymbolicAnalyzer:
         except SyntaxError as e:
             raise ValueError(f"Invalid {language} syntax: {e}")
 
-        execution_result = self._interpreter.execute(ir_module)
+        # Step 2.5: Check if top-level contains function definition
+        # If so, extract and execute function body with symbolic parameters
+        if ir_module.body and isinstance(ir_module.body[0], IRFunctionDef):
+            func_def = ir_module.body[0]
+            logger.debug(f"Detected function definition: {func_def.name}")
+            
+            # Create symbolic parameters for function arguments
+            for param in func_def.params:
+                param_name = param.name
+                # Infer Z3 sort from type annotation
+                if param.type_annotation:
+                    type_str = param.type_annotation.lower()
+                    if "int" in type_str:
+                        param_sort = z3.IntSort()
+                        sort_name = "Int"
+                    elif "float" in type_str or "real" in type_str:
+                        param_sort = z3.RealSort()
+                        sort_name = "Real"
+                    elif "bool" in type_str:
+                        param_sort = z3.BoolSort()
+                        sort_name = "Bool"
+                    elif "str" in type_str:
+                        param_sort = z3.StringSort()
+                        sort_name = "String"
+                    else:
+                        # Default to String for unknown types
+                        param_sort = z3.StringSort()
+                        sort_name = f"String (fallback from {param.type_annotation})"
+                else:
+                    # Default to String for untyped parameters
+                    param_sort = z3.StringSort()
+                    sort_name = "String (untyped)"
+                
+                logger.debug(f"Creating symbolic parameter: {param_name} ({sort_name})")
+                self._interpreter.declare_symbolic(param_name, param_sort)
+            
+            # Execute the function body instead of module body
+            modified_ir = IRModule(
+                loc=ir_module.loc,
+                source_language=ir_module.source_language,
+                body=func_def.body,
+                docstring=ir_module.docstring,
+            )
+            execution_result = self._interpreter.execute(modified_ir)
+        else:
+            # Normal module-level execution
+            execution_result = self._interpreter.execute(ir_module)
+        
         terminal_states = execution_result.states
 
         # Step 3: Process each path through solver

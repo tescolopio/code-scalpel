@@ -844,6 +844,11 @@ SINK_PATTERNS: Dict[str, SecuritySink] = {
     "sqlalchemy.sql.expression.text": SecuritySink.SQL_QUERY,
     # HTML/XSS
     "render_template_string": SecuritySink.HTML_OUTPUT,
+    "flask.render_template_string": SecuritySink.HTML_OUTPUT,
+    "Response": SecuritySink.HTML_OUTPUT,
+    "flask.Response": SecuritySink.HTML_OUTPUT,
+    "make_response": SecuritySink.HTML_OUTPUT,
+    "flask.make_response": SecuritySink.HTML_OUTPUT,
     "Markup": SecuritySink.HTML_OUTPUT,
     "flask.Markup": SecuritySink.HTML_OUTPUT,
     "markupsafe.Markup": SecuritySink.HTML_OUTPUT,
@@ -864,7 +869,10 @@ SINK_PATTERNS: Dict[str, SecuritySink] = {
     "exec": SecuritySink.EVAL,
     "compile": SecuritySink.EVAL,
     # Deserialization
+    "pickle.load": SecuritySink.DESERIALIZATION,
     "pickle.loads": SecuritySink.DESERIALIZATION,
+    "_pickle.load": SecuritySink.DESERIALIZATION,
+    "_pickle.loads": SecuritySink.DESERIALIZATION,
     "yaml.load": SecuritySink.DESERIALIZATION,
     "yaml.unsafe_load": SecuritySink.DESERIALIZATION,
     "marshal.loads": SecuritySink.DESERIALIZATION,

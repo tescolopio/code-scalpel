@@ -39,6 +39,14 @@ pdg_visualizations/
 analysis_results/
 .scalpel_cache/
 
+# Polyglot stubs (exclude compiled tree-sitter)
+*.so
+*.dylib
+*.dll
+
+# tree-sitter build artifacts
+build/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/

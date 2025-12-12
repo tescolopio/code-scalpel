@@ -33,6 +33,7 @@ from .taint_tracker import (
     TaintTracker,
     TaintInfo,
     TaintLevel,
+    TaintSource,
     SecuritySink,
     Vulnerability,
     TAINT_SOURCE_PATTERNS,
@@ -221,6 +222,19 @@ class SecurityAnalyzer:
 
         elif isinstance(node, ast.FunctionDef):
             result.functions_analyzed.append(node.name)
+            
+            # Mark function parameters as taint sources (untrusted input)
+            for arg in node.args.args:
+                param_name = arg.arg
+                taint_info = TaintInfo(
+                    source=TaintSource.USER_INPUT,
+                    level=TaintLevel.HIGH,
+                    source_location=(node.lineno, node.col_offset),
+                    propagation_path=[],
+                )
+                self._taint_tracker.mark_tainted(param_name, taint_info)
+                self._current_taint_map[param_name] = taint_info
+            
             for child in node.body:
                 self._analyze_node(child, result)
 
@@ -242,6 +256,22 @@ class SecurityAnalyzer:
                 self._analyze_node(child, result)
 
         elif isinstance(node, ast.With):
+            # Handle context manager assignments: with open(path) as f:
+            for item in node.items:
+                # First, analyze the context expression as a potential sink
+                if isinstance(item.context_expr, ast.Call):
+                    self._analyze_call(item.context_expr, (node.lineno, node.col_offset))
+                
+                # Then propagate taint to the bound variable
+                if item.optional_vars and isinstance(item.optional_vars, ast.Name):
+                    target_var = item.optional_vars.id
+                    # Extract variables from the context expression (e.g., open(full_path))
+                    source_vars = self._extract_variable_names(item.context_expr)
+                    # Propagate taint from source variables to the target
+                    # signature: propagate_assignment(target, source_names: List[str])
+                    if source_vars:
+                        self._taint_tracker.propagate_assignment(target_var, source_vars)
+            
             for child in node.body:
                 self._analyze_node(child, result)
 
@@ -251,6 +281,12 @@ class SecurityAnalyzer:
             for handler in node.handlers:
                 for child in handler.body:
                     self._analyze_node(child, result)
+
+        elif isinstance(node, ast.Return):
+            # Analyze return statements for sink calls
+            # e.g., return render_template_string(user_input)
+            if node.value and isinstance(node.value, ast.Call):
+                self._analyze_call(node.value, (node.lineno, node.col_offset))
 
     def _analyze_assignment(self, node: ast.Assign) -> None:
         """Analyze an assignment for taint propagation."""

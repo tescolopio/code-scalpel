@@ -28,6 +28,7 @@ class TestCase:
     expected_behavior: str
     path_conditions: list[str]
     description: str
+    expected_result: Any = None  # Expected return value if known
 
     def to_pytest(self, index: int) -> str:
         """Convert test case to pytest function."""
@@ -50,11 +51,18 @@ class TestCase:
         lines.append(f"    result = {self.function_name}({args})")
         lines.append("")
 
-        # Assert (we can't know expected output without execution, but we verify no crash)
-        lines.append("    # Path is reachable with these inputs")
-        lines.append(
-            "    assert result is not None or result is None  # Executed successfully"
-        )
+        # Generate meaningful assertion based on expected result
+        lines.append("    # Verify path execution")
+        if self.expected_result is not None:
+            # We have a concrete expected result
+            lines.append(f"    assert result == {repr(self.expected_result)}")
+        elif self.expected_behavior and "returns True" in self.expected_behavior:
+            lines.append("    assert result is True")
+        elif self.expected_behavior and "returns False" in self.expected_behavior:
+            lines.append("    assert result is False")
+        else:
+            # Fallback to basic assertion
+            lines.append("    assert result is not None  # Function returned a value")
 
         return "\n".join(lines)
 
@@ -294,12 +302,13 @@ class TestGenerator:
     def _run_symbolic_execution(self, code: str, language: str) -> dict[str, Any]:
         """Run symbolic execution on the code."""
         try:
-            from code_scalpel.symbolic import SymbolicExecutor
+            from code_scalpel.symbolic_execution_tools.engine import SymbolicAnalyzer
 
-            executor = SymbolicExecutor(max_iterations=10)
-            return executor.execute(code)
-        except ImportError:
-            # Fallback to basic path analysis
+            analyzer = SymbolicAnalyzer(enable_cache=False)
+            result = analyzer.analyze(code, language=language)
+            return result.to_dict()
+        except (ImportError, ValueError, SyntaxError):
+            # Fallback to basic path analysis on import or syntax errors
             return self._basic_path_analysis(code, language)
 
     def _basic_path_analysis(self, code: str, language: str) -> dict[str, Any]:
@@ -434,39 +443,77 @@ class TestGenerator:
         paths = symbolic_result.get("paths", [])
         symbolic_vars = symbolic_result.get("symbolic_vars", [])
 
+        # Extract type hints from function signature
+        param_types = self._extract_parameter_types(code, function_name, language)
+        
+        # Analyze code to map path conditions to expected return values
+        return_value_map = self._analyze_return_paths(code, function_name, language)
+
+        # Track seen input combinations for deduplication
+        seen_inputs: set[tuple] = set()
+
         for path in paths:
             path_id = path.get("path_id", len(test_cases))
-            conditions = path.get("conditions", [])
-            state = path.get("state", {})
+            # Support both old format (conditions) and new format (constraints)
+            conditions = path.get("conditions", path.get("constraints", []))
+            # Support both old format (state) and new format (model/variables)
+            state = path.get("state", path.get("model", path.get("variables", {})))
             reachable = path.get("reachable", True)
+            # New format uses status instead of reachable
+            if path.get("status") == "infeasible":
+                reachable = False
 
             if not reachable:
                 continue
 
-            # Extract reproduction inputs
+            # Extract reproduction inputs - ONLY for actual function parameters
             inputs = {}
-            for var in symbolic_vars:
-                if var in state:
-                    value = state[var]
-                    # Convert Z3 values to Python if needed
-                    inputs[var] = self._to_python_value(value)
+            # Filter state to only include actual function parameters (from param_types)
+            # This excludes intermediate variables like 'discount' that are defined inside the function
+            if state:
+                for var, value in state.items():
+                    # Only include if it's a known function parameter
+                    if var in param_types or (not param_types):
+                        # If no param_types available, still include but will be filtered later
+                        expected_type = param_types.get(var)
+                        inputs[var] = self._to_python_value(value, expected_type)
+            
+            # If param_types is available, ensure we only have actual parameters
+            if param_types:
+                inputs = {k: v for k, v in inputs.items() if k in param_types}
+
+            # Deduplicate: skip if we've seen this exact input combination
+            input_key = tuple(sorted((k, repr(v)) for k, v in inputs.items()))
+            if input_key in seen_inputs:
+                continue
+            seen_inputs.add(input_key)
 
             # Generate description
             if conditions:
-                description = f"Triggers path where {' and '.join(conditions[:2])}"
+                desc_conditions = [str(c) for c in conditions[:2]]
+                description = f"Triggers path where {' and '.join(desc_conditions)}"
                 if len(conditions) > 2:
                     description += f" (and {len(conditions) - 2} more conditions)"
             else:
                 description = "Default/linear execution path"
+
+            # Infer expected result from path conditions
+            expected_result = self._infer_expected_result(conditions, return_value_map, inputs)
+            expected_behavior = "Executes without error"
+            if expected_result is True:
+                expected_behavior = "returns True"
+            elif expected_result is False:
+                expected_behavior = "returns False"
 
             test_cases.append(
                 TestCase(
                     path_id=path_id,
                     function_name=function_name,
                     inputs=inputs,
-                    expected_behavior="Executes without error",
+                    expected_behavior=expected_behavior,
                     path_conditions=conditions,
                     description=description,
+                    expected_result=expected_result,
                 )
             )
 
@@ -485,24 +532,192 @@ class TestGenerator:
 
         return test_cases
 
-    def _to_python_value(self, value: Any) -> Any:
-        """Convert Z3 or other symbolic values to Python natives."""
+    def _extract_parameter_types(
+        self, code: str, function_name: str, language: str
+    ) -> dict[str, str]:
+        """Extract parameter type hints from function signature.
+        
+        Returns:
+            Dict mapping parameter names to their type annotations (e.g., {'role': 'str', 'level': 'int'})
+        """
+        if language != "python":
+            return {}
+        
+        try:
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef) and node.name == function_name:
+                    param_types = {}
+                    for arg in node.args.args:
+                        if arg.annotation:
+                            # Extract type from annotation
+                            if isinstance(arg.annotation, ast.Name):
+                                param_types[arg.arg] = arg.annotation.id
+                            elif isinstance(arg.annotation, ast.Constant):
+                                param_types[arg.arg] = str(arg.annotation.value)
+                    return param_types
+        except Exception:
+            pass
+        
+        return {}
+
+    def _to_python_value(self, value: Any, expected_type: str | None = None) -> Any:
+        """Convert Z3 or other symbolic values to Python natives.
+        
+        Args:
+            value: The value to convert (Z3 object, int, str, etc.)
+            expected_type: Expected Python type from type hint ('str', 'int', 'bool', etc.)
+        
+        Returns:
+            Python native value matching the expected type
+        """
+        # Handle Z3 objects first
         if hasattr(value, "as_long"):
             # Z3 IntNumRef
-            return value.as_long()
+            int_val = value.as_long()
+            if expected_type == "str":
+                # If function expects string but Z3 gave us int, convert to string
+                return f"value_{int_val}"
+            return int_val
+        
         if hasattr(value, "as_string"):
             # Z3 StringVal
             return value.as_string()
+        
         if hasattr(value, "is_true"):
             # Z3 BoolRef
             return bool(value)
+        
+        # Handle Python primitives with type coercion
+        if isinstance(value, (int, float)):
+            if expected_type == "str":
+                return str(value)
+            elif expected_type == "bool":
+                return bool(value)
+            return value
+        
         if isinstance(value, str):
-            # Already a string
-            try:
-                return int(value)
-            except ValueError:
+            # If we have a type hint, respect it
+            if expected_type == "int":
+                try:
+                    return int(value)
+                except ValueError:
+                    return 0  # Default safe value
+            elif expected_type == "float":
                 try:
                     return float(value)
                 except ValueError:
-                    return value
+                    return 0.0
+            elif expected_type == "bool":
+                return value.lower() in ("true", "1", "yes")
+            # For str or no hint, keep as string
+            return value
+        
         return value
+
+    def _analyze_return_paths(
+        self, code: str, function_name: str, language: str
+    ) -> dict[str, Any]:
+        """Analyze code to map conditions to their return values.
+        
+        For boolean functions, this maps branch conditions to True/False returns.
+        
+        Returns:
+            Dict mapping condition patterns to expected return values
+        """
+        if language != "python":
+            return {}
+        
+        try:
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef) and node.name == function_name:
+                    return self._extract_return_map(node)
+        except Exception:
+            pass
+        
+        return {}
+
+    def _extract_return_map(self, func_node: ast.FunctionDef) -> dict[str, Any]:
+        """Extract mapping of conditions to return values from a function AST.
+        
+        Analyzes if-else chains to determine which conditions lead to which returns.
+        """
+        return_map: dict[str, Any] = {}
+        
+        def visit_body(body: list, condition_stack: list[str]):
+            """Recursively visit function body, tracking conditions."""
+            for stmt in body:
+                if isinstance(stmt, ast.Return):
+                    # Found a return - map current conditions to return value
+                    if stmt.value is not None:
+                        ret_val = self._ast_value_to_python(stmt.value)
+                        if ret_val is not None:
+                            # Create key from conditions
+                            cond_key = " AND ".join(condition_stack) if condition_stack else "default"
+                            return_map[cond_key] = ret_val
+                            
+                elif isinstance(stmt, ast.If):
+                    # Analyze if branch
+                    condition_str = ast.unparse(stmt.test) if hasattr(ast, 'unparse') else str(stmt.test)
+                    visit_body(stmt.body, condition_stack + [condition_str])
+                    
+                    # Analyze else/elif branches
+                    if stmt.orelse:
+                        negated = f"not ({condition_str})"
+                        visit_body(stmt.orelse, condition_stack + [negated])
+        
+        visit_body(func_node.body, [])
+        return return_map
+
+    def _ast_value_to_python(self, node: ast.expr) -> Any:
+        """Convert AST constant/name to Python value."""
+        if isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.NameConstant):  # Python 3.7 compatibility
+            return node.value
+        elif isinstance(node, ast.Name):
+            if node.id == "True":
+                return True
+            elif node.id == "False":
+                return False
+        return None
+
+    def _infer_expected_result(
+        self, conditions: list[str], return_map: dict[str, Any], inputs: dict[str, Any]
+    ) -> Any:
+        """Infer expected return value from path conditions and return map.
+        
+        Uses the analyzed return paths to determine what value should be returned
+        for the given set of conditions.
+        """
+        if not conditions or not return_map:
+            return None
+        
+        # Try to match conditions to return map entries
+        conditions_str = " ".join(str(c) for c in conditions)
+        
+        # Look for patterns in conditions that indicate the return path
+        # Common patterns in boolean functions:
+        # - "== 'admin'" typically leads to True for access control
+        # - Final else branch typically captured by negations
+        
+        for cond_key, ret_val in return_map.items():
+            # Check if the path conditions match this return path
+            # This is a heuristic - check if key concepts appear in conditions
+            key_parts = cond_key.replace("not (", "").replace(")", "").split(" AND ")
+            
+            match_count = 0
+            for part in key_parts:
+                part_clean = part.strip()
+                if part_clean and part_clean != "default":
+                    # Look for the condition or its negation in path conditions
+                    if any(part_clean in str(c) or part_clean.replace("==", "!=") in str(c) 
+                           for c in conditions):
+                        match_count += 1
+            
+            # If most conditions match, use this return value
+            if key_parts and match_count >= len(key_parts) // 2:
+                return ret_val
+        
+        return None
