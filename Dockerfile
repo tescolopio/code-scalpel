@@ -38,11 +38,11 @@ COPY --from=builder /app /app
 ENV PATH=/root/.local/bin:$PATH
 
 # Expose the MCP server port
-EXPOSE 8080
+EXPOSE 8593
 
 # Health check for HTTP transport
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/sse -H "Accept: text/event-stream" || exit 1
+    CMD curl -f http://localhost:8593/sse -H "Accept: text/event-stream" || exit 1
 
 # Default project root inside container
 ENV SCALPEL_ROOT=/app/code
@@ -51,4 +51,4 @@ ENV SCALPEL_ROOT=/app/code
 # Host 0.0.0.0 is required for Docker networking
 # --allow-lan disables host validation for external access
 # --root points to the mounted code directory
-CMD ["code-scalpel", "mcp", "--http", "--host", "0.0.0.0", "--port", "8080", "--root", "/app/code", "--allow-lan"]
+CMD ["code-scalpel", "mcp", "--http", "--host", "0.0.0.0", "--port", "8593", "--root", "/app/code", "--allow-lan"]
