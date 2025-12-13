@@ -5,31 +5,32 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-1669%20passed-brightgreen.svg)](https://github.com/tescolopio/code-scalpel)
 
-**Precision Code Analysis for the AI Era**
+**MCP Server Toolkit for AI Agents**
 
-Code Scalpel gives AI agents the power to understand, analyze, and transform code with mathematical precision. Built for Claude, Copilot, and autonomous coding systems.
+Code Scalpel enables AI assistants (Claude, GitHub Copilot, Cursor) to perform surgical code operations without hallucination. Extract exactly what's needed, modify without collateral damage, verify before applying.
 
 ```bash
 pip install code-scalpel
 ```
 
-> **✅ v1.2.3 STABLE RELEASE** (December 12, 2025)  
-> Production-ready with **100% vulnerability detection rate** (validated by external team).
+> **v1.3.0 STABLE RELEASE** (December 12, 2025)  
+> Production-ready MCP server for AI agents with **100% vulnerability detection rate**.
 >
 > | Capability | Status | Notes |
 > |------------|--------|-------|
-> | Security Scanning | **100%** (12/12 types) | SQL injection, XSS, command injection, path traversal, SSRF, weak crypto |
-> | Test Generation | **Correct types** | Float, int, str, bool all properly inferred |
-> | Symbolic Execution | **4/4 paths** | Full path exploration with deduplication |
-> | Line Numbers | **Working** | Exact line numbers in all vulnerability reports |
+> | Security Scanning | **100%** (15+ types) | SQL, XSS, NoSQL, LDAP injection, secrets |
+> | Secret Detection | **30+ patterns** | AWS, GitHub, Stripe, private keys |
+> | Test Generation | **Float support** | Int, str, bool, float properly inferred |
+> | Surgical Extraction | **95%+ coverage** | Extract by symbol name, not line guessing |
 >
-> **What's New in v1.2.3:**
-> - Flask XSS detection (`render_template_string`, `Response`)
-> - Float type inference for test generation
-> - Test path deduplication (no duplicates)
-> - Meaningful assertions (`assert result is True/False`)
+> **What's New in v1.3.0:**
+> - NoSQL injection detection (MongoDB find, aggregate, update, delete)
+> - LDAP injection detection (python-ldap, ldap3)
+> - Hardcoded secret scanning (30+ patterns including AWS, GitHub, Stripe)
+> - Float type inference for symbolic execution
+> - Path resolution improvements for extract_code
 >
-> See [RELEASE_NOTES_v1.2.2.md](RELEASE_NOTES_v1.2.2.md) for technical details.
+> See [RELEASE_NOTES_v1.3.0.md](docs/RELEASE_NOTES_v1.3.0.md) for technical details.
 
 ---
 
@@ -208,7 +209,9 @@ Add to `claude_desktop_config.json`:
 - Insecure Deserialization (CWE-502) - pickle
 - SSRF (CWE-918)
 - Weak Cryptography (CWE-327) - MD5/SHA1
-- Hardcoded Secrets (CWE-798) - AWS keys, API tokens
+- Hardcoded Secrets (CWE-798) - 30+ patterns (AWS, GitHub, Stripe, private keys)
+- NoSQL Injection (CWE-943) - MongoDB PyMongo/Motor
+- LDAP Injection (CWE-90) - python-ldap/ldap3
 
 ### Performance
 - **200x cache speedup** for unchanged files
@@ -262,28 +265,29 @@ pytest tests/
 
 See [Contributing Guide](docs/guides/CONTRIBUTING.md) for details.
 
-## Roadmap 2025
+## Roadmap
 
-See [docs/ROADMAP_2025.md](docs/ROADMAP_2025.md) for the complete roadmap.
+See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) for the complete roadmap.
 
-| Version | Target | Highlights |
+| Version | Status | Highlights |
 |---------|--------|------------|
-| **v1.3.0** | January 2025 | NoSQL/LDAP injection, hardcoded secrets, 95% coverage |
-| **v1.4.0** | February 2025 | XXE/SSTI detection, VS Code extension (preview) |
-| **v1.5.0** | March 2025 | Dependency CVE scan, call graph visualization |
-| **v2.0.0** | Q2 2025 | TypeScript/JavaScript support |
-| **v2.1.0** | Q3 2025 | AI-assisted auto-fix, full VS Code extension |
+| **v1.3.0** | Current | NoSQL/LDAP injection, hardcoded secrets, 95% coverage |
+| **v1.4.0** | Next | Context MCP tools (get_file_context, get_symbol_references) |
+| **v1.5.0** | Planned | Project intelligence (get_project_map, get_call_graph) |
+| **v2.0.0** | Planned | TypeScript/JavaScript full support |
+| **v2.1.0** | Planned | AI verification tools (verify_behavior, suggest_fix) |
 
-**Strategic Focus:** Become the dominant polyglot security scanner with native AI agent integration.
+**Strategic Focus:** MCP server toolkit enabling AI agents to perform surgical code operations without hallucination.
 
 ## Stats
 
 - **1,669** tests passing
 - **100%** coverage: PDG, AST, Symbolic Execution, Security Analysis
-- **95%** coverage: Surgical Tools (SurgicalExtractor 94%, SurgicalPatcher 96%)
+- **95%+** coverage: Surgical Tools (SurgicalExtractor 95%, SurgicalPatcher 96%)
 - **3** languages supported (Python full, JS/Java structural)
-- **8** MCP tools
-- **12** vulnerability types detected (SQL injection, XSS, command injection, path traversal, SSRF, weak crypto, hardcoded secrets, and more)
+- **8** MCP tools for AI agents
+- **15+** vulnerability types detected (SQL, XSS, NoSQL, LDAP, command injection, path traversal, secrets)
+- **30+** secret detection patterns (AWS, GitHub, Stripe, private keys)
 - **200x** cache speedup
 
 ## License

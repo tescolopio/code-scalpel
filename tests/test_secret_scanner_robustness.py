@@ -18,7 +18,8 @@ def connect_aws():
     ]
     # We want this to pass eventually
     assert len(vulns) >= 1
-    assert "AWS Access Key" in vulns[0].taint_path
+    # taint_path is a list - check if any element contains the key type
+    assert any("AWS Access Key" in path for path in vulns[0].taint_path)
 
 
 def test_fstring_secret_detection():
@@ -38,7 +39,8 @@ msg = f"Your key is AKIAIOSFODNN7EXAMPLE for now"
         if v.sink_type == SecuritySink.HARDCODED_SECRET
     ]
     assert len(vulns) >= 1
-    assert "AWS Access Key" in vulns[0].taint_path
+    # taint_path is a list - check if any element contains the key type
+    assert any("AWS Access Key" in path for path in vulns[0].taint_path)
 
 
 def test_generic_api_key_tuple_unpacking():

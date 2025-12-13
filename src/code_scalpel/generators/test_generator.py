@@ -391,42 +391,47 @@ class TestGenerator:
     ) -> Any:
         """Generate a value that satisfies (or doesn't satisfy) a condition."""
         # Parse common patterns
-        # x > 0, x < 0, x == 0, x >= N, x <= N
+        # Support both integer and float comparisons (e.g., x > 0, x > 100.0)
         patterns = [
+            # Float patterns (must come before int patterns)
             (
-                rf"{var}\s*>\s*(\d+)",
-                lambda m: int(m.group(1)) + 1
+                rf"{var}\s*>\s*(\d+\.?\d*)",
+                lambda m: float(m.group(1)) + 1.0
                 if should_satisfy
-                else int(m.group(1)) - 1,
+                else float(m.group(1)) - 1.0,
             ),
             (
-                rf"{var}\s*<\s*(\d+)",
-                lambda m: int(m.group(1)) - 1
+                rf"{var}\s*<\s*(\d+\.?\d*)",
+                lambda m: float(m.group(1)) - 1.0
                 if should_satisfy
-                else int(m.group(1)) + 1,
+                else float(m.group(1)) + 1.0,
             ),
             (
-                rf"{var}\s*>=\s*(\d+)",
-                lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) - 1,
+                rf"{var}\s*>=\s*(\d+\.?\d*)",
+                lambda m: float(m.group(1)) if should_satisfy else float(m.group(1)) - 1.0,
             ),
             (
-                rf"{var}\s*<=\s*(\d+)",
-                lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) + 1,
+                rf"{var}\s*<=\s*(\d+\.?\d*)",
+                lambda m: float(m.group(1)) if should_satisfy else float(m.group(1)) + 1.0,
             ),
             (
-                rf"{var}\s*==\s*(\d+)",
-                lambda m: int(m.group(1)) if should_satisfy else int(m.group(1)) + 1,
+                rf"{var}\s*==\s*(\d+\.?\d*)",
+                lambda m: float(m.group(1)) if should_satisfy else float(m.group(1)) + 1.0,
             ),
             (
-                rf"{var}\s*!=\s*(\d+)",
-                lambda m: int(m.group(1)) + 1 if should_satisfy else int(m.group(1)),
+                rf"{var}\s*!=\s*(\d+\.?\d*)",
+                lambda m: float(m.group(1)) + 1.0 if should_satisfy else float(m.group(1)),
             ),
         ]
 
         for pattern, value_fn in patterns:
             match = re.search(pattern, condition)
             if match:
-                return value_fn(match)
+                val = value_fn(match)
+                # Return int if it's a whole number without decimal in original
+                if '.' not in match.group(1) and val == int(val):
+                    return int(val)
+                return val
 
         # Default values
         return 1 if should_satisfy else -1
@@ -566,7 +571,7 @@ class TestGenerator:
         
         Args:
             value: The value to convert (Z3 object, int, str, etc.)
-            expected_type: Expected Python type from type hint ('str', 'int', 'bool', etc.)
+            expected_type: Expected Python type from type hint ('str', 'int', 'bool', 'float', etc.)
         
         Returns:
             Python native value matching the expected type
@@ -578,7 +583,18 @@ class TestGenerator:
             if expected_type == "str":
                 # If function expects string but Z3 gave us int, convert to string
                 return f"value_{int_val}"
+            elif expected_type == "float":
+                # v1.3.0: Convert to float if expected
+                return float(int_val)
             return int_val
+        
+        if hasattr(value, "as_fraction"):
+            # Z3 RealNumRef (for floats)
+            frac = value.as_fraction()
+            float_val = float(frac.numerator) / float(frac.denominator)
+            if expected_type == "int":
+                return int(float_val)
+            return float_val
         
         if hasattr(value, "as_string"):
             # Z3 StringVal
@@ -594,6 +610,11 @@ class TestGenerator:
                 return str(value)
             elif expected_type == "bool":
                 return bool(value)
+            elif expected_type == "float":
+                # v1.3.0: Ensure float type
+                return float(value)
+            elif expected_type == "int":
+                return int(value)
             return value
         
         if isinstance(value, str):
@@ -691,33 +712,175 @@ class TestGenerator:
         Uses the analyzed return paths to determine what value should be returned
         for the given set of conditions.
         """
-        if not conditions or not return_map:
+        if not return_map:
             return None
         
-        # Try to match conditions to return map entries
-        conditions_str = " ".join(str(c) for c in conditions)
+        # Handle empty conditions - return default if available
+        if not conditions:
+            return return_map.get("default")
         
-        # Look for patterns in conditions that indicate the return path
-        # Common patterns in boolean functions:
-        # - "== 'admin'" typically leads to True for access control
-        # - Final else branch typically captured by negations
+        # Normalize all path conditions to a comparable form
+        conditions_set = set()
+        for c in conditions:
+            cond_str = str(c).strip()
+            conditions_set.add(cond_str)
+            # Also add normalized versions for comparison
+            conditions_set.add(cond_str.replace(" ", ""))
+        
+        best_match = None
+        best_score = -1
         
         for cond_key, ret_val in return_map.items():
-            # Check if the path conditions match this return path
-            # This is a heuristic - check if key concepts appear in conditions
-            key_parts = cond_key.replace("not (", "").replace(")", "").split(" AND ")
+            if cond_key == "default":
+                continue
+                
+            # Parse the return map key into individual conditions
+            # Keys are like "temp > 100" or "temp > 100 AND not (temp > 200)"
+            key_parts = []
+            for part in cond_key.split(" AND "):
+                part = part.strip()
+                if part:
+                    key_parts.append(part)
             
-            match_count = 0
+            if not key_parts:
+                continue
+            
+            # Calculate match score
+            match_score = 0
+            mismatch_count = 0
+            
             for part in key_parts:
-                part_clean = part.strip()
-                if part_clean and part_clean != "default":
-                    # Look for the condition or its negation in path conditions
-                    if any(part_clean in str(c) or part_clean.replace("==", "!=") in str(c) 
-                           for c in conditions):
-                        match_count += 1
+                part_normalized = part.replace(" ", "")
+                is_negated = part.startswith("not (") and part.endswith(")")
+                
+                if is_negated:
+                    # Extract the inner condition from "not (condition)"
+                    inner = part[5:-1].strip()
+                    inner_normalized = inner.replace(" ", "")
+                    
+                    # Check if this negated condition matches a path condition negation
+                    # Path conditions use operators like <= instead of "not (>)"
+                    negated_match = False
+                    for pc in conditions:
+                        pc_str = str(pc).strip()
+                        pc_normalized = pc_str.replace(" ", "")
+                        
+                        # Check for direct match of negated form
+                        if f"Not({inner_normalized})" in pc_normalized:
+                            negated_match = True
+                            break
+                        # Check for inverted comparison operators
+                        if self._is_negation_match(inner, pc_str):
+                            negated_match = True
+                            break
+                        # Check for explicit "not" in conditions
+                        if inner_normalized in pc_normalized and "not" in pc_str.lower():
+                            negated_match = True
+                            break
+                    
+                    if negated_match:
+                        match_score += 1
+                    else:
+                        # Check if the positive form is in conditions (mismatch)
+                        if any(inner_normalized in str(c).replace(" ", "") for c in conditions):
+                            mismatch_count += 1
+                else:
+                    # Non-negated condition - check for direct match
+                    direct_match = False
+                    for pc in conditions:
+                        pc_str = str(pc).strip()
+                        pc_normalized = pc_str.replace(" ", "")
+                        
+                        if part_normalized in pc_normalized or part in pc_str:
+                            direct_match = True
+                            break
+                        # Also check for equivalent forms
+                        if self._is_equivalent_condition(part, pc_str):
+                            direct_match = True
+                            break
+                    
+                    if direct_match:
+                        match_score += 1
+                    else:
+                        # Check if the negated form is in conditions (mismatch)
+                        for pc in conditions:
+                            if self._is_negation_match(part, str(pc)):
+                                mismatch_count += 1
+                                break
             
-            # If most conditions match, use this return value
-            if key_parts and match_count >= len(key_parts) // 2:
-                return ret_val
+            # Calculate final score - penalize mismatches heavily
+            final_score = match_score - (mismatch_count * 2)
+            
+            # Update best match if this is better
+            if final_score > best_score:
+                best_score = final_score
+                best_match = ret_val
         
-        return None
+        # Only return if we have a positive match
+        if best_score > 0:
+            return best_match
+        
+        # Fall back to default if no good match
+        return return_map.get("default")
+    
+    def _is_negation_match(self, condition: str, path_condition: str) -> bool:
+        """Check if path_condition is the negation of condition.
+        
+        For example: "temp > 100" is negated by "temp <= 100"
+        """
+        # Extract operator and operands from conditions
+        import re
+        
+        # Pattern to match comparisons like "var > 100" or "var == 'value'"
+        pattern = r"(\w+)\s*([<>=!]+)\s*(.+)"
+        
+        cond_match = re.match(pattern, condition.strip())
+        path_match = re.match(pattern, path_condition.strip())
+        
+        if not cond_match or not path_match:
+            return False
+        
+        cond_var, cond_op, cond_val = cond_match.groups()
+        path_var, path_op, path_val = path_match.groups()
+        
+        # Variables must match
+        if cond_var != path_var:
+            return False
+        
+        # Values must match (normalize)
+        if cond_val.strip().strip("'\"") != path_val.strip().strip("'\""):
+            return False
+        
+        # Check if operators are negations of each other
+        negation_pairs = {
+            ">": "<=", "<": ">=", ">=": "<", "<=": ">",
+            "==": "!=", "!=": "==",
+        }
+        
+        return negation_pairs.get(cond_op) == path_op
+    
+    def _is_equivalent_condition(self, cond1: str, cond2: str) -> bool:
+        """Check if two conditions are equivalent (same meaning, different format)."""
+        # Normalize both conditions
+        c1 = cond1.strip().replace(" ", "")
+        c2 = cond2.strip().replace(" ", "")
+        
+        if c1 == c2:
+            return True
+        
+        # Check for common equivalent patterns
+        # e.g., "x>100" vs "100<x"
+        import re
+        pattern = r"(\w+)([<>=!]+)(\d+\.?\d*)"
+        
+        m1 = re.match(pattern, c1)
+        m2 = re.match(pattern, c2)
+        
+        if m1 and m2:
+            var1, op1, val1 = m1.groups()
+            var2, op2, val2 = m2.groups()
+            
+            if var1 == var2 and val1 == val2 and op1 == op2:
+                return True
+        
+        return False

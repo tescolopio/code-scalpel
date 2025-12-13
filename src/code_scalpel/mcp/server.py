@@ -76,6 +76,24 @@ def _get_cache():
 # ============================================================================
 
 
+class FunctionInfo(BaseModel):
+    """Information about a function."""
+
+    name: str = Field(description="Function name")
+    lineno: int = Field(description="Line number where function starts")
+    end_lineno: int | None = Field(default=None, description="Line number where function ends")
+    is_async: bool = Field(default=False, description="Whether function is async")
+
+
+class ClassInfo(BaseModel):
+    """Information about a class."""
+
+    name: str = Field(description="Class name")
+    lineno: int = Field(description="Line number where class starts")
+    end_lineno: int | None = Field(default=None, description="Line number where class ends")
+    methods: list[str] = Field(default_factory=list, description="Method names in class")
+
+
 class AnalysisResult(BaseModel):
     """Result of code analysis."""
 
@@ -90,6 +108,9 @@ class AnalysisResult(BaseModel):
     lines_of_code: int = Field(description="Total lines of code")
     issues: list[str] = Field(default_factory=list, description="Issues found")
     error: str | None = Field(default=None, description="Error message if failed")
+    # v1.3.0: Detailed info with line numbers
+    function_details: list[FunctionInfo] = Field(default_factory=list, description="Detailed function info with line numbers")
+    class_details: list[ClassInfo] = Field(default_factory=list, description="Detailed class info with line numbers")
 
 
 class VulnerabilityInfo(BaseModel):
@@ -312,6 +333,9 @@ class ContextualExtractionResult(BaseModel):
         default_factory=list, description="Names of included dependencies"
     )
     total_lines: int = Field(default=0, description="Total lines in extraction")
+    # v1.3.0: Line number information
+    line_start: int = Field(default=0, description="Starting line number of target")
+    line_end: int = Field(default=0, description="Ending line number of target")
     token_estimate: int = Field(default=0, description="Estimated token count")
     error: str | None = Field(default=None, description="Error if failed")
 
@@ -474,20 +498,42 @@ def _analyze_code_sync(code: str, language: str = "python") -> AnalysisResult:
         tree = ast.parse(code)
 
         functions = []
+        function_details = []
         classes = []
+        class_details = []
         imports = []
         issues = []
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 functions.append(node.name)
+                function_details.append(FunctionInfo(
+                    name=node.name,
+                    lineno=node.lineno,
+                    end_lineno=getattr(node, 'end_lineno', None),
+                    is_async=False,
+                ))
                 # Flag potential issues
                 if len(node.name) < 2:
                     issues.append(f"Function '{node.name}' has very short name")
             elif isinstance(node, ast.AsyncFunctionDef):
                 functions.append(f"async {node.name}")
+                function_details.append(FunctionInfo(
+                    name=node.name,
+                    lineno=node.lineno,
+                    end_lineno=getattr(node, 'end_lineno', None),
+                    is_async=True,
+                ))
             elif isinstance(node, ast.ClassDef):
                 classes.append(node.name)
+                # Extract method names
+                methods = [n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+                class_details.append(ClassInfo(
+                    name=node.name,
+                    lineno=node.lineno,
+                    end_lineno=getattr(node, 'end_lineno', None),
+                    methods=methods,
+                ))
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     imports.append(alias.name)
@@ -506,6 +552,8 @@ def _analyze_code_sync(code: str, language: str = "python") -> AnalysisResult:
             complexity=_count_complexity(tree),
             lines_of_code=len(code.splitlines()),
             issues=issues,
+            function_details=function_details,
+            class_details=class_details,
         )
 
         # Cache successful result
@@ -1429,6 +1477,8 @@ async def extract_code(
             total_lines = (
                 result.line_end - result.line_start + 1 if result.line_end > 0 else 0
             )
+            line_start = result.line_start
+            line_end = result.line_end
             imports_needed = result.imports_needed
 
             # Handle cross-file context
@@ -1445,6 +1495,8 @@ async def extract_code(
             context_items = result.context_items
             context_code = result.context_code
             total_lines = result.total_lines
+            line_start = result.target.line_start
+            line_end = result.target.line_end
             imports_needed = result.target.imports_needed
         else:
             return _extraction_error(
@@ -1463,6 +1515,8 @@ async def extract_code(
             full_code=full_code,
             context_items=context_items,
             total_lines=total_lines,
+            line_start=line_start,
+            line_end=line_end,
             token_estimate=token_estimate,
         )
 

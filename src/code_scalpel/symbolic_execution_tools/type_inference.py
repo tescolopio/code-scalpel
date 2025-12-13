@@ -17,7 +17,7 @@ import ast
 from enum import Enum, auto
 from typing import Dict
 
-from z3 import IntSort, BoolSort, StringSort, Sort
+from z3 import IntSort, BoolSort, StringSort, RealSort, Sort
 
 
 class InferredType(Enum):
@@ -26,12 +26,14 @@ class InferredType(Enum):
 
     Phase 1: INT and BOOL
     Phase 2 (v0.3.0): STRING added
+    Phase 3 (v1.3.0): FLOAT added
     UNKNOWN means we cannot determine the type (unsupported construct).
     """
 
     INT = auto()
     BOOL = auto()
     STRING = auto()  # v0.3.0
+    FLOAT = auto()  # v1.3.0
     UNKNOWN = auto()
 
     def to_z3_sort(self) -> Sort:
@@ -42,6 +44,8 @@ class InferredType(Enum):
             return BoolSort()
         elif self == InferredType.STRING:
             return StringSort()
+        elif self == InferredType.FLOAT:
+            return RealSort()  # Z3 uses Real for floats
         else:
             raise ValueError(f"Cannot convert {self.name} to Z3 sort")
 
@@ -174,13 +178,16 @@ class TypeInferenceEngine:
             # IMPORTANT: bool check MUST come before int
             # because isinstance(True, int) is True in Python!
             return InferredType.BOOL
+        elif isinstance(value, float):
+            # v1.3.0: Float support - check before int since float is more specific
+            return InferredType.FLOAT
         elif isinstance(value, int):
             return InferredType.INT
         elif isinstance(value, str):
             # v0.3.0: String support
             return InferredType.STRING
         else:
-            # float, bytes, None, etc. → UNKNOWN
+            # bytes, None, etc. → UNKNOWN
             return InferredType.UNKNOWN
 
     def _infer_unary_type(self, node: ast.UnaryOp) -> InferredType:
@@ -192,9 +199,11 @@ class TypeInferenceEngine:
             return InferredType.BOOL
 
         elif isinstance(node.op, (ast.UAdd, ast.USub)):
-            # +x, -x → same type as operand (if Int, stays Int)
+            # +x, -x → same type as operand (if Int or Float, stays same)
             if operand_type == InferredType.INT:
                 return InferredType.INT
+            elif operand_type == InferredType.FLOAT:
+                return InferredType.FLOAT
             return InferredType.UNKNOWN
 
         elif isinstance(node.op, ast.Invert):
@@ -231,6 +240,12 @@ class TypeInferenceEngine:
                 return InferredType.STRING
             if left == InferredType.INT and right == InferredType.INT:
                 return InferredType.INT
+            # v1.3.0: Float arithmetic
+            if left == InferredType.FLOAT and right == InferredType.FLOAT:
+                return InferredType.FLOAT
+            if (left == InferredType.INT and right == InferredType.FLOAT) or \
+               (left == InferredType.FLOAT and right == InferredType.INT):
+                return InferredType.FLOAT
             # Mixed types → UNKNOWN (Python would convert, but we're strict)
             return InferredType.UNKNOWN
 
@@ -242,16 +257,36 @@ class TypeInferenceEngine:
                 return InferredType.STRING
             if left == InferredType.INT and right == InferredType.INT:
                 return InferredType.INT
+            # v1.3.0: Float multiplication
+            if left == InferredType.FLOAT and right == InferredType.FLOAT:
+                return InferredType.FLOAT
+            if (left == InferredType.INT and right == InferredType.FLOAT) or \
+               (left == InferredType.FLOAT and right == InferredType.INT):
+                return InferredType.FLOAT
             return InferredType.UNKNOWN
 
-        # Arithmetic operators on Int → Int
+        # Arithmetic operators on Int → Int, Float → Float
         if isinstance(op, (ast.Sub, ast.FloorDiv, ast.Mod, ast.Pow)):
             if left == InferredType.INT and right == InferredType.INT:
                 return InferredType.INT
+            # v1.3.0: Float arithmetic (except FloorDiv which returns int for floats too)
+            if isinstance(op, ast.FloorDiv):
+                # FloorDiv returns int in Python 3 for floats too
+                if (left == InferredType.FLOAT or right == InferredType.FLOAT):
+                    return InferredType.FLOAT  # Actually returns float in Python
+            if left == InferredType.FLOAT and right == InferredType.FLOAT:
+                return InferredType.FLOAT
+            if (left == InferredType.INT and right == InferredType.FLOAT) or \
+               (left == InferredType.FLOAT and right == InferredType.INT):
+                return InferredType.FLOAT
             return InferredType.UNKNOWN
 
-        # True division always returns float → UNKNOWN in Phase 1
+        # True division always returns float
         if isinstance(op, ast.Div):
+            # v1.3.0: True division always returns float
+            if (left in (InferredType.INT, InferredType.FLOAT) and 
+                right in (InferredType.INT, InferredType.FLOAT)):
+                return InferredType.FLOAT
             return InferredType.UNKNOWN
 
         # Bitwise operators on Int → Int

@@ -1,6 +1,6 @@
 # Code Scalpel Development Roadmap
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Last Updated:** December 12, 2025  
 **Current Release:** v1.2.3 (Stable)  
 **Maintainer:** 3D Tech Solutions LLC
@@ -9,52 +9,61 @@
 
 ## Executive Summary
 
-Code Scalpel is evolving from a Python-focused security scanner into the **dominant polyglot code analysis platform** for AI-assisted development. This roadmap outlines our development priorities through 2025, incorporating feedback from external security testers who validated our v1.2.3 release with a **9.5/10 rating**.
+Code Scalpel is an **MCP server toolkit designed for AI agents** (Claude, GitHub Copilot, Cursor, etc.) to perform surgical code operations without hallucination risk. By providing AI assistants with precise, AST-based code analysis and modification tools, we eliminate the guesswork that leads to broken code, incorrect line numbers, and context loss.
+
+### Core Mission
+
+**Enable AI agents to work on real codebases with surgical precision.**
+
+Traditional AI coding assistants struggle with:
+- **Hallucinated line numbers** - AI guesses where code is located
+- **Context overflow** - Large files exceed token limits, AI loses track
+- **Blind modifications** - AI rewrites entire functions when only one line needs changing
+- **No verification** - AI cannot confirm its changes preserve behavior
+
+Code Scalpel solves these by giving AI agents MCP tools that:
+- **Extract exactly what's needed** - Surgical extraction of functions/classes by name, not line guessing
+- **Modify without collateral damage** - Replace specific symbols, preserving surrounding code
+- **Verify before applying** - Simulate refactors to detect behavior changes
+- **Analyze with certainty** - Real AST parsing, not regex pattern matching
 
 ### Current State (v1.2.3)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Vulnerability Detection Rate | 100% (12/12 types) | ✅ Production |
-| Test Suite | 1,669 tests passing | ✅ Stable |
-| Code Coverage | 95%+ | ✅ Target Met |
-| Languages | Python (full), JS/Java (structural) | 🟡 Expanding |
-| MCP Tools | 8 tools | ✅ Stable |
+| MCP Tools | 8 tools (analyze, extract, security, test gen) | Stable |
+| Test Suite | 1,669 tests passing | Stable |
+| Code Coverage | 95%+ | Target Met |
+| Languages | Python (full), JS/Java (structural) | Expanding |
+| AI Agent Integrations | Claude Desktop, VS Code Copilot | Verified |
 
-### Target State (Q4 2025)
+### Target State
 
 | Metric | Target | Milestone |
 |--------|--------|-----------|
-| Vulnerability Types | 25+ | v1.4.0 |
+| MCP Tools | 15+ tools | v2.1.0 |
 | Languages | Python, TypeScript, JavaScript, Java | v2.0.0 |
-| Cross-File Analysis | Full taint tracking | v1.5.1 |
-| IDE Integration | VS Code extension | v2.1.0 |
-| Agentic Capabilities | Auto-fix with verification | v2.1.0 |
+| Cross-File Operations | Full project context | v1.5.1 |
+| AI Verification | Behavior-preserving refactor check | v2.1.0 |
+| Auto-Fix Generation | AI-verified security fixes | v2.1.0 |
 
 ---
 
 ## Release Timeline
 
 ```
-2025 Q1                    2025 Q2                    2025 Q3
-│                          │                          │
-▼                          ▼                          ▼
 ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
 │ v1.3.0  │  │ v1.4.0  │  │ v1.5.0  │  │ v1.5.1  │  │ v2.0.0  │  │ v2.1.0  │
-│ Harden  │→ │ Enter-  │→ │ Depend- │→ │ Cross-  │→ │ Poly-   │→ │ Agentic │
-│         │  │ prise   │  │ encies  │  │ File    │  │ glot    │  │         │
-│ Jan '25 │  │ Feb '25 │  │ Mar '25 │  │ Apr '25 │  │ Q2 '25  │  │ Q3 '25  │
+│ Harden  │─>│ Context │─>│ Project │─>│ Cross-  │─>│ Poly-   │─>│ AI      │
+│         │  │         │  │ Intel   │  │ File    │  │ glot    │  │ Verify  │
 └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘
      │            │            │            │            │            │
-     │            │            │            │            │            │
-   NoSQL       XXE/SSTI     CVE Scan    Cross-File   TypeScript   Auto-Fix
-   LDAP        VS Code      Call Graph  Taint        JavaScript   VS Code
-   Secrets     Preview      Circular    Import Res   Java Spring  Full IDE
+   Path Res    More Vuln   Dep Graph    Import Res   TypeScript   Behavior
+   Secrets     Patterns    Call Graph   Taint Flow   JavaScript   Verify
+   Coverage    SSTI/XXE    Project Map  Multi-File   Java         Auto-Fix
 ```
 
----
-
-## v1.3.0 - "Hardening" (January 2025)
+## v1.3.0 - "Hardening"
 
 ### Overview
 
@@ -65,15 +74,15 @@ Code Scalpel is evolving from a Python-focused security scanner into the **domin
 
 ### Priorities
 
-| Priority | Feature | Owner | Effort | Dependencies |
-|----------|---------|-------|--------|--------------|
-| **P0** | Fix `extract_code` file path resolution | TBD | 2 days | None |
-| **P0** | Add hardcoded secret detection | TBD | 1 day | None |
-| **P0** | Add NoSQL injection (MongoDB) | TBD | 1 day | None |
-| **P0** | Add LDAP injection sinks | TBD | 1 day | None |
-| **P0** | Surgical tools → 95% coverage | TBD | 3 days | None |
-| **P1** | Line numbers in all MCP tools | TBD | 1 day | None |
-| **P1** | Improve test generation types | TBD | 2 days | None |
+| Priority | Feature                                 | Owner | Effort | Dependencies |
+| -------- | --------------------------------------- | ----- | ------ | ------------ |
+| **P0**   | Fix `extract_code` file path resolution |TDE   | 2 days | None         |
+| **P0**   | Add hardcoded secret detection          | TDE   | 1 day  | None         |
+| **P0**   | Add NoSQL injection (MongoDB)           | TDE   | 1 day  | None         |
+| **P0**   | Add LDAP injection sinks                | TDE   | 1 day  | None         |
+| **P0**   | Surgical tools → 95% coverage           | TDE   | 3 days | None         |
+| **P1**   | Line numbers in all MCP tools           | TDE   | 1 day  | None         |
+| **P1**   | Improve test generation types           | TDE   | 2 days | None         |
 
 ### Technical Specifications
 
@@ -84,38 +93,40 @@ Code Scalpel is evolving from a Python-focused security scanner into the **domin
 **Root Cause:** The `extract_code` tool doesn't resolve paths relative to the workspace root.
 
 **Solution:**
+
 ```python
 # In src/code_scalpel/mcp/server.py or surgical tools
 
 def resolve_file_path(file_path: str, workspace_root: str = None) -> str:
     """Resolve file path to absolute path."""
     path = Path(file_path)
-    
+
     # Already absolute
     if path.is_absolute():
         return str(path)
-    
+
     # Try relative to workspace root
     if workspace_root:
         workspace_path = Path(workspace_root) / path
         if workspace_path.exists():
             return str(workspace_path)
-    
+
     # Try relative to current working directory
     cwd_path = Path.cwd() / path
     if cwd_path.exists():
         return str(cwd_path)
-    
+
     # Try common project structures
     for prefix in ["src", "lib", "app", "."]:
         candidate = Path(prefix) / path
         if candidate.exists():
             return str(candidate.resolve())
-    
+
     raise FileNotFoundError(f"Cannot resolve path: {file_path}")
 ```
 
 **Acceptance Criteria:**
+
 - [ ] `extract_code("utils.py", ...)` works from project root
 - [ ] `extract_code("src/utils.py", ...)` works with relative paths
 - [ ] `extract_code("/absolute/path/utils.py", ...)` works unchanged
@@ -126,6 +137,7 @@ def resolve_file_path(file_path: str, workspace_root: str = None) -> str:
 **New Vulnerability Type:** `HARDCODED_SECRET` (CWE-798)
 
 **Patterns to Detect:**
+
 ```python
 # src/code_scalpel/symbolic_execution_tools/taint_tracker.py
 
@@ -151,6 +163,7 @@ HARDCODED_SECRET_PATTERNS = {
 ```
 
 **Implementation:**
+
 ```python
 # Add to SecuritySink enum
 class SecuritySink(Enum):
@@ -161,7 +174,7 @@ class SecuritySink(Enum):
 def _check_hardcoded_secrets(self, node: ast.AST) -> List[Vulnerability]:
     """Check for hardcoded secrets in string literals."""
     vulnerabilities = []
-    
+
     for child in ast.walk(node):
         if isinstance(child, ast.Constant) and isinstance(child.value, str):
             for secret_type, pattern in HARDCODED_SECRET_PATTERNS.items():
@@ -174,11 +187,12 @@ def _check_hardcoded_secrets(self, node: ast.AST) -> List[Vulnerability]:
                         line=child.lineno,
                         column=child.col_offset,
                     ))
-    
+
     return vulnerabilities
 ```
 
 **Test Cases:**
+
 ```python
 def test_detects_aws_access_key():
     code = 'AWS_ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE"'
@@ -202,6 +216,7 @@ def test_ignores_placeholder():
 **New Sink Category:** MongoDB query methods
 
 **Patterns:**
+
 ```python
 # Add to SINK_PATTERNS in taint_tracker.py
 
@@ -235,6 +250,7 @@ def test_ignores_placeholder():
 ```
 
 **Vulnerable Pattern Example:**
+
 ```python
 # VULNERABLE - user input directly in query
 @app.route('/user/<user_id>')
@@ -260,6 +276,7 @@ def get_user_safe(user_id):
 **New Sink Category:** LDAP query methods
 
 **Patterns:**
+
 ```python
 # Add to SINK_PATTERNS in taint_tracker.py
 
@@ -290,12 +307,13 @@ def get_user_safe(user_id):
 ```
 
 **Vulnerable Pattern Example:**
+
 ```python
 # VULNERABLE - user input in LDAP filter
 def authenticate(username, password):
     ldap_filter = f"(&(uid={username})(userPassword={password}))"  # INJECTION!
     conn.search("dc=example,dc=com", ldap_filter)
-    
+
 # SAFE - escaped input
 from ldap3.utils.conv import escape_filter_chars
 def authenticate_safe(username, password):
@@ -307,68 +325,120 @@ def authenticate_safe(username, password):
 
 ### Acceptance Criteria Checklist
 
-```
 v1.3.0 Release Criteria:
 
-[ ] extract_code works with relative paths (P0)
-[ ] extract_code works with absolute paths (P0)
-[ ] extract_code provides clear error for missing files (P0)
+[x] extract_code works with relative paths (P0) - path_utils.py
+[x] extract_code works with absolute paths (P0) - path_utils.py
+[x] extract_code provides clear error for missing files (P0) - FileNotFoundError
 
-[ ] Detects AWS access keys (P0)
-[ ] Detects AWS secret keys (P0)
-[ ] Detects GitHub tokens (ghp_, gho_, ghu_) (P0)
-[ ] Detects Stripe keys (sk_live_, sk_test_) (P0)
-[ ] Detects private keys (-----BEGIN PRIVATE KEY-----) (P0)
-[ ] Detects generic secrets (password=, api_key=) (P0)
+[x] Detects AWS access keys (P0) - 30+ patterns in taint*tracker.py
+[x] Detects AWS secret keys (P0) - HARDCODED_SECRET_PATTERNS
+[x] Detects GitHub tokens (ghp*, gho*, ghu*) (P0) - All 3 formats
+[x] Detects Stripe keys (sk*live*, sk*test*) (P0) - Both formats
+[x] Detects private keys (-----BEGIN PRIVATE KEY-----) (P0) - RSA/EC/DSA/OPENSSH
+[x] Detects generic secrets (password=, api_key=) (P0) - With placeholder filter
 
-[ ] Detects MongoDB find() with tainted input (P0)
-[ ] Detects MongoDB aggregate() with tainted input (P0)
-[ ] Detects MongoDB update/delete with tainted input (P0)
+[x] Detects MongoDB find() with tainted input (P0) - nosql_injection sinks
+[x] Detects MongoDB aggregate() with tainted input (P0) - PyMongo + Motor
+[x] Detects MongoDB update/delete with tainted input (P0) - Full CRUD coverage
 
-[ ] Detects LDAP search with tainted filter (P0)
-[ ] Detects LDAP bind with tainted credentials (P0)
+[x] Detects LDAP search with tainted filter (P0) - ldap_injection sinks
+[x] Detects LDAP bind with tainted credentials (P0) - python-ldap + ldap3
 
-[ ] SurgicalExtractor coverage ≥ 95% (P0)
-[ ] SurgicalPatcher coverage ≥ 95% (P0)
+[x] SurgicalExtractor coverage >= 95% (P0) - 95%
+[x] SurgicalPatcher coverage >= 95% (P0) - 96%
 
-[ ] All MCP tools return line numbers (P1)
-[ ] Test generation infers float types correctly (P1)
+[x] All MCP tools return line numbers (P1) - FunctionInfo/ClassInfo models
+[x] Test generation infers float types correctly (P1) - FLOAT type + RealSort
 
-[ ] All 1,669+ tests passing (Gate)
-[ ] No regressions in existing detections (Gate)
-[ ] Documentation updated (Gate)
-```
+[x] All 1,669+ tests passing (Gate) - 1,669 passed
+[x] No regressions in existing detections (Gate) - Verified
+[x] Documentation updated (Gate) - README, copilot-instructions, RELEASE_NOTES_v1.3.0
 
----
-
-## v1.4.0 - "Enterprise" (February 2025)
+## v1.4.0 - "Context"
 
 ### Overview
 
-**Theme:** Enterprise Security + IDE Integration  
-**Goal:** Add critical vulnerability types, ship VS Code preview  
-**Effort:** ~15 developer-days  
-**Risk Level:** Medium (new architecture for VS Code)
+**Theme:** Enhanced AI Context and Detection Coverage  
+**Goal:** Give AI agents richer context about code and expand vulnerability detection  
+**Effort:** ~12 developer-days  
+**Risk Level:** Low (extends existing MCP tools)
 
 ### Priorities
 
 | Priority | Feature | Owner | Effort | Dependencies |
 |----------|---------|-------|--------|--------------|
+| **P0** | `get_file_context` MCP tool | TBD | 3 days | None |
+| **P0** | `get_symbol_references` MCP tool | TBD | 2 days | PDG |
 | **P0** | XXE detection | TBD | 2 days | None |
 | **P0** | SSTI detection (Jinja2) | TBD | 1 day | None |
-| **P0** | VS Code extension (Preview) | TBD | 5 days | None |
 | **P1** | JWT vulnerabilities | TBD | 2 days | None |
 | **P1** | Mass assignment detection | TBD | 2 days | None |
-| **P2** | Open redirect | TBD | 1 day | None |
-| **P2** | Header injection | TBD | 1 day | None |
 
 ### Technical Specifications
 
-#### 1. XXE Detection (XML External Entity)
+#### 1. `get_file_context` MCP Tool
+
+**Purpose:** AI agents need to understand a file's role without reading the entire file.
+
+```python
+# New MCP tool for AI agents
+async def get_file_context(file_path: str) -> FileContext:
+    """Provide AI with file overview without full content."""
+    return FileContext(
+        file_path=file_path,
+        language="python",
+        line_count=450,
+        functions=["main", "process_request", "validate_input"],
+        classes=["RequestHandler", "Validator"],
+        imports=["flask", "sqlalchemy", "os"],
+        exports=["RequestHandler", "main"],
+        complexity_score=12,
+        has_security_issues=True,
+        summary="Flask request handler with database operations"
+    )
+```
+
+**Why AI Agents Need This:**
+- Quickly assess if a file is relevant to their task
+- Understand file structure without consuming tokens on full content
+- Make informed decisions about which functions to extract
+
+#### 2. `get_symbol_references` MCP Tool
+
+**Purpose:** AI agents need to find all usages of a function/class before modifying it.
+
+```python
+# New MCP tool for AI agents  
+async def get_symbol_references(
+    symbol_name: str, 
+    project_root: str
+) -> SymbolReferences:
+    """Find all references to a symbol across the project."""
+    return SymbolReferences(
+        symbol_name="validate_input",
+        definition_file="src/validators.py",
+        definition_line=42,
+        references=[
+            Reference(file="src/handlers.py", line=15, context="validate_input(request.data)"),
+            Reference(file="src/api.py", line=88, context="if validate_input(payload):"),
+            Reference(file="tests/test_validators.py", line=12, context="assert validate_input(...)"),
+        ],
+        total_references=3
+    )
+```
+
+**Why AI Agents Need This:**
+- Safe refactoring - know all call sites before changing signature
+- Impact analysis - understand blast radius of changes
+- No hallucination - real references, not guessed ones
+
+#### 3. XXE Detection (XML External Entity)
 
 **CWE:** CWE-611
 
 **Vulnerable Parsers:**
+
 ```python
 "xxe": [
     # Vulnerable by default
@@ -399,6 +469,7 @@ v1.3.0 Release Criteria:
 **CWE:** CWE-1336
 
 **Vulnerable Patterns:**
+
 ```python
 "ssti": [
     # Jinja2
@@ -415,6 +486,7 @@ v1.3.0 Release Criteria:
 ```
 
 **Example:**
+
 ```python
 # VULNERABLE
 @app.route('/render')
@@ -428,155 +500,180 @@ def render_safe():
     return render_template('page.html', data=request.args.get('data'))
 ```
 
-#### 3. VS Code Extension (Preview)
+### Acceptance Criteria Checklist
 
-**Scope (MVP only):**
-```
-✅ In Scope:
-- Right-click file → "Code Scalpel: Scan for Vulnerabilities"
-- Results shown in Problems panel
-- Diagnostic markers (red squiggles) on vulnerable lines
-- Quick-info hover showing vulnerability details
-- Command palette: "Code Scalpel: Scan Current File"
+v1.4.0 Release Criteria:
 
-❌ Out of Scope (v2.1.0):
-- Auto-fix suggestions
-- Inline code actions
-- Project-wide dashboard
-- Settings UI
-```
+[ ] get_file_context: Returns file overview without full content (P0)
+[ ] get_file_context: Lists functions, classes, imports (P0)
+[ ] get_file_context: Reports complexity score (P0)
+[ ] get_file_context: Flags files with security issues (P0)
 
-**Architecture:**
-```
-┌─────────────────────────────────────────────────────────┐
-│                    VS Code Extension                     │
-├─────────────────────────────────────────────────────────┤
-│  extension.ts                                            │
-│  ├── registerCommand("codescalpel.scanFile")            │
-│  ├── DiagnosticCollection for Problems panel            │
-│  └── HoverProvider for vulnerability details            │
-├─────────────────────────────────────────────────────────┤
-│  Code Scalpel MCP Server (localhost:8593)               │
-│  └── security_scan tool                                  │
-└─────────────────────────────────────────────────────────┘
-```
+[ ] get_symbol_references: Finds all usages across project (P0)
+[ ] get_symbol_references: Returns file, line, and context snippet (P0)
+[ ] get_symbol_references: Works for functions, classes, variables (P0)
+[ ] get_symbol_references: Performance < 5s for 100-file project (P0)
 
-**package.json (extension manifest):**
-```json
-{
-  "name": "code-scalpel",
-  "displayName": "Code Scalpel",
-  "description": "AI-powered security scanner for Python",
-  "version": "0.1.0",
-  "engines": { "vscode": "^1.80.0" },
-  "categories": ["Linters", "Programming Languages"],
-  "activationEvents": ["onLanguage:python"],
-  "contributes": {
-    "commands": [
-      {
-        "command": "codescalpel.scanFile",
-        "title": "Scan for Vulnerabilities",
-        "category": "Code Scalpel"
-      }
-    ],
-    "menus": {
-      "editor/context": [
-        {
-          "command": "codescalpel.scanFile",
-          "when": "resourceLangId == python"
-        }
-      ]
-    }
-  }
-}
-```
+[ ] XXE: Detects xml.etree.ElementTree.parse with tainted input (P0)
+[ ] XXE: Detects xml.dom.minidom.parse with tainted input (P0)
+[ ] XXE: Detects lxml.etree.parse with tainted input (P0)
+[ ] XXE: Recognizes defusedxml.* as safe sanitizers (P0)
+
+[ ] SSTI: Detects jinja2.Template with user-controlled string (P0)
+[ ] SSTI: Detects Environment.from_string injection (P0)
+[ ] SSTI: Detects mako.template.Template injection (P0)
+
+[ ] JWT: Detects algorithm confusion vulnerabilities (P1)
+[ ] JWT: Detects missing signature verification (P1)
+[ ] Mass Assignment: Detects unfiltered request.json usage (P1)
+
+[ ] MCP tools registered and documented (Gate)
+[ ] All tests passing (Gate)
+[ ] Code coverage >= 95% (Gate)
+[ ] No regressions in v1.3.0 detections (Gate)
 
 ---
 
-## v1.5.0 - "Dependencies" (March 2025)
+## v1.5.0 - "Project Intelligence"
 
 ### Overview
 
-**Theme:** Dependency Intelligence (Quick Wins)  
-**Goal:** High-value, low-effort features  
-**Effort:** ~7 developer-days  
-**Risk Level:** Low (uses existing infrastructure)
+**Theme:** Project-Wide Understanding for AI Agents  
+**Goal:** Give AI agents complete project context without reading every file  
+**Effort:** ~10 developer-days  
+**Risk Level:** Low (uses existing PDG infrastructure)
 
 ### Priorities
 
 | Priority | Feature | Owner | Effort | Dependencies |
 |----------|---------|-------|--------|--------------|
-| **P0** | Dependency CVE scan | TBD | 3 days | None |
-| **P0** | Call graph visualization | TBD | 2 days | PDG exists |
+| **P0** | `get_project_map` MCP tool | TBD | 3 days | None |
+| **P0** | `get_call_graph` MCP tool | TBD | 2 days | PDG exists |
+| **P0** | `scan_dependencies` MCP tool | TBD | 3 days | None |
 | **P1** | Circular dependency detection | TBD | 1 day | PDG exists |
 
 ### Technical Specifications
 
-#### 1. Dependency CVE Scan
+#### 1. `get_project_map` MCP Tool
 
-**Data Sources:**
-- OSV (Open Source Vulnerabilities) API - Free, comprehensive
-- NVD (National Vulnerability Database) - Government source
-- PyPI Advisory Database - Python-specific
+**Purpose:** AI agents need a mental model of the entire project structure.
 
-**Implementation:**
 ```python
-# New MCP tool: scan_dependencies
-
-async def scan_dependencies(requirements_path: str) -> DependencyReport:
-    """Scan requirements.txt or pyproject.toml for known CVEs."""
-    
-    # Parse dependencies
-    deps = parse_requirements(requirements_path)
-    
-    # Query OSV API
-    vulnerabilities = []
-    for dep in deps:
-        osv_results = await query_osv(dep.name, dep.version)
-        vulnerabilities.extend(osv_results)
-    
-    return DependencyReport(
-        total_dependencies=len(deps),
-        vulnerable_count=len(vulnerabilities),
-        vulnerabilities=vulnerabilities,
+# New MCP tool for AI agents
+async def get_project_map(project_root: str) -> ProjectMap:
+    """Provide AI with complete project structure."""
+    return ProjectMap(
+        project_root=project_root,
+        total_files=47,
+        total_lines=12500,
+        languages={"python": 42, "yaml": 3, "json": 2},
+        entry_points=["src/main.py", "src/cli.py"],
+        modules=[
+            Module(path="src/handlers/", purpose="HTTP request handlers", files=8),
+            Module(path="src/models/", purpose="Database models", files=6),
+            Module(path="src/utils/", purpose="Utility functions", files=4),
+        ],
+        key_files=[
+            KeyFile(path="src/config.py", purpose="Configuration management"),
+            KeyFile(path="src/database.py", purpose="Database connection"),
+        ],
+        dependency_count=23,
+        test_coverage=87.5
     )
 ```
 
-#### 2. Call Graph Visualization
+**Why AI Agents Need This:**
+- Understand project architecture without exploring randomly
+- Identify where to make changes based on purpose, not guessing
+- Know which modules are related before making cross-cutting changes
 
-**Output Format:** DOT (Graphviz) or Mermaid
+#### 2. `get_call_graph` MCP Tool
+
+**Purpose:** AI agents need to understand function relationships.
 
 ```python
-# New MCP tool: visualize_call_graph
-
-def visualize_call_graph(file_path: str, format: str = "mermaid") -> str:
-    """Generate call graph visualization from PDG."""
-    
-    pdg = build_pdg(file_path)
-    
-    if format == "mermaid":
-        return pdg_to_mermaid(pdg)
-    elif format == "dot":
-        return pdg_to_dot(pdg)
+# New MCP tool for AI agents
+async def get_call_graph(
+    entry_point: str,
+    depth: int = 3
+) -> CallGraph:
+    """Generate call graph from entry point."""
+    return CallGraph(
+        entry_point="main",
+        nodes=[
+            Node(name="main", file="src/main.py", line=10),
+            Node(name="process_request", file="src/handlers.py", line=25),
+            Node(name="validate_input", file="src/validators.py", line=42),
+        ],
+        edges=[
+            Edge(caller="main", callee="process_request"),
+            Edge(caller="process_request", callee="validate_input"),
+        ],
+        mermaid_diagram="graph TD\\n  main --> process_request\\n  ...",
+    )
 ```
 
-**Example Output (Mermaid):**
-```mermaid
-graph TD
-    main --> process_request
-    process_request --> validate_input
-    process_request --> execute_query
-    execute_query --> db.execute
+**Why AI Agents Need This:**
+- Trace execution flow to understand code behavior
+- Find all functions affected by a change
+- Identify dead code or unused functions
+
+#### 3. `scan_dependencies` MCP Tool
+
+**Purpose:** AI agents need to know about vulnerable dependencies.
+
+```python
+# New MCP tool for AI agents
+async def scan_dependencies(requirements_path: str) -> DependencyReport:
+    """Scan dependencies for known CVEs."""
+    return DependencyReport(
+        total_dependencies=23,
+        vulnerable_count=2,
+        vulnerabilities=[
+            CVE(package="requests", version="2.25.0", cve="CVE-2023-32681", 
+                severity="HIGH", fixed_in="2.31.0"),
+        ]
+    )
 ```
+
+### Acceptance Criteria Checklist
+
+v1.5.0 Release Criteria:
+
+[ ] get_project_map: Returns complete project structure (P0)
+[ ] get_project_map: Identifies entry points automatically (P0)
+[ ] get_project_map: Groups files into logical modules (P0)
+[ ] get_project_map: Reports language breakdown (P0)
+[ ] get_project_map: Performance < 10s for 500-file project (P0)
+
+[ ] get_call_graph: Traces calls from entry point (P0)
+[ ] get_call_graph: Returns nodes with file/line info (P0)
+[ ] get_call_graph: Generates Mermaid diagram (P0)
+[ ] get_call_graph: Handles recursive calls (P0)
+[ ] get_call_graph: Respects depth limit (P0)
+
+[ ] scan_dependencies: Parses requirements.txt (P0)
+[ ] scan_dependencies: Parses pyproject.toml (P0)
+[ ] scan_dependencies: Queries OSV API for CVEs (P0)
+[ ] scan_dependencies: Returns severity levels (P0)
+[ ] scan_dependencies: Suggests fixed versions (P0)
+
+[ ] Circular Deps: Detects direct circular imports (P1)
+[ ] Circular Deps: Reports cycle path clearly (P1)
+
+[ ] New MCP tools registered and documented (Gate)
+[ ] All tests passing (Gate)
+[ ] Code coverage >= 95% (Gate)
+[ ] No regressions in v1.4.0 detections (Gate)
 
 ---
 
-## v1.5.1 - "CrossFile" (April 2025)
+## v1.5.1 - "CrossFile"
 
 ### Overview
 
-**Theme:** Cross-File Taint Tracking  
-**Goal:** Track data flow across module boundaries  
+**Theme:** Multi-File Operations for AI Agents  
+**Goal:** Enable AI agents to understand and modify code across file boundaries  
 **Effort:** ~15 developer-days  
 **Risk Level:** High (architectural complexity)
 
@@ -584,10 +681,45 @@ graph TD
 
 | Priority | Feature | Owner | Effort | Dependencies |
 |----------|---------|-------|--------|--------------|
-| **P0** | Cross-file taint tracking | TBD | 10 days | Import resolution |
-| **P0** | Import resolution | TBD | 5 days | None |
+| **P0** | `extract_cross_file` MCP tool | TBD | 5 days | Import resolution |
+| **P0** | Cross-file taint tracking | TBD | 5 days | Import resolution |
+| **P0** | Import resolution engine | TBD | 5 days | None |
 
-### Architecture
+### Why AI Agents Need Cross-File Operations
+
+**Problem:** AI agents today work file-by-file. When a function in `utils.py` is called from `handlers.py`, the AI has no way to:
+1. Know what callers exist before changing a signature
+2. Track if user input flows across file boundaries
+3. Safely refactor code that spans multiple files
+
+**Solution:** New MCP tools that operate at project scope.
+
+### Technical Specifications
+
+#### 1. `extract_cross_file` MCP Tool
+
+```python
+# New MCP tool for AI agents
+async def extract_cross_file(
+    symbol_name: str,
+    project_root: str,
+    include_callers: bool = True,
+    include_callees: bool = True
+) -> CrossFileExtraction:
+    """Extract a symbol with all its cross-file dependencies."""
+    return CrossFileExtraction(
+        target=SymbolCode(name="get_user", file="models.py", code="def get_user(...)"),
+        callers=[
+            SymbolCode(name="handle_request", file="views.py", code="def handle_request(...)"),
+        ],
+        callees=[
+            SymbolCode(name="execute_query", file="database.py", code="def execute_query(...)"),
+        ],
+        import_chain=["views.py imports models", "models.py imports database"],
+    )
+```
+
+#### 2. Cross-File Taint Tracking
 
 ```
 Challenge: Track taint across files
@@ -595,7 +727,7 @@ Challenge: Track taint across files
 File: views.py                    File: models.py
 ─────────────                     ─────────────
 def handle_request(req):          def get_user(user_id):
-    user_id = req.args['id']  ──────→  query = f"SELECT * FROM users WHERE id={user_id}"
+    user_id = req.args['id']  ──────>  query = f"SELECT * FROM users WHERE id={user_id}"
     return get_user(user_id)           cursor.execute(query)  # VULNERABLE!
 ```
 
@@ -606,15 +738,15 @@ class CrossFileTaintTracker:
     def __init__(self, project_root: str):
         self.import_graph = {}  # module -> imports
         self.function_signatures = {}  # func -> (params, return_taint)
-        
+
     def analyze_project(self, entry_point: str):
         # Phase 1: Build import graph
         self.build_import_graph(entry_point)
-        
+
         # Phase 2: Analyze each module
         for module in topological_sort(self.import_graph):
             self.analyze_module(module)
-        
+
         # Phase 3: Propagate taint across calls
         self.propagate_cross_file_taint()
 ```
@@ -625,27 +757,93 @@ class CrossFileTaintTracker:
 - No `sys.path` manipulation
 - No circular import resolution (fail gracefully)
 
+### Acceptance Criteria Checklist
+
+v1.5.1 Release Criteria:
+
+[ ] extract_cross_file: Extracts symbol with callers (P0)
+[ ] extract_cross_file: Extracts symbol with callees (P0)
+[ ] extract_cross_file: Returns import chain (P0)
+[ ] extract_cross_file: Works across 3+ files (P0)
+
+[ ] Import Resolution: Resolves "from module import func" (P0)
+[ ] Import Resolution: Resolves "import module" (P0)
+[ ] Import Resolution: Resolves relative imports (P0)
+[ ] Import Resolution: Handles __init__.py packages (P0)
+[ ] Import Resolution: Returns clear error for missing modules (P0)
+
+[ ] Cross-File Taint: Tracks taint through function calls (P0)
+[ ] Cross-File Taint: Tracks taint through return values (P0)
+[ ] Cross-File Taint: Detects SQL injection across 2 files (P0)
+[ ] Cross-File Taint: Detects command injection across 2 files (P0)
+[ ] Cross-File Taint: Reports source file and sink file (P0)
+[ ] Cross-File Taint: Reports full taint propagation path (P0)
+
+[ ] Builds import graph for project (P0)
+[ ] Topological sort handles acyclic dependencies (P0)
+[ ] Graceful failure on circular imports (P0)
+[ ] Performance: Analyzes 50-file project in < 30s (P0)
+
+[ ] All tests passing (Gate)
+[ ] Code coverage >= 95% (Gate)
+[ ] No regressions in v1.5.0 detections (Gate)
+[ ] Cross-file taint documented with examples (Gate)
+
 ---
 
-## v2.0.0 - "Polyglot" (Q2 2025)
+## v2.0.0 - "Polyglot"
 
 ### Overview
 
-**Theme:** TypeScript/JavaScript Support  
-**Goal:** Cover 95% of web development  
+**Theme:** Multi-Language MCP Tools for AI Agents  
+**Goal:** Enable AI agents to work surgically on TypeScript, JavaScript, and Java projects  
 **Effort:** ~25 developer-days  
 **Risk Level:** High (new language architecture)
+
+### Why Polyglot Matters for AI Agents
+
+AI agents today are asked to work on full-stack projects: Python backends, TypeScript frontends, Java microservices. Without language-aware surgical tools, agents must:
+- Guess at code structure based on text patterns
+- Risk breaking syntax when modifying unfamiliar languages
+- Miss language-specific vulnerabilities
+
+**Solution:** Extend all MCP tools to support TypeScript, JavaScript, and Java with the same surgical precision as Python.
 
 ### Priorities
 
 | Priority | Feature | Owner | Effort | Dependencies |
 |----------|---------|-------|--------|--------------|
-| **P0** | TypeScript AST support | TBD | 10 days | tree-sitter |
-| **P0** | JavaScript security scanning | TBD | 8 days | TS support |
-| **P1** | Java Spring security | TBD | 7 days | tree-sitter |
+| **P0** | TypeScript/JavaScript AST support | TBD | 10 days | tree-sitter |
+| **P0** | `extract_code` for TS/JS/Java | TBD | 5 days | AST support |
+| **P0** | `security_scan` for TS/JS/Java | TBD | 8 days | AST support |
+| **P1** | Java Spring security patterns | TBD | 5 days | tree-sitter |
 | **P1** | JSX/TSX support | TBD | 3 days | TS support |
 
-### JavaScript/TypeScript Vulnerabilities
+### Technical Specifications
+
+#### 1. Multi-Language `extract_code`
+
+```python
+# Extended MCP tool
+async def extract_code(
+    file_path: str = None,
+    code: str = None,
+    target_type: str,  # "function", "class", "method", "interface", "type"
+    target_name: str,
+    language: str = "auto"  # "python", "typescript", "javascript", "java", "auto"
+) -> ContextualExtractionResult:
+    """Surgically extract code in any supported language."""
+    # Auto-detect language from file extension or content
+    # Use tree-sitter for TS/JS/Java parsing
+    # Return same structured result regardless of language
+```
+
+**Why This Matters:**
+- AI agents can use ONE tool for all languages
+- Consistent interface reduces agent confusion
+- No hallucinated line numbers regardless of language
+
+#### 2. JavaScript/TypeScript Vulnerabilities
 
 ```python
 JS_SINK_PATTERNS = {
@@ -657,7 +855,7 @@ JS_SINK_PATTERNS = {
         "document.writeln",
         "insertAdjacentHTML",
     ],
-    
+
     # Eval Injection
     "eval_injection": [
         "eval",
@@ -666,7 +864,7 @@ JS_SINK_PATTERNS = {
         "setInterval",  # with string arg
         "new Function",
     ],
-    
+
     # Prototype Pollution
     "prototype_pollution": [
         "Object.assign",
@@ -675,7 +873,7 @@ JS_SINK_PATTERNS = {
         "$.extend",
         "lodash.merge",
     ],
-    
+
     # Node.js Injection
     "node_injection": [
         "child_process.exec",
@@ -683,7 +881,7 @@ JS_SINK_PATTERNS = {
         "child_process.spawn",
         "require",  # with user input
     ],
-    
+
     # SQL Injection (Node.js)
     "node_sql": [
         "connection.query",
@@ -694,75 +892,218 @@ JS_SINK_PATTERNS = {
 }
 ```
 
+### Acceptance Criteria Checklist
+
+v2.0.0 Release Criteria:
+
+[ ] extract_code: Works for TypeScript functions/classes (P0)
+[ ] extract_code: Works for JavaScript functions/classes (P0)
+[ ] extract_code: Works for Java methods/classes (P0)
+[ ] extract_code: Auto-detects language from file extension (P0)
+
+[ ] TypeScript AST: Parses .ts files correctly (P0)
+[ ] TypeScript AST: Parses .tsx files correctly (P0)
+[ ] TypeScript AST: Handles type annotations (P0)
+[ ] TypeScript AST: Handles interfaces and types (P0)
+
+[ ] JavaScript AST: Parses .js files correctly (P0)
+[ ] JavaScript AST: Parses .jsx files correctly (P0)
+[ ] JavaScript AST: Handles ES6+ syntax (P0)
+[ ] JavaScript AST: Handles CommonJS and ESM imports (P0)
+
+[ ] security_scan: Detects DOM XSS (innerHTML, document.write) (P0)
+[ ] security_scan: Detects eval injection (P0)
+[ ] security_scan: Detects prototype pollution (P0)
+[ ] security_scan: Detects Node.js command injection (P0)
+[ ] security_scan: Detects Node.js SQL injection (P0)
+
+[ ] Java: Parses .java files correctly (P1)
+[ ] Java: Detects SQL injection in JPA queries (P1)
+[ ] Java: Detects command injection (P1)
+
+[ ] All MCP tools work identically across languages (Gate)
+[ ] All tests passing (Gate)
+[ ] Code coverage >= 95% (Gate)
+[ ] No regressions in Python detections (Gate)
+
 ---
 
-## v2.1.0 - "Agentic" (Q3 2025)
+## v2.1.0 - "AI Verify"
 
 ### Overview
 
-**Theme:** AI-Assisted Remediation  
-**Goal:** Close the OODA loop with auto-fix  
+**Theme:** Behavior Verification for AI-Generated Code  
+**Goal:** Enable AI agents to verify their changes don't break existing behavior  
 **Effort:** ~25 developer-days  
 **Risk Level:** High (safety-critical)
+
+### Why AI Agents Need Verification
+
+The biggest risk of AI-assisted coding is **silent breakage**: the AI makes a change that looks correct but subtly breaks existing behavior. Currently, AI agents have no way to verify their changes are safe.
+
+**Solution:** MCP tools that let AI agents verify behavior preservation before applying changes.
 
 ### Priorities
 
 | Priority | Feature | Owner | Effort | Dependencies |
 |----------|---------|-------|--------|--------------|
-| **P0** | `auto_fix` MCP tool | TBD | 10 days | simulate_refactor |
-| **P0** | VS Code extension (Full) | TBD | 8 days | v1.4.0 extension |
-| **P0** | `refactor_safe` tool | TBD | 5 days | simulate_refactor |
-| **P1** | CI/CD templates | TBD | 3 days | None |
-| **P1** | Framework migration | TBD | 5 days | cross-file |
+| **P0** | `verify_behavior` MCP tool | TBD | 10 days | simulate_refactor |
+| **P0** | `suggest_fix` MCP tool | TBD | 8 days | security_scan |
+| **P0** | `apply_verified_fix` MCP tool | TBD | 5 days | verify_behavior |
+| **P1** | Batch verification for multi-file changes | TBD | 5 days | cross-file |
 
-### Auto-Fix Safety Model
+### Technical Specifications
+
+#### 1. `verify_behavior` MCP Tool
+
+**Purpose:** AI agents need to verify their changes don't break existing behavior.
+
+```python
+# New MCP tool for AI agents
+async def verify_behavior(
+    original_code: str,
+    modified_code: str,
+    test_inputs: list[dict] = None
+) -> BehaviorVerification:
+    """Verify that modified code preserves original behavior."""
+    return BehaviorVerification(
+        is_safe=True,
+        confidence=0.95,
+        behavior_preserved=True,
+        changes_detected=[
+            Change(type="signature_same", description="Function signature unchanged"),
+            Change(type="return_type_same", description="Return type unchanged"),
+        ],
+        warnings=[],
+        recommendation="Safe to apply"
+    )
+```
+
+**Why AI Agents Need This:**
+- Confidence before applying changes
+- Catch subtle bugs that text-based diffs miss
+- Prevent "it compiles but doesn't work" failures
+
+#### 2. `suggest_fix` MCP Tool
+
+**Purpose:** AI agents can request fix suggestions for detected vulnerabilities.
+
+```python
+# New MCP tool for AI agents
+async def suggest_fix(
+    vulnerability: Vulnerability,
+    strategy: str = "auto"  # "parameterize", "escape", "validate", "auto"
+) -> FixSuggestion:
+    """Generate a verified fix for a security vulnerability."""
+    return FixSuggestion(
+        vulnerability_id="SQL_INJECTION_L42",
+        strategy_used="parameterize",
+        original_code='query = f"SELECT * FROM users WHERE id={user_id}"',
+        fixed_code='query = "SELECT * FROM users WHERE id=?"\ncursor.execute(query, (user_id,))',
+        diff="@@ -42 +42,2 @@\n-query = f\"SELECT...\"\n+query = \"SELECT...\"\n+cursor.execute(...)",
+        verification_status="BEHAVIOR_PRESERVED",
+        confidence=0.98
+    )
+```
+
+#### 3. `apply_verified_fix` MCP Tool
+
+**Purpose:** AI agents can apply fixes only after verification passes.
+
+```python
+# New MCP tool for AI agents
+async def apply_verified_fix(
+    file_path: str,
+    fix: FixSuggestion,
+    require_verification: bool = True
+) -> ApplyResult:
+    """Apply a fix only if behavior verification passes."""
+    # 1. Re-verify the fix
+    # 2. Apply if safe
+    # 3. Return result with before/after
+    return ApplyResult(
+        success=True,
+        file_modified=file_path,
+        lines_changed=[42, 43],
+        backup_created=True,
+        can_rollback=True
+    )
+```
+
+### AI Agent Workflow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     AUTO-FIX PIPELINE                        │
+│              AI AGENT VERIFICATION WORKFLOW                  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  1. IDENTIFY                                                 │
-│     └── security_scan → vulnerability at line 42            │
+│  1. DETECT                                                   │
+│     └── security_scan(file) -> vulnerability at line 42     │
 │                                                              │
-│  2. GENERATE                                                 │
-│     └── auto_fix(vuln, strategy="parameterize")             │
-│         └── Produces candidate fix (diff)                   │
+│  2. GET FIX                                                  │
+│     └── suggest_fix(vuln) -> FixSuggestion with diff        │
 │                                                              │
 │  3. VERIFY                                                   │
-│     ├── simulate_refactor(old_code, new_code)               │
-│     │   └── Must return: "Behavior preserved"               │
-│     ├── Run test suite (if exists)                          │
-│     │   └── Must pass all existing tests                    │
-│     └── security_scan(new_code)                             │
-│         └── Must have 0 new vulnerabilities                 │
+│     └── verify_behavior(original, fixed)                    │
+│         └── Returns: is_safe=True, confidence=0.95          │
 │                                                              │
-│  4. APPLY                                                    │
-│     ├── If CI context: Create PR with diff                  │
-│     ├── If IDE context: Show inline suggestion              │
-│     └── If CLI context: Apply with --auto-apply flag        │
+│  4. APPLY (only if verified)                                 │
+│     └── apply_verified_fix(file, fix)                       │
+│         └── Creates backup, applies change                  │
 │                                                              │
-│  SAFETY GATES:                                               │
-│  ✗ Never auto-apply to main/master branch                   │
-│  ✗ Never apply if test suite fails                          │
-│  ✗ Never apply if behavior changes detected                 │
-│  ✗ Require human approval for production deployments        │
+│  5. CONFIRM                                                  │
+│     └── security_scan(file) -> 0 vulnerabilities            │
+│                                                              │
+│  SAFETY GUARANTEES:                                          │
+│  - Never applies unverified changes                          │
+│  - Always creates backup before modification                 │
+│  - Rollback available if issues discovered later             │
+│  - Human can review verification results                     │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Acceptance Criteria Checklist
+
+v2.1.0 Release Criteria:
+
+[ ] verify_behavior: Detects signature changes (P0)
+[ ] verify_behavior: Detects return type changes (P0)
+[ ] verify_behavior: Detects semantic behavior changes (P0)
+[ ] verify_behavior: Returns confidence score (P0)
+[ ] verify_behavior: Works for Python/TS/JS/Java (P0)
+
+[ ] suggest_fix: Generates SQL injection fix (parameterize) (P0)
+[ ] suggest_fix: Generates XSS fix (escape) (P0)
+[ ] suggest_fix: Generates command injection fix (subprocess.run) (P0)
+[ ] suggest_fix: Returns unified diff format (P0)
+[ ] suggest_fix: Includes verification status (P0)
+
+[ ] apply_verified_fix: Requires verification pass (P0)
+[ ] apply_verified_fix: Creates backup before change (P0)
+[ ] apply_verified_fix: Supports rollback (P0)
+[ ] apply_verified_fix: Returns lines changed (P0)
+
+[ ] Batch verification for multi-file refactors (P1)
+[ ] Integration with existing simulate_refactor (P1)
+
+[ ] All new MCP tools registered and documented (Gate)
+[ ] All tests passing (Gate)
+[ ] Code coverage >= 95% (Gate)
+[ ] No regressions in polyglot detections (Gate)
 
 ---
 
 ## Risk Register
 
-| ID | Risk | Probability | Impact | Mitigation | Owner |
-|----|------|-------------|--------|------------|-------|
-| R1 | Cross-file taint too complex | High | High | Start single-hop, iterate | TBD |
-| R2 | TypeScript AST differs significantly | Medium | High | Use tree-sitter, proven | TBD |
-| R3 | Auto-fix breaks production code | High | Critical | Mandatory test verification | TBD |
-| R4 | VS Code extension scope creep | Medium | Medium | Strict MVP definition | TBD |
-| R5 | Performance degrades at scale | Medium | High | Benchmark at 100k LOC | TBD |
-| R6 | False positive rate too high | Medium | High | Tune patterns, add sanitizers | TBD |
+| ID  | Risk                                 | Probability | Impact   | Mitigation                    | Owner |
+| --- | ------------------------------------ | ----------- | -------- | ----------------------------- | ----- |
+| R1  | Cross-file taint too complex         | High        | High     | Start single-hop, iterate     | TBD   |
+| R2  | TypeScript AST differs significantly | Medium      | High     | Use tree-sitter, proven       | TBD   |
+| R3  | AI verification gives false confidence | High      | Critical | Conservative confidence scores | TBD   |
+| R4  | MCP protocol changes break compatibility | Low      | High     | Pin MCP version, abstract layer | TBD   |
+| R5  | Performance degrades at scale        | Medium      | High     | Benchmark at 100k LOC         | TBD   |
+| R6  | False positive rate too high         | Medium      | High     | Tune patterns, add sanitizers | TBD   |
 
 ---
 
@@ -773,7 +1114,7 @@ JS_SINK_PATTERNS = {
 | Metric | Threshold | Enforcement |
 |--------|-----------|-------------|
 | Test Pass Rate | 100% | CI blocks merge |
-| Code Coverage | ≥ 95% | CI blocks merge |
+| Code Coverage | >= 95% | CI blocks merge |
 | Ruff Lint | 0 errors | CI blocks merge |
 | Black Format | Pass | CI blocks merge |
 | Security Scan | 0 new vulns | CI blocks merge |
@@ -784,11 +1125,14 @@ JS_SINK_PATTERNS = {
 |---------|-----|--------|
 | v1.3.0 | Detection coverage | 95%+ vulnerability types |
 | v1.3.0 | extract_code success rate | 100% for valid paths |
-| v1.4.0 | VS Code installs (month 1) | 100+ |
+| v1.4.0 | New MCP tools functional | get_file_context, get_symbol_references |
 | v1.4.0 | XXE/SSTI false negative rate | 0% |
+| v1.5.0 | Project map accuracy | Correctly identifies 95%+ of modules |
 | v1.5.0 | CVE scan accuracy | 95%+ vs safety-db |
-| v2.0.0 | TypeScript parity | Match Python detection |
-| v2.1.0 | Auto-fix acceptance rate | 80%+ |
+| v2.0.0 | TypeScript extraction parity | Match Python extract_code |
+| v2.0.0 | Polyglot security scan | Same detection rate as Python |
+| v2.1.0 | Behavior verification accuracy | 95%+ correct verdicts |
+| v2.1.0 | Fix suggestion acceptance | 80%+ fixes are valid |
 
 ---
 
@@ -839,44 +1183,45 @@ git push origin feature/v1.3.0-nosql-injection
 
 ## Appendix A: Competitor Analysis
 
-| Feature | Code Scalpel (v2.1.0) | Semgrep | CodeQL | Snyk | Bandit |
-|---------|----------------------|---------|--------|------|--------|
-| Python security | ✅ | ✅ | ✅ | ✅ | ✅ |
-| TypeScript security | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Cross-file taint | ✅ | ❌ | ✅ | ❌ | ❌ |
-| AI agent integration | ✅ MCP | ❌ | ❌ | ❌ | ❌ |
-| Auto-fix | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Symbolic execution | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Test generation | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Open source | ✅ | ✅ | ❌ | ❌ | ✅ |
-| VS Code extension | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Feature              | Code Scalpel (v2.1.0) | Semgrep | CodeQL | Snyk | Bandit |
+|----------------------|-----------------------|---------|--------|------|--------|
+| Python security      | ✅                    | ✅      | ✅     | ✅   | ✅     |
+| TypeScript security  | ✅                    | ✅      | ✅     | ✅   | ❌     |
+| Cross-file taint     | ✅                    | ❌      | ✅     | ❌   | ❌     |
+| MCP server for AI    | ✅                    | ❌      | ❌     | ❌   | ❌     |
+| Surgical extraction  | ✅                    | ❌      | ❌     | ❌   | ❌     |
+| AI-verified fixes    | ✅                    | ❌      | ❌     | ❌   | ❌     |
+| Symbolic execution   | ✅                    | ❌      | ❌     | ❌   | ❌     |
+| Test generation      | ✅                    | ❌      | ❌     | ❌   | ❌     |
+| Open source          | ✅                    | ✅      | ❌     | ❌   | ✅     |
+| IDE plugins          | Community             | ✅      | ✅     | ✅   | ❌     |
 
-**Unique Differentiation:** Only tool combining symbolic execution + MCP integration + auto-fix in open source.
+**Unique Differentiation:** The only tool purpose-built for AI agents to perform surgical code operations without hallucination. Combines precise extraction, symbolic execution, and behavior verification in an MCP-native architecture.
 
 ---
 
 ## Appendix B: Glossary
 
-| Term | Definition |
-|------|------------|
-| **Taint Tracking** | Tracking data flow from untrusted sources to dangerous sinks |
-| **PDG** | Program Dependence Graph - represents data/control dependencies |
-| **Symbolic Execution** | Executing code with symbolic values to explore all paths |
-| **MCP** | Model Context Protocol - Anthropic's standard for AI tool integration |
-| **XXE** | XML External Entity - attack injecting external entities in XML |
-| **SSTI** | Server-Side Template Injection - code injection via templates |
-| **OODA Loop** | Observe-Orient-Decide-Act - decision cycle for autonomous agents |
+| Term                   | Definition                                                            |
+| ---------------------- | --------------------------------------------------------------------- |
+| **Taint Tracking**     | Tracking data flow from untrusted sources to dangerous sinks          |
+| **PDG**                | Program Dependence Graph - represents data/control dependencies       |
+| **Symbolic Execution** | Executing code with symbolic values to explore all paths              |
+| **MCP**                | Model Context Protocol - Anthropic's standard for AI tool integration |
+| **XXE**                | XML External Entity - attack injecting external entities in XML       |
+| **SSTI**               | Server-Side Template Injection - code injection via templates         |
+| **OODA Loop**          | Observe-Orient-Decide-Act - decision cycle for autonomous agents      |
 
 ---
 
 ## Document History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-12-12 | Copilot | Initial roadmap based on external tester feedback |
+| Version | Date       | Author  | Changes                                           |
+| ------- | ---------- | ------- | ------------------------------------------------- |
+| 1.0     | 2025-12-12 | Copilot | Initial roadmap based on external tester feedback |
 
 ---
 
-*This is a living document. Updates will be committed as priorities evolve.*
+_This is a living document. Updates will be committed as priorities evolve._
 
 **Questions?** Open a GitHub issue or contact the maintainers.

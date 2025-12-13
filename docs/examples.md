@@ -81,18 +81,61 @@ for vuln in result.vulnerabilities:
     print(f"Sink: line {vuln['sink_line']}")
 ```
 
+### Detect NoSQL Injection (v1.3.0+)
+
+```python
+# MongoDB injection via PyMongo
+nosql_vulnerable = """
+from pymongo import MongoClient
+
+def find_user(username):
+    db = MongoClient().mydb
+    # User input goes directly into query - NoSQL injection!
+    return db.users.find_one({"username": username})
+"""
+
+result = security_scan(code=nosql_vulnerable)
+
+for vuln in result.vulnerabilities:
+    print(f"Type: {vuln['type']}")  # "NoSQL Injection"
+    print(f"CWE: {vuln['cwe']}")    # "CWE-943"
+```
+
+### Detect LDAP Injection (v1.3.0+)
+
+```python
+# LDAP injection via python-ldap
+ldap_vulnerable = """
+import ldap
+
+def find_user(username):
+    conn = ldap.initialize("ldap://localhost")
+    # User input in LDAP filter - injection risk!
+    filter_str = f"(uid={username})"
+    return conn.search_s("dc=example,dc=com", ldap.SCOPE_SUBTREE, filter_str)
+"""
+
+result = security_scan(code=ldap_vulnerable)
+
+for vuln in result.vulnerabilities:
+    print(f"Type: {vuln['type']}")  # "LDAP Injection"
+    print(f"CWE: {vuln['cwe']}")    # "CWE-90"
+```
+
 ### Detect Hardcoded Secrets
 
 ```python
 code_with_secrets = '''
 AWS_KEY = "AKIAIOSFODNN7EXAMPLE"
 stripe_key = "sk_live_abcdefghijklmnop"
+github_token = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 '''
 
 result = security_scan(code=code_with_secrets)
 
 for secret in result.secrets:
     print(f"Found {secret['type']} at line {secret['line']}")
+    # Detects: AWS Access Key, Stripe Live Key, GitHub Token
 ```
 
 ---

@@ -29,6 +29,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from code_scalpel.utilities.path_resolution import resolve_file_path
+
 
 @dataclass
 class CrossFileSymbol:
@@ -193,16 +195,19 @@ class SurgicalExtractor:
             >>> # Agent receives ~50 lines, not 5000
         """
 
-        if not os.path.isfile(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
+        # Resolve file path (handles relative/absolute, workspace roots, etc.)
+        try:
+            resolved_path = resolve_file_path(file_path, check_exists=True)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"File not found: {file_path}") from e
 
         try:
-            with open(file_path, "r", encoding=encoding) as f:
+            with open(resolved_path, "r", encoding=encoding) as f:
                 code = f.read()
         except IOError as e:
-            raise ValueError(f"Cannot read file {file_path}: {e}")
+            raise ValueError(f"Cannot read file {resolved_path}: {e}")
 
-        return cls(code, file_path=file_path)
+        return cls(code, file_path=resolved_path)
 
     def _ensure_parsed(self) -> None:
         """Parse the code if not already done."""

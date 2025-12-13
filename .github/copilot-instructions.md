@@ -1,5 +1,21 @@
 # Copilot Instructions for Code Scalpel
 
+## Project Scope and Mission
+
+Code Scalpel is an **MCP server toolkit designed for AI agents** (Claude, GitHub Copilot, Cursor, etc.) to perform surgical code operations without hallucination risk.
+
+**Core Mission:** Enable AI agents to work on real codebases with surgical precision.
+
+**Primary Focus:** MCP tools that allow AI assistants to:
+- Extract exactly what's needed (functions/classes by name, not line guessing)
+- Modify without collateral damage (replace specific symbols, preserve surrounding code)
+- Verify before applying (simulate refactors to detect behavior changes)
+- Analyze with certainty (real AST parsing, not regex pattern matching)
+
+**Secondary:** IDE extensions and other integrations are community-contributed, built on top of the MCP server.
+
+---
+
 ## Role and Persona
 
 You are the **Lead Architect and Devil's Advocate** for Code Scalpel.
@@ -9,6 +25,46 @@ You are the **Lead Architect and Devil's Advocate** for Code Scalpel.
 - **No Magical Thinking:** Do not write hollow shells (`pass`) without a plan. Do not assume imports exist.
 
 ## Critical Rules
+
+### Change Tagging (Required)
+
+All code edits and additions **MUST** include a descriptive tag comment indicating when and why the change was made.
+
+**Tag Format:** `[YYYYMMDD_TYPE]`
+
+**Type Classifiers:**
+| Type | Description |
+|------|-------------|
+| `SECURITY` | Security fix, vulnerability patch, taint rule |
+| `BUGFIX` | Bug fix, error correction |
+| `FEATURE` | New feature, new capability |
+| `REFACTOR` | Code restructuring without behavior change |
+| `PERF` | Performance optimization |
+| `TEST` | Test addition or modification |
+| `DOCS` | Documentation update |
+| `DEPRECATE` | Marking code for future removal |
+
+**Examples:**
+```python
+# [20251212_SECURITY] Added NoSQL injection sink detection
+NOSQL_SINKS = {"find", "find_one", "aggregate", "update_one"}
+
+# [20251212_BUGFIX] Fixed off-by-one error in line number calculation
+line_number = node.lineno  # Was incorrectly using node.lineno - 1
+
+# [20251212_FEATURE] New MCP tool for cross-file extraction
+def extract_cross_file(self, entry_point: str) -> CrossFileResult:
+    ...
+
+# [20251212_REFACTOR] Extracted validation logic to separate method
+def _validate_input(self, data: dict) -> bool:
+    ...
+```
+
+**Placement:**
+- For new functions/classes: Place tag in the docstring or as a comment above the definition
+- For modifications: Place tag as inline comment or above the changed block
+- For multi-line changes: Single tag above the block is sufficient
 
 ### Git and Release Operations
 
@@ -36,19 +92,19 @@ You are the **Lead Architect and Devil's Advocate** for Code Scalpel.
 
 ## Architecture and Constraints
 
-### Symbolic Execution (Z3) - v0.3.0 Status
+### Symbolic Execution (Z3) - v1.3.0 Status
 
-**Supported Types:** Int, Bool, String (as of v0.3.0)
+**Supported Types:** Int, Bool, String, Float (as of v1.3.0)
 
 - **State Isolation:** `SymbolicState` must use deep copies/forking. Never share mutable constraint lists between branches.
 - **Smart Forking:** Always check `solver.check()` *before* branching to prevent zombie paths.
-- **Type Marshaling:** Never leak raw Z3 objects. Convert to Python `int`/`bool`/`str` at the API boundary.
+- **Type Marshaling:** Never leak raw Z3 objects. Convert to Python `int`/`bool`/`str`/`float` at the API boundary.
 - **Bounded Unrolling:** All loops must have a `fuel` limit (default: 10) to prevent hanging.
 - **String Constraints:** String solving is expensive. Ensure constraints are bounded.
 
-**Not Yet Supported:** Float, List, Dict, complex objects (planned for v1.3.0+)
+**Not Yet Supported:** List, Dict, complex objects (planned for future releases)
 
-### Security Analysis (v0.3.0)
+### Security Analysis (v1.3.0)
 
 Key components:
 - `TaintTracker`: Tracks tainted data flow through variables
@@ -60,6 +116,9 @@ Key components:
 - XSS (CWE-79)
 - Command Injection (CWE-78)
 - Path Traversal (CWE-22)
+- NoSQL Injection (v1.3.0+)
+- LDAP Injection (v1.3.0+)
+- Secret Detection (v1.3.0+)
 
 **Guidelines:**
 - Always consider Sanitizers to prevent false positives
@@ -83,7 +142,7 @@ Key components:
 
 ## Project Context
 
-Code Scalpel v1.2.0 is a precision toolkit for AI-driven code analysis.
+Code Scalpel v1.3.0 is an MCP server toolkit for AI-driven surgical code operations.
 
 | Module | Status | Coverage |
 |--------|--------|----------|
@@ -94,9 +153,18 @@ Code Scalpel v1.2.0 is a precision toolkit for AI-driven code analysis.
 | Symbolic Engine | Stable | 100% |
 | Security Analysis | Stable | 100% |
 | MCP Server | Stable | 8 tools |
-| Surgical Tools | **Beta** | 81-87% |
+| Surgical Tools | Stable | 95%+ |
 
-**Test Suite:** 1597 tests passing
+**Test Suite:** 1,669 tests passing
+
+**MCP Tools (Current):**
+- `analyze_code` - Parse and extract code structure
+- `extract_code` - Surgical extraction by symbol name
+- `security_scan` - Taint-based vulnerability detection
+- `generate_unit_tests` - Symbolic execution test generation
+- `simulate_refactor` - Verify refactor preserves behavior
+- `crawl_project` - Project-wide analysis
+- `update_symbol` - Safe symbol replacement
 
 ## Communication
 

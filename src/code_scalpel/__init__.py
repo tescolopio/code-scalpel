@@ -19,7 +19,8 @@ For AI agent integrations:
     >>> from code_scalpel.integrations import AutogenScalpel, CrewAIScalpel
 """
 
-__version__ = "1.2.0"
+# [20251212_FEATURE] Updated version for v1.3.0 "Hardening" release
+__version__ = "1.3.0"
 __author__ = "Tim Escolopio"
 __email__ = "3dtsus@gmail.com"
 

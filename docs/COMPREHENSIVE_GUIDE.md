@@ -1,6 +1,6 @@
-# Code Scalpel v1.2.3 - Comprehensive Documentation
+# Code Scalpel v1.3.0 - Comprehensive Documentation
 
-**The AI Agent Toolkit for Precision Code Analysis**
+**MCP Server Toolkit for AI Agents - Surgical Code Analysis**
 
 ---
 
@@ -449,9 +449,12 @@ for flow in result.taint_flows:
 | Vulnerability | CWE | Detection Method |
 |--------------|-----|------------------|
 | SQL Injection | CWE-89 | Taint: user input → SQL query |
+| NoSQL Injection | CWE-943 | Taint: user input → MongoDB query |
+| LDAP Injection | CWE-90 | Taint: user input → LDAP filter |
 | XSS | CWE-79 | Taint: user input → HTML output |
 | Command Injection | CWE-78 | Taint: user input → subprocess |
 | Path Traversal | CWE-22 | Taint: user input → file path |
+| Hardcoded Secrets | CWE-798 | Pattern: 30+ secret patterns (AWS, API keys, etc.) |
 
 #### Custom Sanitizers
 
@@ -1166,21 +1169,30 @@ from code_scalpel.integrations import (
 
 ---
 
-## What's New in v1.2.3
+## What's New in v1.3.0
 
-**December 12, 2025 - Maintenance Release**
+**December 12, 2025 - "Hardening" Release**
 
-- Repository cleanup (removed 22 obsolete files)
-- Development roadmap published ([DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md))
-- Test suite stability improvements
-- Documentation updates
+### Security Analysis Expansion
+- **NoSQL Injection Detection** (CWE-943): MongoDB PyMongo and Motor drivers
+- **LDAP Injection Detection** (CWE-90): python-ldap and ldap3 libraries
+- **Hardcoded Secret Scanning** (CWE-798): 30+ patterns including AWS, Stripe, GitHub tokens
 
-All critical bug fixes from v1.2.2 retained (100% vulnerability detection).
+### Symbolic Execution
+- **Float Type Inference**: Added RealSort support for floating-point symbolic analysis
 
-**Next Release:** v1.3.0 "Hardening" - January 2025
+### MCP Server
+- **FunctionInfo/ClassInfo Models**: Structured output with line numbers
+- **Path Resolution Improvements**: Better cross-file dependency resolution
+
+### Stats
+- 1,669 tests passing
+- 95%+ code coverage
+- 15+ vulnerability types detected
+- 30+ secret patterns
 
 ---
 
-*Code Scalpel v1.2.3 - Built with surgical precision for AI-driven code analysis.*
+*Code Scalpel v1.3.0 - MCP Server Toolkit for AI Agents*
 
 *"Code Scalpel" is a trademark of 3D Tech Solutions LLC.*

@@ -1,18 +1,17 @@
 # Getting Started with Code Scalpel
 
-Welcome to Code Scalpel! This guide will help you get up and running with AI-powered code analysis.
+Welcome to Code Scalpel! This guide will help you get up and running with MCP-powered code analysis for AI agents.
 
 ## What is Code Scalpel?
 
-Code Scalpel is a Python toolkit for AI-driven code analysis and transformation. It provides:
+Code Scalpel is an **MCP server toolkit** designed for AI agents (Claude, Copilot, Cursor) to perform surgical code operations. It provides:
 
+- **MCP Server** - 8 tools for AI agents via Model Context Protocol
 - **AST Analysis** - Parse and analyze code structure (100% coverage)
 - **PDG Analysis** - Build Program Dependence Graphs for data/control flow (100% coverage)
-- **Program Slicing** - Extract relevant code subsets for analysis
-- **Dead Code Detection** - Find unused functions, variables, and imports
-- **Security Analysis** - Detect SQLi, XSS, command injection, and hardcoded secrets
-- **AI Agent Integration** - Works with Autogen, CrewAI, and other frameworks
-- **MCP Server** - HTTP API for AI agents to query code analysis
+- **Security Analysis** - Detect 15+ vulnerability types including SQLi, NoSQL injection, LDAP injection, XSS, and 30+ secret patterns
+- **Symbolic Execution** - Explore all execution paths with Z3 constraint solver
+- **Surgical Tools** - Token-efficient extraction and safe modification
 
 ## Installation
 
@@ -241,10 +240,14 @@ analyzer = CodeAnalyzer(level=AnalysisLevel.FULL)
 - Unreachable code after return/raise
 
 ### Security Issues
+- SQL injection (CWE-89)
+- NoSQL injection (CWE-943) - MongoDB PyMongo/Motor
+- LDAP injection (CWE-90) - python-ldap/ldap3
+- XSS / Cross-site scripting (CWE-79)
+- Command injection (CWE-78)
+- Path traversal (CWE-22)
 - `eval()` and `exec()` usage
-- SQL injection patterns
-- Command injection risks
-- Hardcoded secrets
+- Hardcoded secrets (30+ patterns: AWS, Stripe, GitHub, etc.)
 
 ### Code Quality
 - High cyclomatic complexity

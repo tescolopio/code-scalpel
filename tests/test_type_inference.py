@@ -162,13 +162,13 @@ class TestUnsupportedTypes:
         # v0.3.0: Strings are now supported
         assert result["x"] == InferredType.STRING
 
-    def test_float_literal_unsupported(self):
-        """x = 3.14 → x is UNKNOWN"""
+    def test_float_literal_supported(self):
+        """x = 3.14 → x is FLOAT (v1.3.0+)"""
         engine = TypeInferenceEngine()
         code = "x = 3.14"
         result = engine.infer(code)
 
-        assert result["x"] == InferredType.UNKNOWN
+        assert result["x"] == InferredType.FLOAT
 
     def test_list_literal_unsupported(self):
         """x = [1, 2, 3] → x is UNKNOWN"""
@@ -392,13 +392,13 @@ class TestCoverageCompleteness:
 
         assert result["x"] == InferredType.STRING
 
-    def test_float_literal_is_unknown(self):
-        """x = 3.14 → x is UNKNOWN."""
+    def test_float_literal_is_float(self):
+        """x = 3.14 → x is FLOAT (v1.3.0+)."""
         engine = TypeInferenceEngine()
         code = "x = 3.14"
         result = engine.infer(code)
 
-        assert result["x"] == InferredType.UNKNOWN
+        assert result["x"] == InferredType.FLOAT
 
     def test_none_literal_is_unknown(self):
         """x = None → x is UNKNOWN."""
@@ -456,13 +456,13 @@ class TestCoverageCompleteness:
 
         assert result["y"] == InferredType.UNKNOWN
 
-    def test_unary_fallback_unknown(self):
-        """Unary operator on non-int is UNKNOWN."""
+    def test_unary_on_float_is_float(self):
+        """Unary operator on float is FLOAT (v1.3.0+)."""
         engine = TypeInferenceEngine()
         code = "x = 3.14\ny = -x"
         result = engine.infer(code)
 
-        assert result["y"] == InferredType.UNKNOWN
+        assert result["y"] == InferredType.FLOAT
 
     def test_string_concatenation(self):
         """x = 'a' + 'b' → x is STRING."""
@@ -512,13 +512,13 @@ class TestCoverageCompleteness:
 
         assert result["x"] == InferredType.INT
 
-    def test_true_division_is_unknown(self):
-        """x = 10 / 3 → x is UNKNOWN (returns float)."""
+    def test_true_division_is_float(self):
+        """x = 10 / 3 → x is FLOAT (v1.3.0+)."""
         engine = TypeInferenceEngine()
         code = "x = 10 / 3"
         result = engine.infer(code)
 
-        assert result["x"] == InferredType.UNKNOWN
+        assert result["x"] == InferredType.FLOAT
 
     def test_bitwise_or(self):
         """x = 5 | 3 → x is INT."""
@@ -658,15 +658,15 @@ class TestCoverageCompleteness:
         # Matrix mult is UNKNOWN
         assert result["x"] == InferredType.UNKNOWN
 
-    def test_unknown_binop_fallback(self):
-        """Unknown operator fallback (line 266)."""
+    def test_int_division_is_float(self):
+        """True division of ints is FLOAT (v1.3.0+)."""
         engine = TypeInferenceEngine()
-        # This should hit the final fallback after all operator checks
-        code = "x = 1\ny = 2\nz = x / y"  # True division with ints → UNKNOWN
+        # True division with ints → FLOAT
+        code = "x = 1\ny = 2\nz = x / y"
         result = engine.infer(code)
 
-        # Division of ints is UNKNOWN (returns float in Python)
-        assert result["z"] == InferredType.UNKNOWN
+        # Division of ints returns float in Python, now supported
+        assert result["z"] == InferredType.FLOAT
 
     def test_direct_ast_num_node(self):
         """Test handling of legacy ast.Num node (line 139)."""
