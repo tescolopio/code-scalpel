@@ -2,7 +2,7 @@
 
 **Status:** Draft  
 **Authors:** Code Scalpel Team  
-**Created:** 2024-12-04  
+**Created:** 2025-12-04  
 **Target Version:** v0.2.0 "Redemption"
 
 ---
@@ -423,9 +423,9 @@ def test_password_cracker():
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2024-12-04 | Phase 1: Int/Bool only | Reduce scope, prove architecture |
-| 2024-12-04 | Bounded loop unrolling (10) | Avoid infinite loops without invariants |
-| 2024-12-04 | External calls → unconstrained | Safer than crashing, user can annotate later |
+| 2025-12-04 | Phase 1: Int/Bool only | Reduce scope, prove architecture |
+| 2025-12-04 | Bounded loop unrolling (10) | Avoid infinite loops without invariants |
+| 2025-12-04 | External calls → unconstrained | Safer than crashing, user can annotate later |
 
 ---
 

@@ -365,7 +365,7 @@ v1.3.0 Release Criteria:
 **Goal:** Give AI agents richer context about code and expand vulnerability detection  
 **Effort:** ~12 developer-days  
 **Risk Level:** Low (extends existing MCP tools)  
-**Status:** ✅ Released December 12, 2024
+**Status:** ✅ Released December 12, 2025
 
 ### Priorities
 

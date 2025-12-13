@@ -1,7 +1,7 @@
 # Release Protocol
 
 **Version:** 1.0  
-**Last Updated:** 2024-12-04  
+**Last Updated:** 2025-12-04  
 **Status:** 🎉 Gate 3 ✅ PASSED - v0.1.0 LIVE ON PyPI
 
 ---
@@ -29,7 +29,7 @@ We do not ship hope. We ship verified artifacts.
 
 ## 🛡️ Gate 0: Security Gate
 
-**Status: ✅ PASSED (2024-12-04)**
+**Status: ✅ PASSED (2025-12-04)**
 
 ### Checklist
 
@@ -69,7 +69,7 @@ $ python scripts/simulate_mcp_client.py --port 8098
 
 ## 📦 Gate 1: Artifact Gate
 
-**Status: ✅ PASSED (2024-12-04)**
+**Status: ✅ PASSED (2025-12-04)**
 
 ### Checklist
 
@@ -149,7 +149,7 @@ affect package functionality.
 
 ## 🚀 Gate 3: Public Debut (v0.1.0)
 
-**Status: ✅ PASSED (2024-12-04)**
+**Status: ✅ PASSED (2025-12-04)**
 
 **Live:** https://pypi.org/project/code-scalpel/0.1.0/
 
@@ -233,17 +233,17 @@ print('Paths explored:', len(result.paths))
 
 | Date | Gate | Action | Result |
 |------|------|--------|--------|
-| 2024-12-04 | 0 | Security audit | ✅ PASSED |
-| 2024-12-04 | 0 | Fixed 0.0.0.0 → 127.0.0.1 | ✅ Fixed |
-| 2024-12-04 | 0 | Path traversal test | ✅ No vulnerability |
-| 2024-12-04 | 0 | Code execution test | ✅ No vulnerability |
-| 2024-12-04 | 0 | pip-audit | ⚠️ 47 CVEs in system, mitigated with requirements-secure.txt |
-| 2024-12-04 | 1 | Configure sdist exclusions | ✅ Fixed |
-| 2024-12-04 | 1 | Removed tests/docs/examples from sdist | ✅ Done |
-| 2024-12-04 | 1 | twine check | ✅ PASSED |
-| 2024-12-04 | 2 | Upload to TestPyPI | ✅ https://test.pypi.org/project/code-scalpel/0.1.0/ |
-| 2024-12-04 | 2 | Stranger Test (TestPyPI) | ✅ Install + CLI + Import all work |
-| 2024-12-04 | 3 | Git tag v0.1.0 | ✅ Pushed to origin |
-| 2024-12-04 | 3 | Upload to PyPI | ✅ https://pypi.org/project/code-scalpel/0.1.0/ |
-| 2024-12-04 | 3 | Stranger Test (PyPI) | ✅ Install + CLI + Import all work |
-| 2024-12-04 | 3 | **v0.1.0 LIVE** | 🎉 First public release |
+| 2025-12-04 | 0 | Security audit | ✅ PASSED |
+| 2025-12-04 | 0 | Fixed 0.0.0.0 → 127.0.0.1 | ✅ Fixed |
+| 2025-12-04 | 0 | Path traversal test | ✅ No vulnerability |
+| 2025-12-04 | 0 | Code execution test | ✅ No vulnerability |
+| 2025-12-04 | 0 | pip-audit | ⚠️ 47 CVEs in system, mitigated with requirements-secure.txt |
+| 2025-12-04 | 1 | Configure sdist exclusions | ✅ Fixed |
+| 2025-12-04 | 1 | Removed tests/docs/examples from sdist | ✅ Done |
+| 2025-12-04 | 1 | twine check | ✅ PASSED |
+| 2025-12-04 | 2 | Upload to TestPyPI | ✅ https://test.pypi.org/project/code-scalpel/0.1.0/ |
+| 2025-12-04 | 2 | Stranger Test (TestPyPI) | ✅ Install + CLI + Import all work |
+| 2025-12-04 | 3 | Git tag v0.1.0 | ✅ Pushed to origin |
+| 2025-12-04 | 3 | Upload to PyPI | ✅ https://pypi.org/project/code-scalpel/0.1.0/ |
+| 2025-12-04 | 3 | Stranger Test (PyPI) | ✅ Install + CLI + Import all work |
+| 2025-12-04 | 3 | **v0.1.0 LIVE** | 🎉 First public release |

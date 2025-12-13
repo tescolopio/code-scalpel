@@ -327,7 +327,7 @@ class TestCrawlResult:
         """Test summary property calculations."""
         result = CrawlResult(
             root_path="/test",
-            timestamp="2024-01-01",
+            timestamp="2025-01-01",
             files_analyzed=[
                 FileAnalysisResult(
                     path="/test/a.py",
@@ -354,7 +354,7 @@ class TestCrawlResult:
         """Test summary as dictionary."""
         result = CrawlResult(
             root_path="/test",
-            timestamp="2024-01-01",
+            timestamp="2025-01-01",
         )
         summary = result.summary
 

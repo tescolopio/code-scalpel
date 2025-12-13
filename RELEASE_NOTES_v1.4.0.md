@@ -1,6 +1,6 @@
 # Code Scalpel v1.4.0 "Context" Release Notes
 
-**Release Date:** December 12, 2024
+**Release Date:** December 12, 2025
 
 ## Overview
 

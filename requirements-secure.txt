@@ -1,5 +1,5 @@
 # Code Scalpel - Pinned Dependencies
-# Last security audit: 2024-12-04
+# Last security audit: 2025-12-04
 # Run `pip-audit -r requirements.txt` to verify
 
 # Core Analysis (no network, safe)
@@ -9,7 +9,7 @@ networkx>=3.1
 
 # Web Server - SECURITY CRITICAL
 flask>=3.0.0
-werkzeug>=3.1.4  # CVE-2024-49766, CVE-2024-49767 fixed
+werkzeug>=3.1.4  # CVE-2025-49766, CVE-2025-49767 fixed
 jinja2>=3.1.6    # CVE-2025-27516 fixed
 
 # HTTP Client
