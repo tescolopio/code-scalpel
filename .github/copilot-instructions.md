@@ -74,6 +74,25 @@ def _validate_input(self, data: dict) -> bool:
 - **Release Protocol:** Follow the strict Gating System (Security -> Artifact -> TestPyPI -> PyPI).
 - **History Hygiene:** Ensure commit messages explain *why*, not just *what*.
 
+### PyPI Release Process
+
+The PyPI API token is stored in `.env` at the project root. Use it for uploads:
+
+```bash
+# Build the package
+rm -rf dist/ build/ *.egg-info && python -m build
+
+# Upload to PyPI using token from .env
+source .env && python -m twine upload dist/* -u __token__ -p "$PYPI_TOKEN"
+```
+
+**Environment Variables in `.env`:**
+- `PYPI_TOKEN` - PyPI API token (starts with `pypi-`)
+- `TWINE_USERNAME` - Set to `__token__`
+- `TWINE_REPOSITORY` - Set to `pypi`
+
+**Never** hardcode or expose the token. Always source from `.env`.
+
 ### Before You Code Checklist
 
 1. Read and understand the existing code before modifying
