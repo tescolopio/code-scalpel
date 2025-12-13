@@ -1,0 +1,237 @@
+{
+  "benchmark_info": {
+    "name": "Code Scalpel Tool Comparison Benchmark",
+    "version": "1.0.0",
+    "timestamp": "2025-12-13T00:23:00.115074",
+    "total_test_cases": 17,
+    "tools_compared": [
+      "code_scalpel"
+    ]
+  },
+  "tool_summaries": {
+    "code_scalpel": {
+      "total_tests": 17,
+      "correct": 15,
+      "accuracy_percentage": 88.2,
+      "true_positives": 12,
+      "false_negatives": 2,
+      "true_negatives": 3,
+      "false_positives": 0,
+      "precision": 1.0,
+      "recall": 0.857,
+      "f1_score": 0.923,
+      "detection_rate_percentage": 85.7,
+      "false_positive_rate_percentage": 0.0,
+      "avg_execution_time_ms": 0.08
+    }
+  },
+  "comparison_by_cwe": [
+    {
+      "cwe_id": "CWE-22",
+      "code_scalpel": "1/1"
+    },
+    {
+      "cwe_id": "CWE-327",
+      "code_scalpel": "2/2"
+    },
+    {
+      "cwe_id": "CWE-502",
+      "code_scalpel": "2/2"
+    },
+    {
+      "cwe_id": "CWE-78",
+      "code_scalpel": "2/2"
+    },
+    {
+      "cwe_id": "CWE-798",
+      "code_scalpel": "1/2"
+    },
+    {
+      "cwe_id": "CWE-89",
+      "code_scalpel": "2/2"
+    },
+    {
+      "cwe_id": "CWE-918",
+      "code_scalpel": "0/1"
+    },
+    {
+      "cwe_id": "CWE-94",
+      "code_scalpel": "2/2"
+    }
+  ],
+  "detailed_results": {
+    "code_scalpel": [
+      {
+        "test_id": "SQL-001",
+        "cwe_id": "CWE-89",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.25,
+        "error": null
+      },
+      {
+        "test_id": "SQL-002",
+        "cwe_id": "CWE-89",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.15,
+        "error": null
+      },
+      {
+        "test_id": "SQL-003",
+        "cwe_id": "CWE-89",
+        "is_vulnerable": false,
+        "detected": false,
+        "correct": true,
+        "findings_count": 0,
+        "execution_time_ms": 0.12,
+        "error": null
+      },
+      {
+        "test_id": "CMD-001",
+        "cwe_id": "CWE-78",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.06,
+        "error": null
+      },
+      {
+        "test_id": "CMD-002",
+        "cwe_id": "CWE-78",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.07,
+        "error": null
+      },
+      {
+        "test_id": "CMD-003",
+        "cwe_id": "CWE-78",
+        "is_vulnerable": false,
+        "detected": false,
+        "correct": true,
+        "findings_count": 0,
+        "execution_time_ms": 0.06,
+        "error": null
+      },
+      {
+        "test_id": "CODE-001",
+        "cwe_id": "CWE-94",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.04,
+        "error": null
+      },
+      {
+        "test_id": "CODE-002",
+        "cwe_id": "CWE-94",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.04,
+        "error": null
+      },
+      {
+        "test_id": "DESER-001",
+        "cwe_id": "CWE-502",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.05,
+        "error": null
+      },
+      {
+        "test_id": "DESER-002",
+        "cwe_id": "CWE-502",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.05,
+        "error": null
+      },
+      {
+        "test_id": "DESER-003",
+        "cwe_id": "CWE-502",
+        "is_vulnerable": false,
+        "detected": false,
+        "correct": true,
+        "findings_count": 0,
+        "execution_time_ms": 0.04,
+        "error": null
+      },
+      {
+        "test_id": "CRYPTO-001",
+        "cwe_id": "CWE-327",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.07,
+        "error": null
+      },
+      {
+        "test_id": "CRYPTO-002",
+        "cwe_id": "CWE-327",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.06,
+        "error": null
+      },
+      {
+        "test_id": "SECRET-001",
+        "cwe_id": "CWE-798",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.07,
+        "error": null
+      },
+      {
+        "test_id": "SECRET-002",
+        "cwe_id": "CWE-798",
+        "is_vulnerable": true,
+        "detected": false,
+        "correct": false,
+        "findings_count": 0,
+        "execution_time_ms": 0.04,
+        "error": null
+      },
+      {
+        "test_id": "PATH-001",
+        "cwe_id": "CWE-22",
+        "is_vulnerable": true,
+        "detected": true,
+        "correct": true,
+        "findings_count": 1,
+        "execution_time_ms": 0.08,
+        "error": null
+      },
+      {
+        "test_id": "SSRF-001",
+        "cwe_id": "CWE-918",
+        "is_vulnerable": true,
+        "detected": false,
+        "correct": false,
+        "findings_count": 0,
+        "execution_time_ms": 0.04,
+        "error": null
+      }
+    ]
+  },
+  "conclusion": "Code Scalpel achieved 88.2% accuracy with 85.7% detection rate."
+}

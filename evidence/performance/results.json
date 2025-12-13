@@ -1,0 +1,73 @@
+{
+  "benchmark_info": {
+    "name": "Code Scalpel Cache Performance Benchmark",
+    "version": "1.0.0",
+    "timestamp": "2025-12-13T00:22:22.013769",
+    "total_execution_time_seconds": 0.09,
+    "iterations_per_test": 3
+  },
+  "summary": {
+    "average_speedup_ratio": 2909.9,
+    "max_speedup_ratio": 6341.0,
+    "min_speedup_ratio": 682.1,
+    "average_cold_time_ms": 7.17,
+    "average_warm_time_ms": 0.0,
+    "all_cache_hits": true
+  },
+  "by_code_size": {
+    "small": {
+      "lines": 9,
+      "cold_time_ms": 1.01,
+      "warm_time_ms": 0.0,
+      "speedup_ratio": 682.1,
+      "cache_hit": true
+    },
+    "medium": {
+      "lines": 40,
+      "cold_time_ms": 2.55,
+      "warm_time_ms": 0.0,
+      "speedup_ratio": 1706.6,
+      "cache_hit": true
+    },
+    "large": {
+      "lines": 179,
+      "cold_time_ms": 17.95,
+      "warm_time_ms": 0.0,
+      "speedup_ratio": 6341.0,
+      "cache_hit": true
+    }
+  },
+  "detailed_results": [
+    {
+      "code_size": "small",
+      "code_lines": 9,
+      "cold_time_ms": 1.01,
+      "warm_time_ms": 0.0,
+      "speedup_ratio": 682.1,
+      "cache_hit": true
+    },
+    {
+      "code_size": "medium",
+      "code_lines": 40,
+      "cold_time_ms": 2.55,
+      "warm_time_ms": 0.0,
+      "speedup_ratio": 1706.6,
+      "cache_hit": true
+    },
+    {
+      "code_size": "large",
+      "code_lines": 179,
+      "cold_time_ms": 17.95,
+      "warm_time_ms": 0.0,
+      "speedup_ratio": 6341.0,
+      "cache_hit": true
+    }
+  ],
+  "claim_validation": {
+    "claim": "200x cache speedup",
+    "measured_average": "2909.9x",
+    "measured_max": "6341.0x",
+    "validated": true,
+    "notes": "Excellent: Cache provides >100x speedup on average The '200x' claim refers to peak performance on larger codebases. In this benchmark, max speedup was 6341.0x."
+  }
+}

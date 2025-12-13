@@ -1,0 +1,208 @@
+{
+  "benchmark_info": {
+    "name": "Code Scalpel Token Efficiency Benchmark",
+    "version": "1.0.0",
+    "timestamp": "2025-12-13T00:21:27.800648",
+    "total_execution_time_seconds": 0.05,
+    "codebase_path": "/home/user/code-scalpel/evidence/token-efficiency/sample_codebase",
+    "total_tasks": 10
+  },
+  "summary": {
+    "total_tokens_naive_approach": 64113,
+    "total_tokens_surgical_approach": 3503,
+    "total_tokens_saved": 60610,
+    "average_token_savings_percentage": 94.54,
+    "average_reduction_ratio": 0.0546,
+    "compression_factor": 18.3
+  },
+  "best_case": {
+    "task": "Refactor password hashing",
+    "target": "User.hash_password",
+    "savings_percentage": 98.32,
+    "full_tokens": 6411,
+    "surgical_tokens": 108
+  },
+  "worst_case": {
+    "task": "Refactor user preferences",
+    "target": "UserPreferences",
+    "savings_percentage": 68.1,
+    "full_tokens": 6411,
+    "surgical_tokens": 2045
+  },
+  "by_task_type": {
+    "refactor": {
+      "count": 3,
+      "average_savings_percentage": 88.22
+    },
+    "debug": {
+      "count": 2,
+      "average_savings_percentage": 97.22
+    },
+    "understand": {
+      "count": 3,
+      "average_savings_percentage": 97.68
+    },
+    "test": {
+      "count": 2,
+      "average_savings_percentage": 96.62
+    }
+  },
+  "detailed_results": [
+    {
+      "task_name": "Refactor password hashing",
+      "target_symbol": "User.hash_password",
+      "full_file_lines": 638,
+      "full_file_tokens": 6411,
+      "full_file_chars": 25644,
+      "surgical_lines": 12,
+      "surgical_tokens": 108,
+      "surgical_chars": 433,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0188,
+      "token_reduction_ratio": 0.0168,
+      "token_savings_percentage": 98.32,
+      "extraction_time_ms": 5.64
+    },
+    {
+      "task_name": "Fix login validation",
+      "target_symbol": "AuthService.authenticate",
+      "full_file_lines": 638,
+      "full_file_tokens": 6412,
+      "full_file_chars": 25648,
+      "surgical_lines": 20,
+      "surgical_tokens": 249,
+      "surgical_chars": 999,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0313,
+      "token_reduction_ratio": 0.0388,
+      "token_savings_percentage": 96.12,
+      "extraction_time_ms": 4.55
+    },
+    {
+      "task_name": "Add 2FA verification",
+      "target_symbol": "AuthService.authenticate_with_2fa",
+      "full_file_lines": 638,
+      "full_file_tokens": 6412,
+      "full_file_chars": 25648,
+      "surgical_lines": 9,
+      "surgical_tokens": 112,
+      "surgical_chars": 448,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0141,
+      "token_reduction_ratio": 0.0175,
+      "token_savings_percentage": 98.25,
+      "extraction_time_ms": 3.94
+    },
+    {
+      "task_name": "Test token generation",
+      "target_symbol": "AuthService._generate_tokens",
+      "full_file_lines": 638,
+      "full_file_tokens": 6412,
+      "full_file_chars": 25648,
+      "surgical_lines": 18,
+      "surgical_tokens": 272,
+      "surgical_chars": 1091,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0282,
+      "token_reduction_ratio": 0.0424,
+      "token_savings_percentage": 95.76,
+      "extraction_time_ms": 4.77
+    },
+    {
+      "task_name": "Refactor user preferences",
+      "target_symbol": "UserPreferences",
+      "full_file_lines": 638,
+      "full_file_tokens": 6411,
+      "full_file_chars": 25644,
+      "surgical_lines": 217,
+      "surgical_tokens": 2045,
+      "surgical_chars": 8182,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.3401,
+      "token_reduction_ratio": 0.319,
+      "token_savings_percentage": 68.1,
+      "extraction_time_ms": 3.69
+    },
+    {
+      "task_name": "Fix permission check",
+      "target_symbol": "PermissionService.has_permission",
+      "full_file_lines": 638,
+      "full_file_tokens": 6412,
+      "full_file_chars": 25648,
+      "surgical_lines": 12,
+      "surgical_tokens": 108,
+      "surgical_chars": 434,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0188,
+      "token_reduction_ratio": 0.0168,
+      "token_savings_percentage": 98.32,
+      "extraction_time_ms": 3.94
+    },
+    {
+      "task_name": "Understand user serialization",
+      "target_symbol": "User.to_dict",
+      "full_file_lines": 638,
+      "full_file_tokens": 6411,
+      "full_file_chars": 25644,
+      "surgical_lines": 7,
+      "surgical_tokens": 121,
+      "surgical_chars": 487,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.011,
+      "token_reduction_ratio": 0.0189,
+      "token_savings_percentage": 98.11,
+      "extraction_time_ms": 4.23
+    },
+    {
+      "task_name": "Add login endpoint validation",
+      "target_symbol": "login",
+      "full_file_lines": 638,
+      "full_file_tokens": 6409,
+      "full_file_chars": 25638,
+      "surgical_lines": 17,
+      "surgical_tokens": 213,
+      "surgical_chars": 852,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0266,
+      "token_reduction_ratio": 0.0332,
+      "token_savings_percentage": 96.68,
+      "extraction_time_ms": 5.11
+    },
+    {
+      "task_name": "Refactor user repository",
+      "target_symbol": "UserRepository.find_by_id",
+      "full_file_lines": 638,
+      "full_file_tokens": 6411,
+      "full_file_chars": 25644,
+      "surgical_lines": 13,
+      "surgical_tokens": 113,
+      "surgical_chars": 454,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0204,
+      "token_reduction_ratio": 0.0176,
+      "token_savings_percentage": 98.24,
+      "extraction_time_ms": 4.22
+    },
+    {
+      "task_name": "Test password change",
+      "target_symbol": "AuthService.change_password",
+      "full_file_lines": 638,
+      "full_file_tokens": 6412,
+      "full_file_chars": 25648,
+      "surgical_lines": 14,
+      "surgical_tokens": 162,
+      "surgical_chars": 648,
+      "dependencies_included": 0,
+      "line_reduction_ratio": 0.0219,
+      "token_reduction_ratio": 0.0253,
+      "token_savings_percentage": 97.47,
+      "extraction_time_ms": 4.13
+    }
+  ],
+  "claim_validation": {
+    "claim": "Feed the LLM 50 lines, not 5,000 lines",
+    "validated": true,
+    "evidence": "Average token reduction: 94.5%",
+    "interpretation": "Excellent: Surgical extraction provides >10x token reduction"
+  }
+}
