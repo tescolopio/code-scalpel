@@ -1426,3 +1426,210 @@ def my_func():
         # Token estimate should be reasonable (not the entire file)
         # The models.py + target should be ~150-250 tokens
         assert result.token_estimate < 500
+
+
+# [20251212_TEST] v1.4.0 - Tests for new MCP tools
+
+class TestGetFileContext:
+    """Tests for the get_file_context tool (v1.4.0)."""
+
+    async def test_get_file_context_basic(self, tmp_path):
+        """Test basic file context extraction."""
+        from code_scalpel.mcp.server import get_file_context
+
+        # Create a test file
+        test_file = tmp_path / "test_module.py"
+        test_file.write_text('''
+"""A test module."""
+
+import os
+from pathlib import Path
+
+def helper_function():
+    """A helper function."""
+    return 42
+
+class MyClass:
+    """A test class."""
+    
+    def method(self):
+        return "hello"
+''')
+
+        result = await get_file_context(str(test_file))
+        
+        assert result.success is True
+        assert result.language == "python"
+        assert result.line_count > 0
+        assert "helper_function" in result.functions
+        assert "MyClass" in result.classes
+        assert "os" in result.imports
+        assert result.complexity_score >= 0
+
+    async def test_get_file_context_security_issues(self, tmp_path):
+        """Test file context detects security issues."""
+        from code_scalpel.mcp.server import get_file_context
+
+        test_file = tmp_path / "vulnerable.py"
+        test_file.write_text('''
+def dangerous_eval(user_input):
+    return eval(user_input)  # Security issue!
+''')
+
+        result = await get_file_context(str(test_file))
+        
+        assert result.success is True
+        assert result.has_security_issues is True
+
+    async def test_get_file_context_not_found(self):
+        """Test handling of non-existent file."""
+        from code_scalpel.mcp.server import get_file_context
+
+        result = await get_file_context("/nonexistent/path/file.py")
+        
+        assert result.success is False
+        assert result.error is not None
+        assert "not found" in result.error.lower()
+
+    async def test_get_file_context_syntax_error(self, tmp_path):
+        """Test handling of file with syntax error."""
+        from code_scalpel.mcp.server import get_file_context
+
+        test_file = tmp_path / "broken.py"
+        test_file.write_text("def broken(")  # Invalid syntax
+
+        result = await get_file_context(str(test_file))
+        
+        assert result.success is False
+        assert result.error is not None
+        assert "syntax" in result.error.lower()
+
+    async def test_get_file_context_exports(self, tmp_path):
+        """Test detection of __all__ exports."""
+        from code_scalpel.mcp.server import get_file_context
+
+        test_file = tmp_path / "exports.py"
+        test_file.write_text('''
+__all__ = ["public_func", "PublicClass"]
+
+def public_func():
+    pass
+
+def _private_func():
+    pass
+
+class PublicClass:
+    pass
+''')
+
+        result = await get_file_context(str(test_file))
+        
+        assert result.success is True
+        assert "public_func" in result.exports
+        assert "PublicClass" in result.exports
+
+
+class TestGetSymbolReferences:
+    """Tests for the get_symbol_references tool (v1.4.0)."""
+
+    async def test_find_function_references(self, tmp_path):
+        """Test finding all references to a function."""
+        from code_scalpel.mcp.server import get_symbol_references
+
+        # Create multiple files that reference a function
+        utils_file = tmp_path / "utils.py"
+        utils_file.write_text('''
+def helper_function():
+    """The helper function definition."""
+    return 42
+''')
+
+        main_file = tmp_path / "main.py"
+        main_file.write_text('''
+from utils import helper_function
+
+def main():
+    result = helper_function()
+    return result
+''')
+
+        test_file = tmp_path / "test_utils.py"
+        test_file.write_text('''
+from utils import helper_function
+
+def test_helper():
+    assert helper_function() == 42
+''')
+
+        result = await get_symbol_references("helper_function", str(tmp_path))
+        
+        assert result.success is True
+        assert result.symbol_name == "helper_function"
+        assert result.definition_file is not None
+        assert result.total_references >= 3  # Definition + 2 usages
+
+    async def test_find_class_references(self, tmp_path):
+        """Test finding all references to a class."""
+        from code_scalpel.mcp.server import get_symbol_references
+
+        models_file = tmp_path / "models.py"
+        models_file.write_text('''
+class User:
+    def __init__(self, name):
+        self.name = name
+''')
+
+        service_file = tmp_path / "service.py"
+        service_file.write_text('''
+from models import User
+
+def create_user(name):
+    return User(name)
+''')
+
+        result = await get_symbol_references("User", str(tmp_path))
+        
+        assert result.success is True
+        assert result.total_references >= 2  # Definition + 1 usage
+        assert any(ref.is_definition for ref in result.references)
+
+    async def test_symbol_not_found(self, tmp_path):
+        """Test behavior when symbol is not found."""
+        from code_scalpel.mcp.server import get_symbol_references
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("x = 1")
+
+        result = await get_symbol_references("nonexistent_symbol", str(tmp_path))
+        
+        assert result.success is True  # Search succeeded, just no results
+        assert result.total_references == 0
+
+    async def test_invalid_project_root(self):
+        """Test handling of invalid project root."""
+        from code_scalpel.mcp.server import get_symbol_references
+
+        result = await get_symbol_references("some_symbol", "/nonexistent/path")
+        
+        assert result.success is False
+        assert result.error is not None
+
+    async def test_reference_context_included(self, tmp_path):
+        """Test that context snippets are included in references."""
+        from code_scalpel.mcp.server import get_symbol_references
+
+        test_file = tmp_path / "code.py"
+        test_file.write_text('''
+def target_function():
+    return "result"
+
+result = target_function()
+''')
+
+        result = await get_symbol_references("target_function", str(tmp_path))
+        
+        assert result.success is True
+        # All references should have context
+        for ref in result.references:
+            assert ref.context != ""
+            assert "target_function" in ref.context

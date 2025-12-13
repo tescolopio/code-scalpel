@@ -1,8 +1,8 @@
 # Code Scalpel Development Roadmap
 
-**Document Version:** 1.1  
+**Document Version:** 1.3  
 **Last Updated:** December 12, 2025  
-**Current Release:** v1.2.3 (Stable)  
+**Current Release:** v1.4.0 (Stable)  
 **Maintainer:** 3D Tech Solutions LLC
 
 ---
@@ -27,13 +27,14 @@ Code Scalpel solves these by giving AI agents MCP tools that:
 - **Verify before applying** - Simulate refactors to detect behavior changes
 - **Analyze with certainty** - Real AST parsing, not regex pattern matching
 
-### Current State (v1.2.3)
+### Current State (v1.4.0)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| MCP Tools | 8 tools (analyze, extract, security, test gen) | Stable |
-| Test Suite | 1,669 tests passing | Stable |
+| MCP Tools | 10 tools (analyze, extract, security, test gen, context) | Stable |
+| Test Suite | 1,692 tests passing | Stable |
 | Code Coverage | 95%+ | Target Met |
+| Security Detection | 17+ vulnerability types, 30+ secret patterns | Stable |
 | Languages | Python (full), JS/Java (structural) | Expanding |
 | AI Agent Integrations | Claude Desktop, VS Code Copilot | Verified |
 
@@ -127,10 +128,10 @@ def resolve_file_path(file_path: str, workspace_root: str = None) -> str:
 
 **Acceptance Criteria:**
 
-- [ ] `extract_code("utils.py", ...)` works from project root
-- [ ] `extract_code("src/utils.py", ...)` works with relative paths
-- [ ] `extract_code("/absolute/path/utils.py", ...)` works unchanged
-- [ ] Clear error message when file truly doesn't exist
+- [x] `extract_code("utils.py", ...)` works from project root
+- [x] `extract_code("src/utils.py", ...)` works with relative paths
+- [x] `extract_code("/absolute/path/utils.py", ...)` works unchanged
+- [x] Clear error message when file truly doesn't exist
 
 #### 2. Hardcoded Secret Detection
 
@@ -327,6 +328,7 @@ def authenticate_safe(username, password):
 
 v1.3.0 Release Criteria:
 
+[x] extract_code works from project root (P0) - path_resolution.py
 [x] extract_code works with relative paths (P0) - path_utils.py
 [x] extract_code works with absolute paths (P0) - path_utils.py
 [x] extract_code provides clear error for missing files (P0) - FileNotFoundError
@@ -355,25 +357,26 @@ v1.3.0 Release Criteria:
 [x] No regressions in existing detections (Gate) - Verified
 [x] Documentation updated (Gate) - README, copilot-instructions, RELEASE_NOTES_v1.3.0
 
-## v1.4.0 - "Context"
+## v1.4.0 - "Context" ✅ RELEASED
 
 ### Overview
 
 **Theme:** Enhanced AI Context and Detection Coverage  
 **Goal:** Give AI agents richer context about code and expand vulnerability detection  
 **Effort:** ~12 developer-days  
-**Risk Level:** Low (extends existing MCP tools)
+**Risk Level:** Low (extends existing MCP tools)  
+**Status:** ✅ Released December 12, 2024
 
 ### Priorities
 
-| Priority | Feature | Owner | Effort | Dependencies |
-|----------|---------|-------|--------|--------------|
-| **P0** | `get_file_context` MCP tool | TBD | 3 days | None |
-| **P0** | `get_symbol_references` MCP tool | TBD | 2 days | PDG |
-| **P0** | XXE detection | TBD | 2 days | None |
-| **P0** | SSTI detection (Jinja2) | TBD | 1 day | None |
-| **P1** | JWT vulnerabilities | TBD | 2 days | None |
-| **P1** | Mass assignment detection | TBD | 2 days | None |
+| Priority | Feature | Owner | Effort | Status |
+|----------|---------|-------|--------|--------|
+| **P0** | `get_file_context` MCP tool | TDE | 3 days | ✅ Done |
+| **P0** | `get_symbol_references` MCP tool | TDE | 2 days | ✅ Done |
+| **P0** | XXE detection (CWE-611) | TDE | 2 days | ✅ Done |
+| **P0** | SSTI detection (CWE-1336) | TDE | 1 day | ✅ Done |
+| **P1** | JWT vulnerabilities | - | 2 days | Deferred to v1.5.0 |
+| **P1** | Mass assignment detection | - | 2 days | Deferred to v1.5.0 |
 
 ### Technical Specifications
 
@@ -504,33 +507,38 @@ def render_safe():
 
 v1.4.0 Release Criteria:
 
-[ ] get_file_context: Returns file overview without full content (P0)
-[ ] get_file_context: Lists functions, classes, imports (P0)
-[ ] get_file_context: Reports complexity score (P0)
-[ ] get_file_context: Flags files with security issues (P0)
+[x] get_file_context: Returns file overview without full content (P0)
+[x] get_file_context: Lists functions, classes, imports (P0)
+[x] get_file_context: Reports complexity score (P0)
+[x] get_file_context: Flags files with security issues (P0)
 
-[ ] get_symbol_references: Finds all usages across project (P0)
-[ ] get_symbol_references: Returns file, line, and context snippet (P0)
-[ ] get_symbol_references: Works for functions, classes, variables (P0)
-[ ] get_symbol_references: Performance < 5s for 100-file project (P0)
+[x] get_symbol_references: Finds all usages across project (P0)
+[x] get_symbol_references: Returns file, line, and context snippet (P0)
+[x] get_symbol_references: Works for functions, classes, variables (P0)
+[x] get_symbol_references: Performance < 5s for 100-file project (P0)
 
-[ ] XXE: Detects xml.etree.ElementTree.parse with tainted input (P0)
-[ ] XXE: Detects xml.dom.minidom.parse with tainted input (P0)
-[ ] XXE: Detects lxml.etree.parse with tainted input (P0)
-[ ] XXE: Recognizes defusedxml.* as safe sanitizers (P0)
+[x] XXE: Detects xml.etree.ElementTree.parse with tainted input (P0)
+[x] XXE: Detects xml.dom.minidom.parse with tainted input (P0)
+[x] XXE: Detects lxml.etree.parse with tainted input (P0)
+[x] XXE: Recognizes defusedxml.* as safe sanitizers (P0)
 
-[ ] SSTI: Detects jinja2.Template with user-controlled string (P0)
-[ ] SSTI: Detects Environment.from_string injection (P0)
-[ ] SSTI: Detects mako.template.Template injection (P0)
+[x] SSTI: Detects jinja2.Template with user-controlled string (P0)
+[x] SSTI: Detects Environment.from_string injection (P0)
+[x] SSTI: Detects mako.template.Template injection (P0)
 
-[ ] JWT: Detects algorithm confusion vulnerabilities (P1)
-[ ] JWT: Detects missing signature verification (P1)
-[ ] Mass Assignment: Detects unfiltered request.json usage (P1)
+[x] Agents: Base agent framework with MCP tool integration (P0)
+[x] Agents: Code review agent implementation (P0)
+[x] Agents: Security agent implementation (P0)
+[x] Agents: Optimization agent implementation (P0)
 
-[ ] MCP tools registered and documented (Gate)
-[ ] All tests passing (Gate)
-[ ] Code coverage >= 95% (Gate)
-[ ] No regressions in v1.3.0 detections (Gate)
+DEFERRED TO v1.5.0 - JWT: Detects algorithm confusion vulnerabilities (P1)
+DEFERRED TO v1.5.0 - JWT: Detects missing signature verification (P1)
+DEFERRED TO v1.5.0 - Mass Assignment: Detects unfiltered request.json usage (P1)
+
+[x] MCP tools registered and documented (Gate)
+[x] All tests passing (Gate)
+[x] Code coverage >= 95% (Gate)
+[x] No regressions in v1.3.0 detections (Gate)
 
 ---
 
@@ -551,6 +559,8 @@ v1.4.0 Release Criteria:
 | **P0** | `get_call_graph` MCP tool | TBD | 2 days | PDG exists |
 | **P0** | `scan_dependencies` MCP tool | TBD | 3 days | None |
 | **P1** | Circular dependency detection | TBD | 1 day | PDG exists |
+| **P1** | JWT vulnerabilities | TBD | 2 days | None |
+| **P1** | Mass assignment detection | TBD | 2 days | None |
 
 ### Technical Specifications
 

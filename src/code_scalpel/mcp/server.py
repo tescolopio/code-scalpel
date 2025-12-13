@@ -355,6 +355,49 @@ class PatchResultModel(BaseModel):
     error: str | None = Field(default=None, description="Error message if failed")
 
 
+# [20251212_FEATURE] v1.4.0 - New MCP tool models for enhanced AI context
+
+class FileContextResult(BaseModel):
+    """Result of get_file_context - file overview without full content."""
+
+    success: bool = Field(description="Whether analysis succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
+    file_path: str = Field(description="Path to the analyzed file")
+    language: str = Field(default="python", description="Detected language")
+    line_count: int = Field(description="Total lines in file")
+    functions: list[str] = Field(default_factory=list, description="Function names")
+    classes: list[str] = Field(default_factory=list, description="Class names")
+    imports: list[str] = Field(default_factory=list, description="Import statements")
+    exports: list[str] = Field(default_factory=list, description="Exported symbols (__all__)")
+    complexity_score: int = Field(default=0, description="Overall cyclomatic complexity")
+    has_security_issues: bool = Field(default=False, description="Whether file has security issues")
+    summary: str = Field(default="", description="Brief description of file purpose")
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
+class SymbolReference(BaseModel):
+    """A single reference to a symbol."""
+
+    file: str = Field(description="File path containing the reference")
+    line: int = Field(description="Line number of the reference")
+    column: int = Field(default=0, description="Column number")
+    context: str = Field(description="Code snippet showing usage context")
+    is_definition: bool = Field(default=False, description="Whether this is the definition")
+
+
+class SymbolReferencesResult(BaseModel):
+    """Result of get_symbol_references - all usages of a symbol."""
+
+    success: bool = Field(description="Whether search succeeded")
+    server_version: str = Field(default=__version__, description="Code Scalpel version")
+    symbol_name: str = Field(description="Name of the searched symbol")
+    definition_file: str | None = Field(default=None, description="File where symbol is defined")
+    definition_line: int | None = Field(default=None, description="Line where symbol is defined")
+    references: list[SymbolReference] = Field(default_factory=list, description="All references found")
+    total_references: int = Field(default=0, description="Total reference count")
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
 # ============================================================================
 # MCP SERVER
 # ============================================================================
@@ -707,14 +750,19 @@ async def security_scan(code: str) -> SecurityResult:
     """
     Scan Python code for security vulnerabilities using taint analysis.
 
-    Use this tool to audit code for security vulnerabilities (SQL Injection, XSS, etc.)
-    before deploying or committing changes. It tracks data flow from sources to sinks.
+    Use this tool to audit code for security vulnerabilities before deploying
+    or committing changes. It tracks data flow from sources to sinks.
 
     Detects:
     - SQL Injection (CWE-89)
+    - NoSQL Injection (CWE-943) - MongoDB
+    - LDAP Injection (CWE-90)
     - Cross-Site Scripting (CWE-79)
     - Command Injection (CWE-78)
     - Path Traversal (CWE-22)
+    - XXE - XML External Entity (CWE-611) [v1.4.0]
+    - SSTI - Server-Side Template Injection (CWE-1336) [v1.4.0]
+    - Hardcoded Secrets (CWE-798) - 30+ patterns
 
     Args:
         code: Python source code to scan
@@ -1909,6 +1957,301 @@ Code to audit:
 ```
 
 Provide a risk assessment and remediation steps for each finding."""
+
+
+# ============================================================================
+# v1.4.0 MCP TOOLS - Enhanced AI Context
+# ============================================================================
+
+
+def _get_file_context_sync(file_path: str) -> FileContextResult:
+    """Synchronous implementation of get_file_context."""
+    try:
+        path = Path(file_path)
+        
+        # Try to resolve the path
+        if not path.is_absolute():
+            # Try relative to PROJECT_ROOT
+            candidate = PROJECT_ROOT / path
+            if candidate.exists():
+                path = candidate
+            else:
+                # Try current working directory
+                candidate = Path.cwd() / path
+                if candidate.exists():
+                    path = candidate
+        
+        if not path.exists():
+            return FileContextResult(
+                success=False,
+                file_path=file_path,
+                line_count=0,
+                error=f"File not found: {file_path}",
+            )
+        
+        code = path.read_text(encoding="utf-8")
+        lines = code.splitlines()
+        
+        # Parse the code
+        try:
+            tree = ast.parse(code)
+        except SyntaxError as e:
+            return FileContextResult(
+                success=False,
+                file_path=str(path),
+                line_count=len(lines),
+                error=f"Syntax error at line {e.lineno}: {e.msg}",
+            )
+        
+        functions = []
+        classes = []
+        imports = []
+        exports = []
+        complexity = 0
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                # Only top-level functions
+                if hasattr(node, 'col_offset') and node.col_offset == 0:
+                    functions.append(node.name)
+                    complexity += _count_complexity_node(node)
+            elif isinstance(node, ast.ClassDef):
+                if hasattr(node, 'col_offset') and node.col_offset == 0:
+                    classes.append(node.name)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.append(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                for alias in node.names:
+                    imports.append(f"{module}.{alias.name}")
+            elif isinstance(node, ast.Assign):
+                # Check for __all__ exports
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "__all__":
+                        if isinstance(node.value, ast.List | ast.Tuple):
+                            for elt in node.value.elts:
+                                if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                    exports.append(elt.value)
+        
+        # Quick security check
+        has_security_issues = False
+        security_patterns = ["eval(", "exec(", "cursor.execute", "os.system(", "subprocess.call("]
+        for pattern in security_patterns:
+            if pattern in code:
+                has_security_issues = True
+                break
+        
+        # Generate summary based on content
+        summary_parts = []
+        if classes:
+            summary_parts.append(f"{len(classes)} class(es)")
+        if functions:
+            summary_parts.append(f"{len(functions)} function(s)")
+        if "flask" in code.lower() or "app.route" in code:
+            summary_parts.append("Flask web application")
+        elif "django" in code.lower():
+            summary_parts.append("Django module")
+        elif "test_" in path.name or "pytest" in code:
+            summary_parts.append("Test module")
+        
+        summary = ", ".join(summary_parts) if summary_parts else "Python module"
+        
+        return FileContextResult(
+            success=True,
+            file_path=str(path),
+            language="python",
+            line_count=len(lines),
+            functions=functions,
+            classes=classes,
+            imports=imports[:20],  # Limit to avoid token bloat
+            exports=exports,
+            complexity_score=complexity,
+            has_security_issues=has_security_issues,
+            summary=summary,
+        )
+        
+    except Exception as e:
+        return FileContextResult(
+            success=False,
+            file_path=file_path,
+            line_count=0,
+            error=f"Analysis failed: {str(e)}",
+        )
+
+
+def _count_complexity_node(node: ast.AST) -> int:
+    """Count cyclomatic complexity for a single node."""
+    complexity = 1  # Base complexity
+    for child in ast.walk(node):
+        if isinstance(child, ast.If | ast.While | ast.For | ast.ExceptHandler):
+            complexity += 1
+        elif isinstance(child, ast.BoolOp):
+            complexity += len(child.values) - 1
+    return complexity
+
+
+@mcp.tool()
+async def get_file_context(file_path: str) -> FileContextResult:
+    """
+    Get a file overview without reading full content.
+    
+    [v1.4.0] Use this tool to quickly assess if a file is relevant to your task
+    without consuming tokens on full content. Returns functions, classes, imports,
+    complexity score, and security warnings.
+    
+    Why AI agents need this:
+    - Quickly assess file relevance before extracting code
+    - Understand file structure without token overhead
+    - Make informed decisions about which functions to modify
+    
+    Args:
+        file_path: Path to the Python file (absolute or relative to project root)
+    
+    Returns:
+        FileContextResult with file overview and metadata
+    """
+    return await asyncio.to_thread(_get_file_context_sync, file_path)
+
+
+def _get_symbol_references_sync(symbol_name: str, project_root: str | None = None) -> SymbolReferencesResult:
+    """Synchronous implementation of get_symbol_references."""
+    try:
+        root = Path(project_root) if project_root else PROJECT_ROOT
+        
+        if not root.exists():
+            return SymbolReferencesResult(
+                success=False,
+                symbol_name=symbol_name,
+                error=f"Project root not found: {root}",
+            )
+        
+        references: list[SymbolReference] = []
+        definition_file = None
+        definition_line = None
+        
+        # Walk through all Python files
+        for py_file in root.rglob("*.py"):
+            # Skip common non-source directories
+            if any(part.startswith('.') or part in ('__pycache__', 'node_modules', 'venv', '.venv', 'dist', 'build') 
+                   for part in py_file.parts):
+                continue
+            
+            try:
+                code = py_file.read_text(encoding="utf-8")
+                lines = code.splitlines()
+                tree = ast.parse(code)
+                
+                for node in ast.walk(tree):
+                    # Check for function/class definitions
+                    if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+                        if node.name == symbol_name:
+                            rel_path = str(py_file.relative_to(root))
+                            if definition_file is None:
+                                definition_file = rel_path
+                                definition_line = node.lineno
+                            
+                            context = lines[node.lineno - 1] if node.lineno <= len(lines) else ""
+                            references.append(SymbolReference(
+                                file=rel_path,
+                                line=node.lineno,
+                                column=node.col_offset,
+                                context=context.strip(),
+                                is_definition=True,
+                            ))
+                    
+                    # Check for function calls
+                    elif isinstance(node, ast.Call):
+                        func = node.func
+                        name = None
+                        if isinstance(func, ast.Name):
+                            name = func.id
+                        elif isinstance(func, ast.Attribute):
+                            name = func.attr
+                        
+                        if name == symbol_name:
+                            rel_path = str(py_file.relative_to(root))
+                            line_no = getattr(node, 'lineno', 0)
+                            context = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+                            references.append(SymbolReference(
+                                file=rel_path,
+                                line=line_no,
+                                column=getattr(node, 'col_offset', 0),
+                                context=context.strip(),
+                                is_definition=False,
+                            ))
+                    
+                    # Check for name references
+                    elif isinstance(node, ast.Name) and node.id == symbol_name:
+                        rel_path = str(py_file.relative_to(root))
+                        line_no = getattr(node, 'lineno', 0)
+                        context = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+                        # Avoid duplicates from Call nodes
+                        if not any(r.file == rel_path and r.line == line_no for r in references):
+                            references.append(SymbolReference(
+                                file=rel_path,
+                                line=line_no,
+                                column=getattr(node, 'col_offset', 0),
+                                context=context.strip(),
+                                is_definition=False,
+                            ))
+            
+            except (SyntaxError, UnicodeDecodeError):
+                # Skip files that can't be parsed
+                continue
+        
+        # Remove duplicates and sort
+        seen = set()
+        unique_refs = []
+        for ref in references:
+            key = (ref.file, ref.line, ref.is_definition)
+            if key not in seen:
+                seen.add(key)
+                unique_refs.append(ref)
+        
+        unique_refs.sort(key=lambda r: (not r.is_definition, r.file, r.line))
+        
+        return SymbolReferencesResult(
+            success=True,
+            symbol_name=symbol_name,
+            definition_file=definition_file,
+            definition_line=definition_line,
+            references=unique_refs[:100],  # Limit to prevent token overflow
+            total_references=len(unique_refs),
+        )
+        
+    except Exception as e:
+        return SymbolReferencesResult(
+            success=False,
+            symbol_name=symbol_name,
+            error=f"Search failed: {str(e)}",
+        )
+
+
+@mcp.tool()
+async def get_symbol_references(
+    symbol_name: str,
+    project_root: str | None = None,
+) -> SymbolReferencesResult:
+    """
+    Find all references to a symbol across the project.
+    
+    [v1.4.0] Use this tool before modifying a function, class, or variable to
+    understand its usage across the codebase. Essential for safe refactoring.
+    
+    Why AI agents need this:
+    - Safe refactoring: know all call sites before changing signatures
+    - Impact analysis: understand blast radius of changes
+    - No hallucination: real references, not guessed ones
+    
+    Args:
+        symbol_name: Name of the function, class, or variable to search for
+        project_root: Project root directory (default: server's project root)
+    
+    Returns:
+        SymbolReferencesResult with definition location and all references
+    """
+    return await asyncio.to_thread(_get_symbol_references_sync, symbol_name, project_root)
 
 
 # ============================================================================

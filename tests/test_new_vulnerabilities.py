@@ -308,3 +308,162 @@ class TestTaintTrackerIntegration:
         assert SINK_PATTERNS.get("requests.post") == SecuritySink.SSRF
         assert SINK_PATTERNS.get("urllib.request.urlopen") == SecuritySink.SSRF
         assert SINK_PATTERNS.get("httpx.get") == SecuritySink.SSRF
+
+
+# [20251212_TEST] v1.4.0 - Tests for XXE and SSTI vulnerability detection
+
+class TestXXEDetection:
+    """Test detection of XML External Entity (XXE) vulnerabilities (CWE-611)."""
+
+    def test_xxe_elementtree_parse(self):
+        """Detect XXE via xml.etree.ElementTree.parse with user input."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        # Verify sink patterns are registered
+        assert SINK_PATTERNS.get("xml.etree.ElementTree.parse") == SecuritySink.XXE
+        assert SINK_PATTERNS.get("ElementTree.parse") == SecuritySink.XXE
+        assert SINK_PATTERNS.get("ET.parse") == SecuritySink.XXE
+
+    def test_xxe_lxml_parse(self):
+        """Detect XXE via lxml.etree.parse."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("lxml.etree.parse") == SecuritySink.XXE
+        assert SINK_PATTERNS.get("lxml.etree.fromstring") == SecuritySink.XXE
+        assert SINK_PATTERNS.get("lxml.etree.XML") == SecuritySink.XXE
+
+    def test_xxe_minidom(self):
+        """Detect XXE via xml.dom.minidom."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("xml.dom.minidom.parse") == SecuritySink.XXE
+        assert SINK_PATTERNS.get("minidom.parseString") == SecuritySink.XXE
+
+    def test_xxe_sax(self):
+        """Detect XXE via xml.sax."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("xml.sax.parse") == SecuritySink.XXE
+
+    def test_xxe_sanitizer_defusedxml(self):
+        """Verify defusedxml is recognized as safe sanitizer."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SANITIZER_REGISTRY,
+        )
+
+        # defusedxml should be a sanitizer that clears XXE sink
+        assert "defusedxml.parse" in SANITIZER_REGISTRY
+        assert "defusedxml.ElementTree.parse" in SANITIZER_REGISTRY
+        
+        sanitizer_info = SANITIZER_REGISTRY["defusedxml.parse"]
+        assert SecuritySink.XXE in sanitizer_info.clears_sinks
+
+    def test_taint_dangerous_for_xxe(self):
+        """Verify tainted data is dangerous for XXE sink."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            TaintInfo,
+            TaintSource,
+            TaintLevel,
+            SecuritySink,
+        )
+
+        taint = TaintInfo(
+            source=TaintSource.USER_INPUT,
+            level=TaintLevel.HIGH,
+        )
+
+        assert taint.is_dangerous_for(SecuritySink.XXE)
+
+
+class TestSSTIDetection:
+    """Test detection of Server-Side Template Injection (SSTI) vulnerabilities (CWE-1336)."""
+
+    def test_ssti_jinja2_template(self):
+        """Detect SSTI via jinja2.Template with user input."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("jinja2.Template") == SecuritySink.SSTI
+        assert SINK_PATTERNS.get("Environment.from_string") == SecuritySink.SSTI
+        assert SINK_PATTERNS.get("jinja2.Environment.from_string") == SecuritySink.SSTI
+
+    def test_ssti_mako_template(self):
+        """Detect SSTI via mako.template.Template."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("mako.template.Template") == SecuritySink.SSTI
+        assert SINK_PATTERNS.get("mako.Template") == SecuritySink.SSTI
+
+    def test_ssti_django_template(self):
+        """Detect SSTI via django.template.Template."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("django.template.Template") == SecuritySink.SSTI
+
+    def test_ssti_tornado_template(self):
+        """Detect SSTI via tornado.template.Template."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SINK_PATTERNS,
+        )
+
+        assert SINK_PATTERNS.get("tornado.template.Template") == SecuritySink.SSTI
+
+    def test_ssti_sanitizer_render_template(self):
+        """Verify render_template (file-based) is recognized as safe."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            SecuritySink,
+            SANITIZER_REGISTRY,
+        )
+
+        # File-based templates are safe
+        assert "render_template" in SANITIZER_REGISTRY
+        assert "flask.render_template" in SANITIZER_REGISTRY
+        
+        sanitizer_info = SANITIZER_REGISTRY["render_template"]
+        assert SecuritySink.SSTI in sanitizer_info.clears_sinks
+
+    def test_taint_dangerous_for_ssti(self):
+        """Verify tainted data is dangerous for SSTI sink."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import (
+            TaintInfo,
+            TaintSource,
+            TaintLevel,
+            SecuritySink,
+        )
+
+        taint = TaintInfo(
+            source=TaintSource.USER_INPUT,
+            level=TaintLevel.HIGH,
+        )
+
+        assert taint.is_dangerous_for(SecuritySink.SSTI)
+
+    def test_security_sink_enum_values(self):
+        """Verify XXE and SSTI are in SecuritySink enum."""
+        from code_scalpel.symbolic_execution_tools.taint_tracker import SecuritySink
+
+        # v1.4.0 additions
+        assert hasattr(SecuritySink, "XXE")
+        assert hasattr(SecuritySink, "SSTI")

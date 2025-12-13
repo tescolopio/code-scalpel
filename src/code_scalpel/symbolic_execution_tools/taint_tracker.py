@@ -74,6 +74,8 @@ class SecuritySink(Enum):
     - DESERIALIZATION: Insecure Deserialization (CWE-502)
     - WEAK_CRYPTO: Use of Weak Cryptographic Algorithm (CWE-327)
     - SSRF: Server-Side Request Forgery (CWE-918)
+    - XXE: XML External Entity Injection (CWE-611) [v1.4.0]
+    - SSTI: Server-Side Template Injection (CWE-1336) [v1.4.0]
     """
 
     SQL_QUERY = auto()  # cursor.execute(), Session.execute()
@@ -87,6 +89,9 @@ class SecuritySink(Enum):
     WEAK_CRYPTO = auto()  # hashlib.md5(), hashlib.sha1(), DES
     SSRF = auto()  # requests.get(), urllib.request.urlopen()
     HARDCODED_SECRET = auto()  # Hardcoded secrets (AWS keys, etc.)
+    # [20251212_FEATURE] v1.4.0 - New vulnerability types
+    XXE = auto()  # xml.etree.ElementTree.parse(), lxml.etree.parse()
+    SSTI = auto()  # jinja2.Template(), mako.template.Template()
 
 
 class TaintLevel(Enum):
@@ -299,6 +304,18 @@ SANITIZER_REGISTRY: Dict[str, SanitizerInfo] = {
     "len": SanitizerInfo("len", set(), full_clear=True),
     "ord": SanitizerInfo("ord", set(), full_clear=True),
     "hex": SanitizerInfo("hex", set(), full_clear=True),
+    # [20251212_FEATURE] v1.4.0 - XXE Sanitizers (defusedxml is safe)
+    "defusedxml.parse": SanitizerInfo("defusedxml.parse", {SecuritySink.XXE}),
+    "defusedxml.fromstring": SanitizerInfo("defusedxml.fromstring", {SecuritySink.XXE}),
+    "defusedxml.ElementTree.parse": SanitizerInfo("defusedxml.ElementTree.parse", {SecuritySink.XXE}),
+    "defusedxml.ElementTree.fromstring": SanitizerInfo("defusedxml.ElementTree.fromstring", {SecuritySink.XXE}),
+    "defusedxml.minidom.parse": SanitizerInfo("defusedxml.minidom.parse", {SecuritySink.XXE}),
+    "defusedxml.minidom.parseString": SanitizerInfo("defusedxml.minidom.parseString", {SecuritySink.XXE}),
+    "defusedxml.sax.parse": SanitizerInfo("defusedxml.sax.parse", {SecuritySink.XXE}),
+    # [20251212_FEATURE] v1.4.0 - SSTI Sanitizers (file-based templates are safe)
+    "render_template": SanitizerInfo("render_template", {SecuritySink.SSTI}),  # Flask file-based
+    "flask.render_template": SanitizerInfo("flask.render_template", {SecuritySink.SSTI}),
+    "django.shortcuts.render": SanitizerInfo("django.shortcuts.render", {SecuritySink.SSTI}),
 }
 
 
@@ -745,6 +762,9 @@ class Vulnerability:
             SecuritySink.WEAK_CRYPTO: "Use of Weak Cryptographic Hash",
             SecuritySink.SSRF: "Server-Side Request Forgery (SSRF)",
             SecuritySink.HARDCODED_SECRET: "Hardcoded Secret",
+            # [20251212_FEATURE] v1.4.0 vulnerability types
+            SecuritySink.XXE: "XML External Entity Injection (XXE)",
+            SecuritySink.SSTI: "Server-Side Template Injection (SSTI)",
         }
         return mapping.get(self.sink_type, "Unknown Vulnerability")
 
@@ -763,6 +783,9 @@ class Vulnerability:
             SecuritySink.WEAK_CRYPTO: "CWE-327",
             SecuritySink.SSRF: "CWE-918",
             SecuritySink.HARDCODED_SECRET: "CWE-798",
+            # [20251212_FEATURE] v1.4.0 CWE mappings
+            SecuritySink.XXE: "CWE-611",
+            SecuritySink.SSTI: "CWE-1336",
         }
         return mapping.get(self.sink_type, "CWE-Unknown")
 
@@ -948,6 +971,39 @@ SINK_PATTERNS: Dict[str, SecuritySink] = {
     "Connection.modify": SecuritySink.SQL_QUERY,
     "Connection.add": SecuritySink.SQL_QUERY,
     "Connection.delete": SecuritySink.SQL_QUERY,
+    # [20251212_FEATURE] v1.4.0 - XXE (XML External Entity) Injection (CWE-611)
+    "xml.etree.ElementTree.parse": SecuritySink.XXE,
+    "xml.etree.ElementTree.fromstring": SecuritySink.XXE,
+    "xml.etree.ElementTree.iterparse": SecuritySink.XXE,
+    "ElementTree.parse": SecuritySink.XXE,
+    "ElementTree.fromstring": SecuritySink.XXE,
+    "ET.parse": SecuritySink.XXE,
+    "ET.fromstring": SecuritySink.XXE,
+    "xml.dom.minidom.parse": SecuritySink.XXE,
+    "xml.dom.minidom.parseString": SecuritySink.XXE,
+    "minidom.parse": SecuritySink.XXE,
+    "minidom.parseString": SecuritySink.XXE,
+    "xml.sax.parse": SecuritySink.XXE,
+    "xml.sax.parseString": SecuritySink.XXE,
+    "sax.parse": SecuritySink.XXE,
+    "lxml.etree.parse": SecuritySink.XXE,
+    "lxml.etree.fromstring": SecuritySink.XXE,
+    "lxml.etree.XML": SecuritySink.XXE,
+    "etree.parse": SecuritySink.XXE,
+    "etree.fromstring": SecuritySink.XXE,
+    "etree.XML": SecuritySink.XXE,
+    "xmlrpc.client.ServerProxy": SecuritySink.XXE,
+    # [20251212_FEATURE] v1.4.0 - SSTI (Server-Side Template Injection) (CWE-1336)
+    "jinja2.Template": SecuritySink.SSTI,
+    "Template": SecuritySink.SSTI,  # Generic template constructor
+    "Environment.from_string": SecuritySink.SSTI,
+    "jinja2.Environment.from_string": SecuritySink.SSTI,
+    "mako.template.Template": SecuritySink.SSTI,
+    "mako.Template": SecuritySink.SSTI,
+    "django.template.Template": SecuritySink.SSTI,
+    "tornado.template.Template": SecuritySink.SSTI,
+    "chameleon.PageTemplate": SecuritySink.SSTI,
+    "genshi.template.MarkupTemplate": SecuritySink.SSTI,
 }
 # Hardcoded Secret Patterns (v1.3.0)
 # These are regex patterns for detecting hardcoded secrets in string literals

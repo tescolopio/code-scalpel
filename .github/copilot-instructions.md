@@ -28,6 +28,8 @@ You are the **Lead Architect and Devil's Advocate** for Code Scalpel.
 
 ### Change Tagging (Required)
 
+ALL COMMITS and RELEASES MUST MEET RELEASE CRITERIA FOUND IN THE DEVELOPMENT_ROADMAP.md FILE.
+
 All code edits and additions **MUST** include a descriptive tag comment indicating when and why the change was made.
 
 **Tag Format:** `[YYYYMMDD_TYPE]`

@@ -1,0 +1,15 @@
+{
+  "file": "temp_xxe_test.py",
+  "vulnerability_count": 1,
+  "risk_level": "medium",
+  "has_vulnerabilities": true,
+  "vulnerabilities": [
+    {
+      "type": "XML External Entity Injection (XXE)",
+      "cwe": "CWE-611",
+      "severity": "medium",
+      "line": 16,
+      "description": ""
+    }
+  ]
+}

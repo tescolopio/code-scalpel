@@ -1,0 +1,32 @@
+{
+  "symbol_name": "TaintTracker",
+  "definition_file": "symbolic_execution_tools/taint_tracker.py",
+  "definition_line": 485,
+  "total_references": 4,
+  "references": [
+    {
+      "file": "symbolic_execution_tools/taint_tracker.py",
+      "line": 485,
+      "context": "class TaintTracker:",
+      "is_definition": true
+    },
+    {
+      "file": "symbolic_execution_tools/security_analyzer.py",
+      "line": 169,
+      "context": "self._taint_tracker: Optional[TaintTracker] = None",
+      "is_definition": false
+    },
+    {
+      "file": "symbolic_execution_tools/security_analyzer.py",
+      "line": 192,
+      "context": "self._taint_tracker = TaintTracker()",
+      "is_definition": false
+    },
+    {
+      "file": "symbolic_execution_tools/taint_tracker.py",
+      "line": 718,
+      "context": "forked = TaintTracker()",
+      "is_definition": false
+    }
+  ]
+}
